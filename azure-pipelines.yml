@@ -1,0 +1,26 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+
+jobs:
+- template: .ci/build.yaml  # Template reference
+  parameters:
+    host: macOS
+    pool:
+      vmImage: 'macOS-10.13'
+
+- template: .ci/build.yaml  # Template reference
+  parameters:
+    host: Linux
+    pool:
+      vmImage: 'Ubuntu-16.04'
+
+- template: .ci/build.yaml  # Template reference
+  parameters:
+    host: Windows
+    pool:
+      vmImage: 'vs2017-win2016'
+    sign: true  # Extra step on Windows only
+    
