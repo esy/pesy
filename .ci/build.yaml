@@ -1,0 +1,61 @@
+parameters:
+  host: ''
+  pool: ''
+  sign: false
+
+jobs:
+- job: ${{ parameters.host }}
+  pool: ${{ parameters.pool }}
+  steps:
+  - ${{ if eq(parameters.sign, 'true') }}:
+    - script: 'npm install -g @esy-nightly/esy@0.4.10-e6e1e7 --unsafe-perm'
+      displayName: 'Installing deps'
+      workingDirectory: 're'
+  - ${{ if eq(parameters.sign, 'false') }}:
+    - script: 'sudo npm install -g @esy-nightly/esy@0.4.10-e6e1e7 --unsafe-perm'
+      displayName: 'Installing deps'
+      workingDirectory: 're'
+  - script: esy install
+    displayName: 'Installing deps'
+    workingDirectory: 're'
+  - script: esy build
+    displayName: 'Building'
+    workingDirectory: 're'
+  - ${{ if ne(parameters.sign, 'true') }}:
+    - script: esy test
+      displayName: 'Running inline tests'
+      workingDirectory: 're'
+  - script: esy npm-release
+    displayName: 'Creating npm release'
+    workingDirectory: 're'
+  - script: npm pack
+    displayName: 'NPM packing...'
+    workingDirectory: 're/_release'
+  - ${{ if eq(parameters.host, 'Windows') }}:
+    - script: 'npm install -g .\pesy-0.0.0.tgz --unsafe-perm=true'
+      displayName: 'npm link... for tests'
+      workingDirectory: 're/_release'
+  - ${{ if eq(parameters.host, 'Linux') }}:
+    - script: 'sudo npm install -g ./pesy-0.0.0.tgz --unsafe-perm=true'
+      displayName: 'npm link... for tests'
+      workingDirectory: 're/_release'
+  - ${{ if eq(parameters.host, 'macOS') }}:
+    - script: 'sudo npm install -g ./pesy-0.0.0.tgz --unsafe-perm=false'
+      displayName: 'npm link... for tests'
+      workingDirectory: 're/_release'
+  - ${{ if eq(parameters.sign, 'false') }}:
+    - script: ./_build/install/default/bin/TestBootstrapper.exe
+      displayName: 'Running tests'
+      workingDirectory: 're'
+  - ${{ if eq(parameters.sign, 'true') }}:
+    - script: .\_build\install\default\bin\TestBootstrapper.exe
+      displayName: 'Running tests'
+      workingDirectory: 're'
+  - ${{ if eq(parameters.sign, 'false') }}:
+    - script: ./_build/install/default/bin/TestPesyConfigure.exe
+      displayName: 'Running tests'
+      workingDirectory: 're'
+  - ${{ if eq(parameters.sign, 'true') }}:
+    - script: .\_build\install\default\bin\TestPesyConfigure.exe
+      displayName: 'Running tests'
+      workingDirectory: 're'
