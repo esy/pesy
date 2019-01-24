@@ -1,7 +1,6 @@
 # pesy
 
-[![Build Status](https://dev.azure.com/prometheansacrifice/pesy/_apis/build/status/prometheansacrifice.pesy)](https://dev.azure.com/prometheansacrifice/pesy/_build/latest?definitionId=1)
-
+[![Build Status](https://dev.azure.com/pesy/pesy/_apis/build/status/esy.pesy?branchName=master)](https://dev.azure.com/pesy/pesy/_build/latest?definitionId=1&branchName=master)
 
 - Use `package.json` to automatically configure libraries and executables built
   with Dune.
