@@ -1,0 +1,1 @@
+PesyNpm.Util.foo();
