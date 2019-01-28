@@ -1,1 +1,1 @@
-PesyNpm.Util.foo();
+Library.Util.foo();

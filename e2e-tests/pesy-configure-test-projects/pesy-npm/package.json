@@ -13,16 +13,16 @@
   "buildDirs": {
     "test": {
       "require": ["pesy-npm/library"],
-      "bin": "TestPesyNpm.re"
+      "bin": "TestPesyNpm.re as test-pesy-npm.exe"
     },
     "library": {},
     "executable": {
       "require": ["pesy-npm/library"],
-      "main": "PesyNpmApp.re"
+      "bin": "PesyNpmApp.re as pesy-npm-app.exe"
     }
   },
   "scripts": {
-    "test": "esy x TestPesyNpm.exe"
+    "test": "esy x test-pesy-npm.exe"
   },
   "dependencies": {
     "@opam/dune": ">=1.6.0",

@@ -3,10 +3,12 @@ open PesyUtils;
 open PesyUtils.NoLwt;
 
 exception NullJSONValue(unit);
+exception FatalError(string);
+exception ShouldNotBeHere(unit);
 
 module Library: {
   module Mode: {
-    exception InvalidLibraryMode(unit);
+    exception InvalidLibraryMode(string);
     type t;
     let ofString: string => t;
     let toString: t => string;
@@ -25,7 +27,7 @@ module Library: {
   let toDuneStanza: (Common.t, t) => (string, string);
 } = {
   module Mode = {
-    exception InvalidLibraryMode(unit);
+    exception InvalidLibraryMode(string);
     type t =
       | Native
       | Byte
@@ -35,7 +37,7 @@ module Library: {
       | "best" => Best
       | "native" => Native
       | "byte" => Byte
-      | _ => raise(InvalidLibraryMode());
+      | x => raise(InvalidLibraryMode(x));
     let toString =
       fun
       | Best => "best"
@@ -290,6 +292,7 @@ module Executable: {
     ) =
       Common.toDuneStanzas(common);
     let path = Common.getPath(common);
+    /* Pesy's main is Dune's name */
     let name = Stanza.create("name", Stanza.createAtom(main));
     /* let public_name = */
     /*   Stanza.create("public_name", Stanza.createAtom(pkgName)); */
@@ -501,21 +504,68 @@ module JSON: {
   let debug = t => to_string(t);
 };
 
+/* Turns "Foo.re as Foo.exe" => ("Foo.re", "Foo.exe") */
+let getBinaryNameTuple = namesString => {
+  let parts = Str.(split(regexp(" +as +"), namesString));
+  switch (parts) {
+  | [a, b, ...r] when List.length(r) == 0 => (a, b)
+  | _ => raise(FatalError("Invalid binary name (syntax)"))
+  };
+};
+
+/* Turns "foo/bar/baz" => "foo.bar.baz" */
+let pathToOCamlLibName = p => Str.global_replace(Str.regexp("/"), ".", p);
+
+let isBinPropertyPresent =
+  fun
+  | Some(_) => true
+  | _ => false;
+
 type t = list(package);
 let toPesyConf = (projectPath: string, json: JSON.t): t => {
   let pkgs = JSON.toKeyValuePairs(JSON.member(json, "buildDirs"));
+  let rootName =
+    /* "name" in root package.json */ JSON.member(json, "name")
+    |> JSON.toValue
+    |> FieldTypes.toString;
+
   List.map(
     pkg => {
       let (dir, conf) = pkg;
+      let bin =
+        try (
+          Some(
+            JSON.member(conf, "bin")
+            |> JSON.toValue
+            |> FieldTypes.toString
+            |> getBinaryNameTuple,
+          )
+        ) {
+        | NullJSONValue(_) => None
+        | e => raise(e)
+        };
+
+      let name_was_guessed = ref(false);
+      /* Pesy'name is Dune's public_name */
       let name =
-        JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString;
+        try (JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString) {
+        | NullJSONValue(_) =>
+          name_was_guessed := true;
+          switch (bin) {
+          | Some((_mainFileName, installedBinaryName)) => installedBinaryName
+          | None => rootName ++ "." ++ pathToOCamlLibName(dir)
+          };
+        | e => raise(e)
+        };
       let require =
         try (
           JSON.member(conf, "require")
           |> JSON.toValue
           |> FieldTypes.toList
           |> List.map(FieldTypes.toString)
+          |> /* TODO: relative path */ List.map(pathToOCamlLibName)
         ) {
+        /* "my-package/lib/here" => "my-package.lib.here" */
         | _ => []
         };
 
@@ -615,12 +665,32 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
         | _ => None
         };
 
-      let suffix = getSuffix(name);
+      let nameSpecifiedHasBinSuffix =
+        ! name_was_guessed^ && getSuffix(name) == "exe";
+      let binPropertyIsPresent = isBinPropertyPresent(bin);
 
-      switch (suffix) {
-      | "exe" =>
+      let isBinary = nameSpecifiedHasBinSuffix || binPropertyIsPresent;
+      if (! name_was_guessed^
+          && !nameSpecifiedHasBinSuffix
+          && binPropertyIsPresent) {
+        raise(FatalError("Conflicting values for `bin` property `name`"));
+      };
+
+      if (isBinary) {
+        /* Prioritising `bin` over `name` */
         let main =
-          JSON.member(conf, "main") |> JSON.toValue |> FieldTypes.toString;
+          switch (bin) {
+          | Some((mainFileName, _installedBinaryName)) =>
+            Str.global_replace(Str.regexp("\\.re"), "", mainFileName)
+          | _ =>
+            try (
+              JSON.member(conf, "main") |> JSON.toValue |> FieldTypes.toString
+            ) {
+            | NullJSONValue () => raise(ShouldNotBeHere())
+            | e => raise(e)
+            }
+          };
+
         let modes =
           try (
             Some(
@@ -652,11 +722,16 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             ),
           pkgType: ExecutablePackage(Executable.create(main, modes)),
         };
-      | _ =>
+      } else {
         let namespace =
-          JSON.member(conf, "namespace")
-          |> JSON.toValue
-          |> FieldTypes.toString;
+          try (
+            JSON.member(conf, "namespace")
+            |> JSON.toValue
+            |> FieldTypes.toString
+          ) {
+          | NullJSONValue () => upperCamelCasify(Filename.basename(dir))
+          | e => raise(e)
+          };
         let libraryModes =
           try (
             Some(
