@@ -868,6 +868,7 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
+    "name": "foo",
     "buildDirs": {
       "test": {
         "require": ["foo"],
@@ -890,7 +891,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "require": ["foo"],
         "namespace": "Foo",
@@ -913,7 +915,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "require": ["foo"],
         "namespace": "Foo",
@@ -936,7 +939,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "namespace": "Foo",
         "name": "bar.lib",
@@ -958,7 +962,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "namespace": "Foo",
         "name": "bar.lib",
@@ -980,7 +985,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "namespace": "Foo",
         "name": "bar.lib",
@@ -1002,7 +1008,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "main": "Foo",
         "name": "bar.exe",
@@ -1024,6 +1031,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "require": ["foo"],
@@ -1047,6 +1055,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1069,6 +1078,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1092,6 +1102,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1114,6 +1125,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1136,6 +1148,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1158,6 +1171,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1184,6 +1198,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1208,6 +1223,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testexe": {
                  "main": "Foo",
