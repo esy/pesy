@@ -11,17 +11,14 @@
 │
 ├─test/
 │   name:    Test<PACKAGE_NAME_UPPER_CAMEL>.exe
-│   main:    Test<PACKAGE_NAME_UPPER_CAMEL>
 │   require: <PUBLIC_LIB_NAME>
 │
 ├─library/
 │   library name: <PUBLIC_LIB_NAME>
-│   namespace:    <PACKAGE_NAME_UPPER_CAMEL>
 │   require:
 │
 └─executable/
     name:    <PACKAGE_NAME_UPPER_CAMEL>App.exe
-    main:    <PACKAGE_NAME_UPPER_CAMEL>App
     require: <PUBLIC_LIB_NAME>
 ```
 

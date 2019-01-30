@@ -850,7 +850,15 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             try (
               JSON.member(conf, "main") |> JSON.toValue |> FieldTypes.toString
             ) {
-            | NullJSONValue () => raise(ShouldNotBeHere())
+            | NullJSONValue () =>
+              raise(
+                FatalError(
+                  sprintf(
+                    "Atleast one of `bin` or `main` must be provided for %s",
+                    dir,
+                  ),
+                ),
+              )
             | e => raise(e)
             }
           };

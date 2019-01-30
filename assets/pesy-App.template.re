@@ -1,1 +1,1 @@
-<PACKAGE_NAME_UPPER_CAMEL>.Util.foo()
+Library.Util.foo();

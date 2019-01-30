@@ -29,7 +29,7 @@ let bootstrapIfNecessary = projectPath =>
           "azure-pipeline-templates" / "pesy-esy-build-steps.template.yml"
         ),
       );
-    let packageLibName = packageNameKebabSansScope ++ ".lib";
+    let packageLibName = packageNameKebabSansScope ++ "/library";
 
     if (!exists("package.json")) {
       let packageJSON =
