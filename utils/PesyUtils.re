@@ -120,12 +120,13 @@ let mkdir = (~perms=?, p) =>
   | None => Unix.mkdir(p, 0o755)
   };
 
-let mkdirp = p => {
+let rec mkdirp = p => {
   let directory_created =
     try (Sys.is_directory(p)) {
     | Sys_error(_) => false
     };
   if (!directory_created) {
+    mkdirp(Filename.dirname(p));
     mkdir(p);
   };
 };
