@@ -16,8 +16,9 @@
       "bin": "TestPesyNpm.re as test-pesy-npm.exe"
     },
     "library": {},
+    "library/foo/bar": {},
     "executable": {
-      "require": ["pesy-npm/library"],
+      "require": ["pesy-npm/library/foo/bar", "pesy-npm/library"],
       "bin": "PesyNpmApp.re as pesy-npm-app.exe"
     }
   },
