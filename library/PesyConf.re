@@ -504,13 +504,176 @@ module JSON: {
   let debug = t => to_string(t);
 };
 
+let moduleNameOf = fileName =>
+  Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
+
+let%expect_test _ = {
+  print_endline(moduleNameOf("Foo.re"));
+  %expect
+  {|
+     Foo
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(moduleNameOf("Foo.ml"));
+  %expect
+  {|
+     Foo
+   |};
+};
+
+let isValidBinaryFileName = fileName =>
+  Str.string_match(Str.regexp("^.+\\.exe$"), fileName, 0);
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidBinaryFileName("Foo.re")));
+  %expect
+  {|
+     false
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidBinaryFileName("Foo.exe")));
+  %expect
+  {|
+     true
+   |};
+};
+
+let isValidSourceFile = fileName =>
+  Str.string_match(Str.regexp("^.+\\.\\(re\\|ml\\)$"), fileName, 0);
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidSourceFile("Foo.re")));
+  %expect
+  {|
+     true
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidSourceFile("Foo.ml")));
+  %expect
+  {|
+     true
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidSourceFile("Foo.mlsss")));
+  %expect
+  {|
+     false
+   |};
+};
+
 /* Turns "Foo.re as Foo.exe" => ("Foo.re", "Foo.exe") */
+
+type bte =
+  | InvalidSourceFilename
+  | InvalidBinaryName;
+
+let bte_to_string =
+  fun
+  | InvalidSourceFilename => "InvalidSourceFilename"
+  | InvalidBinaryName => "InvalidBinaryName";
+
+exception BinaryTupleNameError(bte);
 let getBinaryNameTuple = namesString => {
   let parts = Str.(split(regexp(" +as +"), namesString));
   switch (parts) {
-  | [a, b, ...r] when List.length(r) == 0 => (a, b)
+  | [a] =>
+    if (!isValidSourceFile(a)) {
+      raise(BinaryTupleNameError(InvalidSourceFilename));
+    };
+    (a, moduleNameOf(a) ++ ".exe");
+  | [a, b, ...r] when List.length(r) == 0 =>
+    if (!isValidSourceFile(a)) {
+      raise(BinaryTupleNameError(InvalidSourceFilename));
+    };
+    if (!isValidBinaryFileName(b)) {
+      raise(BinaryTupleNameError(InvalidBinaryName));
+    };
+    (a, b);
   | _ => raise(FatalError("Invalid binary name (syntax)"))
   };
+};
+
+let%expect_test _ = {
+  let (a, b) = getBinaryNameTuple("foo.re as blah.exe");
+  printf("(%s, %s)", a, b);
+  %expect
+  {|
+     (foo.re, blah.exe)
+   |};
+};
+
+let%expect_test _ = {
+  let result =
+    try (
+      {
+        let (a, b) = getBinaryNameTuple("foo as blah.exe");
+        sprintf("(%s, %s)", a, b);
+      }
+    ) {
+    | BinaryTupleNameError(x) =>
+      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
+    | e => raise(e)
+    };
+  print_endline(result);
+  %expect
+  {|
+          BinaryTupleNameError(InvalidSourceFilename)
+     |};
+};
+
+let%expect_test _ = {
+  let result =
+    try (
+      {
+        let (a, b) = getBinaryNameTuple("foo.re as blah");
+        sprintf("(%s, %s)", a, b);
+      }
+    ) {
+    | BinaryTupleNameError(x) =>
+      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
+    | e => raise(e)
+    };
+  print_endline(result);
+  %expect
+  {|
+          BinaryTupleNameError(InvalidBinaryName)
+     |};
+};
+
+let%expect_test _ = {
+  let (a, b) = getBinaryNameTuple("foo.re");
+  printf("(%s, %s)", a, b);
+  %expect
+  {|
+     (foo.re, foo.exe)
+     |};
+};
+
+let%expect_test _ = {
+  let result =
+    try (
+      {
+        let (a, b) = getBinaryNameTuple("foo");
+        sprintf("(%s, %s)", a, b);
+      }
+    ) {
+    | BinaryTupleNameError(x) =>
+      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
+    | e => raise(e)
+    };
+  print_endline(result);
+  %expect
+  {|
+          BinaryTupleNameError(InvalidSourceFilename)
+     |};
 };
 
 /* Turns "foo/bar/baz" => "foo.bar.baz" */
@@ -681,7 +844,8 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
         let main =
           switch (bin) {
           | Some((mainFileName, _installedBinaryName)) =>
-            Str.global_replace(Str.regexp("\\.re"), "", mainFileName)
+            moduleNameOf(mainFileName)
+
           | _ =>
             try (
               JSON.member(conf, "main") |> JSON.toValue |> FieldTypes.toString
