@@ -418,6 +418,83 @@ let%expect_test _ = {
   |};
 };
 
+exception ResolveRelativePathFailure(string);
+let resolveRelativePath = path => {
+  let separator = "/";
+  let revParts = List.rev(Str.split(Str.regexp(separator), path));
+
+  let rec resolve = (parts, skipCount, acc) => {
+    switch (parts) {
+    | ["..", ...r] => resolve(r, skipCount + 1, acc)
+    | [".", ...r] => resolve(r, skipCount, acc)
+    | [h, ...r] =>
+      resolve(
+        r,
+        skipCount > 0 ? skipCount - 1 : 0,
+        skipCount == 0 ? [h, ...acc] : acc,
+      )
+    | [] =>
+      if (skipCount == 0) {
+        acc;
+      } else {
+        raise(
+          ResolveRelativePathFailure(
+            sprintf("Failed resolving: %s Too many `../`", path),
+          ),
+        );
+      }
+    };
+  };
+
+  String.concat(separator, resolve(revParts, 0, []));
+};
+
+let%expect_test _ = {
+  print_endline(resolveRelativePath("foo/lib"));
+  %expect
+  {|
+     foo/lib
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(resolveRelativePath("foo/bar/.."));
+  %expect
+  {|
+     foo
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(resolveRelativePath("foo/bar/../.."));
+  %expect
+  {|
+
+   |};
+};
+
+let%expect_test _ = {
+  let result =
+    try (resolveRelativePath("foo/bar/../../..")) {
+    | ResolveRelativePathFailure(x) =>
+      sprintf("ResolveRelativePathFailure(\"%s\")", x)
+    | e => raise(e)
+    };
+  print_endline(result);
+  %expect
+  {|
+          ResolveRelativePathFailure("Failed resolving: foo/bar/../../.. Too many `../`")
+     |};
+};
+
+let%expect_test _ = {
+  print_endline(resolveRelativePath("foo/bar/../baz/"));
+  %expect
+  {|
+     foo/baz
+   |};
+};
+
 module FieldTypes = {
   type t =
     | Bool(bool)
@@ -720,13 +797,21 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
         | e => raise(e)
         };
+
+      let (<|>) = (f, g, x) => g(f(x));
       let require =
         try (
           JSON.member(conf, "require")
           |> JSON.toValue
           |> FieldTypes.toList
-          |> List.map(FieldTypes.toString)
-          |> /* TODO: relative path */ List.map(pathToOCamlLibName)
+          |> List.map(
+               FieldTypes.toString
+               <|> (
+                 x => x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x
+               )
+               <|> resolveRelativePath
+               <|> pathToOCamlLibName,
+             )
         ) {
         /* "my-package/lib/here" => "my-package.lib.here" */
         | _ => []
