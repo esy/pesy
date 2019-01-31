@@ -1,0 +1,2 @@
+Util.foo();
+Bar.bar();
