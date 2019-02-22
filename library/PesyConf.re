@@ -5,6 +5,7 @@ open PesyUtils.NoLwt;
 exception NullJSONValue(unit);
 exception FatalError(string);
 exception ShouldNotBeHere(unit);
+exception InvalidRootName(string);
 
 module Library: {
   module Mode: {
@@ -761,324 +762,380 @@ let isBinPropertyPresent =
   | Some(_) => true
   | _ => false;
 
-type t = list(package);
+let isValidScopeName = n => {
+  n.[0] == '@';
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidScopeName("blah")));
+  %expect
+  {|
+     false
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidScopeName("@myscope")));
+  %expect
+  {|
+     true
+   |};
+};
+
+let stripAtTheRate = s => String.sub(s, 1, String.length(s) - 1);
+
+let doubleKebabifyIfScoped = n => {
+  switch (Str.split(Str.regexp("/"), n)) {
+  | [pkgName] => pkgName
+  | [scope, pkgName, ...rest] =>
+    isValidScopeName(scope)
+      ? String.concat(
+          "/",
+          [stripAtTheRate(scope) ++ "--" ++ pkgName, ...rest],
+        )
+      : raise(InvalidRootName(n))
+  | _ => raise(InvalidRootName(n))
+  };
+};
+
+let%expect_test _ = {
+  print_endline(doubleKebabifyIfScoped("foo-bar"));
+  %expect
+  {|
+     foo-bar
+   |};
+};
+
+type t = (string, list(package));
 let toPesyConf = (projectPath: string, json: JSON.t): t => {
   let pkgs = JSON.toKeyValuePairs(JSON.member(json, "buildDirs"));
+
   let rootName =
-    /* "name" in root package.json */ JSON.member(json, "name")
-    |> JSON.toValue
-    |> FieldTypes.toString;
+    /* "name" in root package.json */
+    doubleKebabifyIfScoped(
+      JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
+    );
+  /* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
 
-  List.map(
-    pkg => {
-      let (dir, conf) = pkg;
-      let bin =
-        try (
-          Some(
-            JSON.member(conf, "bin")
-            |> JSON.toValue
-            |> FieldTypes.toString
-            |> getBinaryNameTuple,
-          )
-        ) {
-        | NullJSONValue(_) => None
-        | e => raise(e)
-        };
-
-      let name_was_guessed = ref(false);
-      /* Pesy'name is Dune's public_name */
-      let name =
-        try (JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString) {
-        | NullJSONValue(_) =>
-          name_was_guessed := true;
-          switch (bin) {
-          | Some((_mainFileName, installedBinaryName)) => installedBinaryName
-          | None => rootName ++ "." ++ pathToOCamlLibName(dir)
-          };
-        | e => raise(e)
-        };
-
-      let (<|>) = (f, g, x) => g(f(x));
-      let require =
-        try (
-          JSON.member(conf, "require")
-          |> JSON.toValue
-          |> FieldTypes.toList
-          |> List.map(
-               FieldTypes.toString
-               <|> (
-                 x => x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x
-               )
-               <|> resolveRelativePath
-               <|> pathToOCamlLibName,
-             )
-        ) {
-        /* "my-package/lib/here" => "my-package.lib.here" */
-        | _ => []
-        };
-
-      let flags =
-        try (
-          Some(
-            JSON.member(conf, "flags")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let ocamlcFlags =
-        try (
-          Some(
-            JSON.member(conf, "ocamlcFlags")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let ocamloptFlags =
-        try (
-          Some(
-            JSON.member(conf, "ocamloptFlags")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let jsooFlags =
-        try (
-          Some(
-            JSON.member(conf, "jsooFlags")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let preprocess =
-        try (
-          Some(
-            JSON.member(conf, "preprocess")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let includeSubdirs =
-        try (
-          Some(
-            JSON.member(conf, "includeSubdirs")
-            |> JSON.toValue
-            |> FieldTypes.toString,
-          )
-        ) {
-        | NullJSONValue(_) => None
-        | e => raise(e)
-        };
-
-      let rawBuildConfig =
-        try (
-          Some(
-            JSON.member(conf, "rawBuildConfig")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let rawBuildConfigFooter =
-        try (
-          Some(
-            JSON.member(conf, "rawBuildConfigFooter")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let nameSpecifiedHasBinSuffix =
-        ! name_was_guessed^ && getSuffix(name) == "exe";
-      let binPropertyIsPresent = isBinPropertyPresent(bin);
-
-      let isBinary = nameSpecifiedHasBinSuffix || binPropertyIsPresent;
-      if (! name_was_guessed^
-          && !nameSpecifiedHasBinSuffix
-          && binPropertyIsPresent) {
-        raise(FatalError("Conflicting values for `bin` property `name`"));
-      };
-
-      if (isBinary) {
-        /* Prioritising `bin` over `name` */
-        let main =
-          switch (bin) {
-          | Some((mainFileName, _installedBinaryName)) =>
-            moduleNameOf(mainFileName)
-
-          | _ =>
-            try (
-              JSON.member(conf, "main") |> JSON.toValue |> FieldTypes.toString
-            ) {
-            | NullJSONValue () =>
-              raise(
-                FatalError(
-                  sprintf(
-                    "Atleast one of `bin` or `main` must be provided for %s",
-                    dir,
-                  ),
-                ),
-              )
-            | e => raise(e)
-            }
-          };
-
-        let modes =
+  (
+    rootName ++ ".opam",
+    List.map(
+      pkg => {
+        let (dir, conf) = pkg;
+        let bin =
           try (
             Some(
-              Executable.Mode.ofList(
+              JSON.member(conf, "bin")
+              |> JSON.toValue
+              |> FieldTypes.toString
+              |> getBinaryNameTuple,
+            )
+          ) {
+          | NullJSONValue(_) => None
+          | e => raise(e)
+          };
+
+        let name_was_guessed = ref(false);
+        /* Pesy'name is Dune's public_name */
+        let name =
+          try (
+            JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString
+          ) {
+          | NullJSONValue(_) =>
+            name_was_guessed := true;
+            switch (bin) {
+            | Some((_mainFileName, installedBinaryName)) => installedBinaryName
+            | None => rootName ++ "." ++ pathToOCamlLibName(dir)
+            };
+          | e => raise(e)
+          };
+
+        let (<|>) = (f, g, x) => g(f(x));
+        let require =
+          try (
+            JSON.member(conf, "require")
+            |> JSON.toValue
+            |> FieldTypes.toList
+            |> List.map(
+                 FieldTypes.toString
+                 <|> (
+                   x =>
+                     x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x
+                 )
+                 <|> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x)
+                 <|> resolveRelativePath
+                 <|> pathToOCamlLibName,
+               )
+          ) {
+          /* "my-package/lib/here" => "my-package.lib.here" */
+          | _ => []
+          };
+
+        let flags =
+          try (
+            Some(
+              JSON.member(conf, "flags")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let ocamlcFlags =
+          try (
+            Some(
+              JSON.member(conf, "ocamlcFlags")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let ocamloptFlags =
+          try (
+            Some(
+              JSON.member(conf, "ocamloptFlags")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let jsooFlags =
+          try (
+            Some(
+              JSON.member(conf, "jsooFlags")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let preprocess =
+          try (
+            Some(
+              JSON.member(conf, "preprocess")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let includeSubdirs =
+          try (
+            Some(
+              JSON.member(conf, "includeSubdirs")
+              |> JSON.toValue
+              |> FieldTypes.toString,
+            )
+          ) {
+          | NullJSONValue(_) => None
+          | e => raise(e)
+          };
+
+        let rawBuildConfig =
+          try (
+            Some(
+              JSON.member(conf, "rawBuildConfig")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let rawBuildConfigFooter =
+          try (
+            Some(
+              JSON.member(conf, "rawBuildConfigFooter")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let nameSpecifiedHasBinSuffix =
+          ! name_was_guessed^ && getSuffix(name) == "exe";
+        let binPropertyIsPresent = isBinPropertyPresent(bin);
+
+        let isBinary = nameSpecifiedHasBinSuffix || binPropertyIsPresent;
+        if (! name_was_guessed^
+            && !nameSpecifiedHasBinSuffix
+            && binPropertyIsPresent) {
+          raise(FatalError("Conflicting values for `bin` property `name`"));
+        };
+
+        if (isBinary) {
+          /* Prioritising `bin` over `name` */
+          let main =
+            switch (bin) {
+            | Some((mainFileName, _installedBinaryName)) =>
+              moduleNameOf(mainFileName)
+
+            | _ =>
+              try (
+                JSON.member(conf, "main")
+                |> JSON.toValue
+                |> FieldTypes.toString
+              ) {
+              | NullJSONValue () =>
+                raise(
+                  FatalError(
+                    sprintf(
+                      "Atleast one of `bin` or `main` must be provided for %s",
+                      dir,
+                    ),
+                  ),
+                )
+              | e => raise(e)
+              }
+            };
+
+          let modes =
+            try (
+              Some(
+                Executable.Mode.ofList(
+                  JSON.member(conf, "modes")
+                  |> JSON.toValue
+                  |> FieldTypes.toList
+                  |> List.map(a => a |> FieldTypes.toString),
+                ),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          {
+            common:
+              Common.create(
+                name,
+                Path.(projectPath / dir),
+                require,
+                flags,
+                ocamlcFlags,
+                ocamloptFlags,
+                jsooFlags,
+                preprocess,
+                includeSubdirs,
+                rawBuildConfig,
+                rawBuildConfigFooter,
+              ),
+            pkgType: ExecutablePackage(Executable.create(main, modes)),
+          };
+        } else {
+          let namespace =
+            try (
+              JSON.member(conf, "namespace")
+              |> JSON.toValue
+              |> FieldTypes.toString
+            ) {
+            | NullJSONValue () => upperCamelCasify(Filename.basename(dir))
+            | e => raise(e)
+            };
+          let libraryModes =
+            try (
+              Some(
                 JSON.member(conf, "modes")
                 |> JSON.toValue
                 |> FieldTypes.toList
-                |> List.map(a => a |> FieldTypes.toString),
+                |> List.map(FieldTypes.toString)
+                |> List.map(Library.Mode.ofString),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          let cStubs =
+            try (
+              Some(
+                JSON.member(conf, "cNames")
+                |> JSON.toValue
+                |> FieldTypes.toList
+                |> List.map(FieldTypes.toString),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          let virtualModules =
+            try (
+              Some(
+                JSON.member(conf, "virtualModules")
+                |> JSON.toValue
+                |> FieldTypes.toList
+                |> List.map(FieldTypes.toString),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          let implements =
+            try (
+              Some(
+                JSON.member(conf, "implements")
+                |> JSON.toValue
+                |> FieldTypes.toList
+                |> List.map(FieldTypes.toString),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          let wrapped =
+            try (
+              Some(
+                JSON.member(conf, "wrapped")
+                |> JSON.toValue
+                |> FieldTypes.toBool,
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          {
+            common:
+              Common.create(
+                name,
+                Path.(projectPath / dir),
+                require,
+                flags,
+                ocamlcFlags,
+                ocamloptFlags,
+                jsooFlags,
+                preprocess,
+                includeSubdirs,
+                rawBuildConfig,
+                rawBuildConfigFooter,
               ),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        {
-          common:
-            Common.create(
-              name,
-              Path.(projectPath / dir),
-              require,
-              flags,
-              ocamlcFlags,
-              ocamloptFlags,
-              jsooFlags,
-              preprocess,
-              includeSubdirs,
-              rawBuildConfig,
-              rawBuildConfigFooter,
-            ),
-          pkgType: ExecutablePackage(Executable.create(main, modes)),
-        };
-      } else {
-        let namespace =
-          try (
-            JSON.member(conf, "namespace")
-            |> JSON.toValue
-            |> FieldTypes.toString
-          ) {
-          | NullJSONValue () => upperCamelCasify(Filename.basename(dir))
-          | e => raise(e)
-          };
-        let libraryModes =
-          try (
-            Some(
-              JSON.member(conf, "modes")
-              |> JSON.toValue
-              |> FieldTypes.toList
-              |> List.map(FieldTypes.toString)
-              |> List.map(Library.Mode.ofString),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        let cStubs =
-          try (
-            Some(
-              JSON.member(conf, "cNames")
-              |> JSON.toValue
-              |> FieldTypes.toList
-              |> List.map(FieldTypes.toString),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        let virtualModules =
-          try (
-            Some(
-              JSON.member(conf, "virtualModules")
-              |> JSON.toValue
-              |> FieldTypes.toList
-              |> List.map(FieldTypes.toString),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        let implements =
-          try (
-            Some(
-              JSON.member(conf, "implements")
-              |> JSON.toValue
-              |> FieldTypes.toList
-              |> List.map(FieldTypes.toString),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        let wrapped =
-          try (
-            Some(
-              JSON.member(conf, "wrapped")
-              |> JSON.toValue
-              |> FieldTypes.toBool,
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        {
-          common:
-            Common.create(
-              name,
-              Path.(projectPath / dir),
-              require,
-              flags,
-              ocamlcFlags,
-              ocamloptFlags,
-              jsooFlags,
-              preprocess,
-              includeSubdirs,
-              rawBuildConfig,
-              rawBuildConfigFooter,
-            ),
-          pkgType:
-            LibraryPackage(
-              Library.create(
-                namespace,
-                libraryModes,
-                cStubs,
-                virtualModules,
-                implements,
-                wrapped,
+            pkgType:
+              LibraryPackage(
+                Library.create(
+                  namespace,
+                  libraryModes,
+                  cStubs,
+                  virtualModules,
+                  implements,
+                  wrapped,
+                ),
               ),
-            ),
+          };
         };
-      };
-    },
-    pkgs,
+      },
+      pkgs,
+    ),
   );
 };
 
@@ -1092,10 +1149,10 @@ let toPackages = (_prjPath, pkgs) =>
     pkgs,
   );
 
-let gen = (prjPath, pkgPath) => {
+let gen = (projectPath, pkgPath) => {
   let json = JSON.fromFile(pkgPath);
-  let pesyPackages = toPesyConf(prjPath, json);
-  let dunePackages = toPackages(prjPath, pesyPackages); /* TODO: Could return added, updated, deleted files i.e. packages updated so that the main exe could log nicely */
+  let (rootNameOpamFile, pesyPackages) = toPesyConf(projectPath, json);
+  let dunePackages = toPackages(projectPath, pesyPackages); /* TODO: Could return added, updated, deleted files i.e. packages updated so that the main exe could log nicely */
   List.iter(
     dpkg => {
       let (path, duneFile) = dpkg;
@@ -1104,12 +1161,44 @@ let gen = (prjPath, pkgPath) => {
     },
     dunePackages,
   );
+
+  let foundAnOpamFile = ref(false);
+  let dirForEachEntry = (f, dirname) => {
+    let d = Unix.opendir(dirname);
+    try (
+      while (true) {
+        f(Unix.readdir(d));
+      }
+    ) {
+    | End_of_file => Unix.closedir(d)
+    };
+  };
+  let contains = (n, s) =>
+    try (Str.search_forward(Str.regexp(s), n, 0) != (-1)) {
+    | Not_found => false
+    };
+
+  dirForEachEntry(
+    n =>
+      if (contains(n, ".opam") && ! foundAnOpamFile^) {
+        printf("%s is an opam file\n", n);
+        foundAnOpamFile := true;
+        if (n != rootNameOpamFile) {
+          copyFile(
+            Path.(projectPath / n),
+            Path.(projectPath / rootNameOpamFile),
+          );
+          Unix.unlink(Path.(projectPath / n));
+        };
+      },
+    projectPath,
+  );
 };
 
 /* TODO: Figure better test setup */
 let testToPackages = jsonStr => {
   let json = JSON.ofString(jsonStr);
-  let pesyPackages = toPesyConf("", json);
+  let (_, pesyPackages) = toPesyConf("", json);
   let dunePackages = toPackages("", pesyPackages);
   List.map(
     p => {

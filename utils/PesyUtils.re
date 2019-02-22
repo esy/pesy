@@ -83,19 +83,9 @@ let loadTemplate = name =>
 
 let buffer_size = 8192;
 let buffer = Bytes.create(buffer_size);
-let copyTemplate = (input_name, output_name) => {
+let copyFile = (input_name, output_name) => {
   open Unix;
-  let fd_in =
-    openfile(
-      Path.(
-        (Sys.executable_name |> parent |> parent)
-        / "share"
-        / "template-repo"
-        / input_name
-      ),
-      [O_RDONLY],
-      0,
-    );
+  let fd_in = openfile(input_name, [O_RDONLY], 0);
   let fd_out = openfile(output_name, [O_WRONLY, O_CREAT, O_TRUNC], 438);
   let rec copy_loop = () =>
     switch (read(fd_in, buffer, 0, buffer_size)) {
@@ -108,6 +98,18 @@ let copyTemplate = (input_name, output_name) => {
   copy_loop();
   close(fd_in);
   close(fd_out);
+};
+
+let copyTemplate = (input_name, output_name) => {
+  copyFile(
+    Path.(
+      (Sys.executable_name |> parent |> parent)
+      / "share"
+      / "template-repo"
+      / input_name
+    ),
+    output_name,
+  );
 };
 
 let r = Str.regexp;
