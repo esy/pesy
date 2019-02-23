@@ -546,7 +546,7 @@ module JSON: {
   let debug: t => string;
 } = {
   open Yojson.Basic;
-  type t = json;
+  type t = Yojson.Basic.t;
   exception InvalidJSONValue(string);
   exception MissingJSONMember(string);
   let ofString = jstr => from_string(jstr);
@@ -558,12 +558,12 @@ module JSON: {
         MissingJSONMember(Printf.sprintf("%s was missing in the json", m)),
       )
     };
-  let toKeyValuePairs = (json: json) =>
+  let toKeyValuePairs = (json: Yojson.Basic.t) =>
     switch (json) {
     | `Assoc(jsonKeyValuePairs) => jsonKeyValuePairs
     | _ => raise(InvalidJSONValue("Expected key value pairs"))
     };
-  let rec toValue = (json: json) =>
+  let rec toValue = (json: Yojson.Basic.t) =>
     switch (json) {
     | `Bool(b) => FieldTypes.Bool(b)
     | `String(s) => FieldTypes.String(s)
