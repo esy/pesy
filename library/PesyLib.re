@@ -4,12 +4,14 @@ open NoLwt;
 open Printf;
 module Mode = Mode;
 module PesyConf = PesyConf;
+exception BootstrappingError(string);
 
 let bootstrapIfNecessary = projectPath =>
   if (!isEsyInstalled()) {
-    fprintf(
-      stderr,
-      "ERROR: You haven't installed esy globally. First install esy then try again",
+    raise(
+      BootstrappingError(
+        "You haven't installed esy globally. First install esy then try again",
+      ),
     );
   } else {
     let packageNameKebab = kebab(Filename.basename(projectPath));
@@ -155,6 +157,12 @@ let bootstrapIfNecessary = projectPath =>
     if (!exists(rootDuneFile)) {
       write(rootDuneFile, "(ignored_subdirs (node_modules))");
     };
+    (
+      packageNameKebabSansScope,
+      version,
+      packageNameUpperCamelCase,
+      packageLibName,
+    );
   };
 
 let generateBuildFiles = projectRoot => {

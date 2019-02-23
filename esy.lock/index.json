@@ -1,5 +1,5 @@
 {
-  "checksum": "89e5d6ba2674063fb99bc99118a9ab47",
+  "checksum": "f1f36dfab87f84d7d98857fedc7a7bc7",
   "root": "pesy@link-dev:./package.json",
   "node": {
     "refmterr@3.1.10@d41d8cd9": {
@@ -31,7 +31,8 @@
       "overrides": [],
       "dependencies": [
         "refmterr@3.1.10@d41d8cd9", "ocaml@4.6.10@d41d8cd9",
-        "dune@0.2.1@d41d8cd9", "@opam/yojson@opam:1.7.0@2d92307e",
+        "dune@0.2.1@d41d8cd9", "@reason-native/pastel@0.2.0@d41d8cd9",
+        "@opam/yojson@opam:1.7.0@2d92307e",
         "@opam/sexplib@opam:v0.11.0@bf5282c9",
         "@opam/ppx_inline_test@opam:v0.11.0@b987f92a",
         "@opam/ppx_expect@opam:v0.11.1@406d6035",
@@ -66,6 +67,23 @@
       },
       "overrides": [],
       "dependencies": [],
+      "devDependencies": []
+    },
+    "@reason-native/pastel@0.2.0@d41d8cd9": {
+      "id": "@reason-native/pastel@0.2.0@d41d8cd9",
+      "name": "@reason-native/pastel",
+      "version": "0.2.0",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://registry.npmjs.org/@reason-native/pastel/-/pastel-0.2.0.tgz#sha1:90d6afacf90db0350705c08d151043ca96dcea10"
+        ]
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.6.10@d41d8cd9", "@opam/dune@opam:1.7.2@52ecbb97",
+        "@esy-ocaml/reason@3.4.0@d41d8cd9"
+      ],
       "devDependencies": []
     },
     "@opam/yojson@opam:1.7.0@2d92307e": {

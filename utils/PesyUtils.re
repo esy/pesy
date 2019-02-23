@@ -1,3 +1,4 @@
+open Printf;
 let prompt = q => {
   print_endline(q);
   read_line();
@@ -156,6 +157,37 @@ let renderAsciiTree = (dir, name, namespace, require, isLast) =>
     ++ (require == "" ? "" : (isLast ? "   " : "│  ") ++ require);
   };
 
+/* Capable of rendering a tree of depth 1 */
+exception RenderAsciiTreeChildrenError(string);
+let renderAscTreeChildren =
+  fun
+  | [] =>
+    raise(RenderAsciiTreeChildrenError("Tree cannot have zero children"))
+  | [firstChild, ...restChildren] => {
+      let firstChildLog = sprintf("├─ %s", firstChild);
+      let restChildrenLog =
+        List.map(c => sprintf("│  %s", c), restChildren);
+      String.concat("\n", ["│", firstChildLog, ...restChildrenLog]);
+    };
+let renderAscLastTree =
+  fun
+  | [] =>
+    raise(RenderAsciiTreeChildrenError("Tree cannot have zero children"))
+  | [firstChild, ...restChildren] => {
+      let firstChildLog = sprintf("└─ %s", firstChild);
+      let restChildrenLog = List.map(c => sprintf("   %s", c), restChildren);
+      String.concat("\n", ["│", firstChildLog, ...restChildrenLog]);
+    };
+
+let rec renderAscTree =
+  fun
+  | [] => ()
+  | [t] => print_endline(renderAscLastTree(t))
+  | [t, ...rest] => {
+      print_endline(renderAscTreeChildren(t));
+      renderAscTree(rest);
+    };
+
 let readFileOpt = f =>
   if (exists(f)) {
     Some(readFile(f));
@@ -176,17 +208,52 @@ let readFileOpt = f =>
 /* }; */
 
 let runCommandWithEnv = (command, args) => {
-  let attach =
-    Unix.create_process_env(
-      command,
-      Array.append([|command|], args),
-      Unix.environment(),
+  /* let attach = */
+  /*   Unix.create_process_env( */
+  /*     command, */
+  /*     Array.append([|command|], args), */
+  /*     Unix.environment(), */
+  /*   ); */
+  /* let pid = attach(Unix.stdin, Unix.stdout, Unix.stderr); */
+  /* switch (Unix.waitpid([], pid)) { */
+  /* | (_, WEXITED(c)) => c */
+  /* | (_, WSIGNALED(c)) => c */
+  /* | (_, WSTOPPED(c)) => c */
+  /* }; */
+
+  open Unix;
+  let cmd =
+    String.concat(" ", Array.to_list(Array.append([|command|], args)));
+  let (cout, cin, cerr) = open_process_full(cmd, Unix.environment());
+  let repeat = ref(true);
+  while (repeat^) {
+    ignore(
+      try (
+        {
+          let line = input_line(cerr);
+          print_endline(Pastel.(<Pastel dim=true> line </Pastel>));
+        }
+      ) {
+      | End_of_file => repeat := false
+      },
     );
-  let pid = attach(Unix.stdin, Unix.stdout, Unix.stderr);
-  switch (Unix.waitpid([], pid)) {
-  | (_, WEXITED(c)) => c
-  | (_, WSIGNALED(c)) => c
-  | (_, WSTOPPED(c)) => c
+  };
+  while (repeat^) {
+    ignore(
+      try (
+        {
+          let line = input_line(cout);
+          print_endline(Pastel.(<Pastel dim=true> line </Pastel>));
+        }
+      ) {
+      | End_of_file => repeat := false
+      },
+    );
+  };
+  switch (close_process_full((cout, cin, cerr))) {
+  | WEXITED(c) => c
+  | WSIGNALED(c) => c
+  | WSTOPPED(c) => c
   };
 };
 

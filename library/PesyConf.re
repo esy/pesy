@@ -1191,7 +1191,6 @@ let gen = (projectPath, pkgPath) => {
   dirForEachEntry(
     n =>
       if (contains(n, ".opam") && ! foundAnOpamFile^) {
-        printf("%s is an opam file\n", n);
         foundAnOpamFile := true;
         if (n != rootNameOpamFile) {
           copyFile(

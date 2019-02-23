@@ -11,19 +11,51 @@ let userCommand =
 let projectRoot = Sys.getcwd();
 
 /* use readFileOpt to read previously computed directory path */
-printf("Bootstrapping files...");
-flush_all();
-PesyLib.bootstrapIfNecessary(projectRoot);
-print_endline("done");
+let (pkgName, versionString, packageNameUpperCamelCase, packageLibName) =
+  PesyLib.bootstrapIfNecessary(projectRoot);
+
+let packageNameVersion = sprintf("%s@%s", pkgName, versionString);
+print_endline(Pastel.(<Pastel bold=true> packageNameVersion </Pastel>));
+PesyUtils.renderAscTree([
+  [
+    "executable",
+    sprintf(
+      "bin:    %sApp.re as %sApp.exe",
+      packageNameUpperCamelCase,
+      packageNameUpperCamelCase,
+    ),
+    sprintf(
+      "require: [%s]",
+      List.fold_left(
+        (acc, e) => acc ++ " " ++ e,
+        "",
+        [sprintf("\"%s\"", packageLibName)],
+      ),
+    ),
+  ],
+  ["library", "require: []"],
+  [
+    "test",
+    sprintf(
+      "bin:    Test%s.re as Test%s.exe",
+      packageNameUpperCamelCase,
+      packageNameUpperCamelCase,
+    ),
+    sprintf(
+      "require: [%s]",
+      String.concat(", ", [sprintf("\"%s\"", packageLibName)]),
+    ),
+  ],
+]);
+print_newline();
+
 PesyLib.generateBuildFiles(projectRoot);
 
 /*  @esy-ocaml/foo-package -> foo-package */
-print_endline("Installing deps and building...");
-
 let esyCommand =
-  Sys.unix ?
-    "esy" :
-    {
+  Sys.unix
+    ? "esy"
+    : {
       let pathVars =
         Array.to_list(Unix.environment())
         |> List.map(e =>
@@ -76,7 +108,7 @@ let esyCommand =
       };
     };
 
-print_endline("Running esy install...");
+print_endline(Pastel.(<Pastel bold=true> "Running 'esy install'" </Pastel>));
 
 let setupStatus = PesyUtils.runCommandWithEnv(esyCommand, [|"install"|]);
 if (setupStatus != 0) {
@@ -84,10 +116,12 @@ if (setupStatus != 0) {
   exit(-1);
 };
 
-print_endline("Running esy build...");
+print_endline(Pastel.(<Pastel bold=true> "Running 'esy build'" </Pastel>));
 let setupStatus = PesyUtils.runCommandWithEnv(esyCommand, [|"build"|]);
 if (setupStatus != 0) {
   fprintf(stderr, "esy (%s) build failed!", esyCommand);
   exit(-1);
 };
-print_endline("You can now run `esy test`");
+print_endline(
+  Pastel.(<Pastel color=Green> "You can now run 'esy test'" </Pastel>),
+);
