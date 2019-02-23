@@ -1088,7 +1088,17 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                 JSON.member(conf, "implements")
                 |> JSON.toValue
                 |> FieldTypes.toList
-                |> List.map(FieldTypes.toString),
+                |> List.map(
+                     FieldTypes.toString
+                     <|> (
+                       x =>
+                         x.[0] == '.'
+                           ? sprintf("%s/%s/%s", rootName, dir, x) : x
+                     )
+                     <|> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x)
+                     <|> resolveRelativePath
+                     <|> pathToOCamlLibName,
+                   ),
               )
             ) {
             | NullJSONValue () => None
