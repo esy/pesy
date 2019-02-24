@@ -49,7 +49,7 @@ PesyUtils.renderAscTree([
 ]);
 print_newline();
 
-PesyLib.generateBuildFiles(projectRoot);
+ignore(PesyLib.generateBuildFiles(projectRoot));
 
 /*  @esy-ocaml/foo-package -> foo-package */
 let esyCommand =

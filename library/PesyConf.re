@@ -25,7 +25,7 @@ module Library: {
       option(bool)
     ) =>
     t;
-  let toDuneStanza: (Common.t, t) => (string, string);
+  let toDuneStanza: (Common.t, t) => (string, list(Stanza.t));
 } = {
   module Mode = {
     exception InvalidLibraryMode(string);
@@ -183,7 +183,7 @@ module Library: {
            @ rawBuildConfig,
       ]);
 
-    (path, DuneFile.toString([library, ...rawBuildConfigFooter]));
+    (path, [library, ...rawBuildConfigFooter]);
   };
 };
 
@@ -195,7 +195,7 @@ module Executable: {
     let toList: t => list(string);
   };
   let create: (string, option(Mode.t)) => t;
-  let toDuneStanza: (Common.t, t) => (string, string);
+  let toDuneStanza: (Common.t, t) => (string, list(Stanza.t));
 } = {
   module Mode = {
     exception InvalidCompilationMode(unit);
@@ -356,7 +356,7 @@ module Executable: {
            @ rawBuildConfig,
       ]);
 
-    (path, DuneFile.toString([executable, ...rawBuildConfigFooter]));
+    (path, [executable, ...rawBuildConfigFooter]);
   };
 };
 
@@ -1159,15 +1159,50 @@ let toPackages = (_prjPath, pkgs) =>
     pkgs,
   );
 
+type fileOperation =
+  | UPDATE(string)
+  | CREATE(string);
 let gen = (projectPath, pkgPath) => {
   let json = JSON.fromFile(pkgPath);
   let (rootNameOpamFile, pesyPackages) = toPesyConf(projectPath, json);
   let dunePackages = toPackages(projectPath, pesyPackages); /* TODO: Could return added, updated, deleted files i.e. packages updated so that the main exe could log nicely */
+  let operations = ref([]);
   List.iter(
     dpkg => {
       let (path, duneFile) = dpkg;
+      let duneFilePath = Path.(path / "dune");
       mkdirp(path);
-      write(Path.(path / "dune"), duneFile);
+      let duneFileStr = DuneFile.toString(duneFile);
+      try (
+        if (duneFile != DuneFile.ofFile(duneFilePath)) {
+          write(duneFilePath, duneFileStr);
+          operations :=
+            [
+              UPDATE(
+                Str.global_replace(
+                  Str.regexp(Path.(projectPath / "")),
+                  "",
+                  duneFilePath,
+                ),
+              ),
+              ...operations^,
+            ];
+        }
+      ) {
+      | _ =>
+        write(duneFilePath, duneFileStr);
+        operations :=
+          [
+            CREATE(
+              Str.global_replace(
+                Str.regexp(Path.(projectPath / "")),
+                "",
+                duneFilePath,
+              ),
+            ),
+            ...operations^,
+          ];
+      };
     },
     dunePackages,
   );
@@ -1198,10 +1233,12 @@ let gen = (projectPath, pkgPath) => {
             Path.(projectPath / rootNameOpamFile),
           );
           Unix.unlink(Path.(projectPath / n));
+          operations := [CREATE(Path.(projectPath / rootNameOpamFile))];
         };
       },
     projectPath,
   );
+  operations^;
 };
 
 /* TODO: Figure better test setup */
@@ -1234,7 +1271,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (executable (name Bar) (public_name Bar.exe) (libraries foo))
@@ -1258,7 +1295,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (libraries foo) (modes best))
@@ -1282,7 +1319,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (libraries foo) (c_names stubs))
@@ -1305,7 +1342,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (virtual_modules foo))
@@ -1328,7 +1365,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (implements foo))
@@ -1351,7 +1388,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (wrapped false))
@@ -1374,7 +1411,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (executable (name Foo) (public_name bar.exe) (modes (best c)))
@@ -1398,7 +1435,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (libraries foo) (flags -w -33+9))
@@ -1421,7 +1458,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (ocamlc_flags -annot -c))
@@ -1444,7 +1481,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib)
@@ -1468,7 +1505,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (js_of_ocaml -pretty -no-inline))
@@ -1491,7 +1528,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (preprocess (pps lwt_ppx)))
@@ -1514,7 +1551,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (include_subdirs unqualified))
@@ -1540,7 +1577,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (libraries lwt lwt.unix raw.lib)
@@ -1566,7 +1603,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib)) (install (section share_root) (files (asset.txt as asset.txt)))
@@ -1591,9 +1628,34 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (executable (name Foo) (public_name Foo.exe)) (install (section share_root) (files (asset.txt as asset.txt)))
    |};
+};
+
+let log = operations => {
+  print_newline();
+  List.iter(
+    o => {
+      switch (o) {
+      | CREATE(x) =>
+        print_endline(
+          Pastel.(
+            <Pastel> "    Created " <Pastel bold=true> x </Pastel> </Pastel>
+          ),
+        )
+      | UPDATE(x) =>
+        print_endline(
+          Pastel.(
+            <Pastel> "    Updated " <Pastel bold=true> x </Pastel> </Pastel>
+          ),
+        )
+      };
+      ();
+    },
+    operations,
+  );
+  print_newline();
 };

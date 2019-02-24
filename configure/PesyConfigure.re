@@ -23,8 +23,12 @@ let projectRoot =
     /**
      * This mean pesy is being run naked on the shell.
      * Either it was:
-     */
-    print_endline("pesy-configure must be run in esy's env");
+   */
+    print_endline(
+      Pastel.(
+        <Pastel color=Red> "pesy-configure must be run in esy's env" </Pastel>
+      ),
+    );
     exit(0);
   };
 
@@ -36,10 +40,20 @@ let mode =
     }
   );
 
-switch (mode) {
-| UPDATE =>
-  let packageJSONPath = Path.(projectRoot / "package.json");
-  PesyLib.PesyConf.gen(projectRoot, packageJSONPath);
+let operations =
+  switch (mode) {
+  | UPDATE =>
+    let packageJSONPath = Path.(projectRoot / "package.json");
+    PesyLib.PesyConf.gen(projectRoot, packageJSONPath);
+  };
+
+switch (operations) {
+| [] => ()
+| _ as operations => PesyLib.PesyConf.log(operations)
 };
 
-print_endline("Build config updated!");
+print_endline(
+  Pastel.(
+    <Pastel> "Ready for " <Pastel color=Green> "esy build" </Pastel> </Pastel>
+  ),
+);
