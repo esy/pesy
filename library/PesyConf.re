@@ -2,10 +2,21 @@ open Printf;
 open PesyUtils;
 open PesyUtils.NoLwt;
 
+type bte =
+  | InvalidSourceFilename(string)
+  | InvalidBinaryName(string);
+
+/* private */
 exception NullJSONValue(unit);
+
+/* public */
+exception ShouldNotBeNull(string);
 exception FatalError(string);
 exception ShouldNotBeHere(unit);
 exception InvalidRootName(string);
+exception GenericException(string);
+exception ResolveRelativePathFailure(string);
+exception BinaryTupleNameError(bte);
 
 module Library: {
   module Mode: {
@@ -369,8 +380,6 @@ type package = {
   pkgType,
 };
 
-exception GenericException(string);
-
 let getSuffix = name => {
   let parts = Str.split(Str.regexp("\\."), name);
   switch (List.rev(parts)) {
@@ -419,7 +428,6 @@ let%expect_test _ = {
   |};
 };
 
-exception ResolveRelativePathFailure(string);
 let resolveRelativePath = path => {
   let separator = "/";
   let revParts = List.rev(Str.split(Str.regexp(separator), path));
@@ -649,30 +657,25 @@ let%expect_test _ = {
 
 /* Turns "Foo.re as Foo.exe" => ("Foo.re", "Foo.exe") */
 
-type bte =
-  | InvalidSourceFilename
-  | InvalidBinaryName;
-
 let bte_to_string =
   fun
-  | InvalidSourceFilename => "InvalidSourceFilename"
-  | InvalidBinaryName => "InvalidBinaryName";
+  | InvalidSourceFilename(_) => "InvalidSourceFilename"
+  | InvalidBinaryName(_) => "InvalidBinaryName";
 
-exception BinaryTupleNameError(bte);
 let getBinaryNameTuple = namesString => {
   let parts = Str.(split(regexp(" +as +"), namesString));
   switch (parts) {
   | [a] =>
     if (!isValidSourceFile(a)) {
-      raise(BinaryTupleNameError(InvalidSourceFilename));
+      raise(BinaryTupleNameError(InvalidSourceFilename(a)));
     };
     (a, moduleNameOf(a) ++ ".exe");
   | [a, b, ...r] when List.length(r) == 0 =>
     if (!isValidSourceFile(a)) {
-      raise(BinaryTupleNameError(InvalidSourceFilename));
+      raise(BinaryTupleNameError(InvalidSourceFilename(a)));
     };
     if (!isValidBinaryFileName(b)) {
-      raise(BinaryTupleNameError(InvalidBinaryName));
+      raise(BinaryTupleNameError(InvalidBinaryName(b)));
     };
     (a, b);
   | _ => raise(FatalError("Invalid binary name (syntax)"))
@@ -812,9 +815,14 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
 
   let rootName =
     /* "name" in root package.json */
-    doubleKebabifyIfScoped(
-      JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
-    );
+    try (
+      doubleKebabifyIfScoped(
+        JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
+      )
+    ) {
+    | NullJSONValue () => raise(ShouldNotBeNull("name"))
+    | x => raise(x)
+    };
   /* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
 
   (
@@ -851,6 +859,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let (<|>) = (f, g, x) => g(f(x));
+        /* "my-package/lib/here" => "my-package.lib.here" */
         let require =
           try (
             JSON.member(conf, "require")
@@ -867,8 +876,8 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                  <|> pathToOCamlLibName,
                )
           ) {
-          /* "my-package/lib/here" => "my-package.lib.here" */
-          | _ => []
+          | NullJSONValue(_) => []
+          | e => raise(e)
           };
 
         let flags =
@@ -1233,7 +1242,7 @@ let gen = (projectPath, pkgPath) => {
             Path.(projectPath / rootNameOpamFile),
           );
           Unix.unlink(Path.(projectPath / n));
-          operations := [CREATE(rootNameOpamFile)];
+          operations := [CREATE(rootNameOpamFile), ...operations^];
         };
       },
     projectPath,

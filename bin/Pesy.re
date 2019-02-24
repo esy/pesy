@@ -137,4 +137,91 @@ let main = () => {
   ();
 };
 
-main();
+PesyLib.PesyConf.(
+  try (main()) {
+  | BinaryTupleNameError(e) =>
+    let l =
+      switch (e) {
+      | InvalidSourceFilename(sourceFile) =>
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red> "Invalid source file " </Pastel>
+            <Pastel bold=true> sourceFile </Pastel>
+            "\nSource file must be a .re file\nMake sure bin property its of the form"
+            <Pastel bold=true> " FooBar.re as BarBaz.exe" </Pastel>
+          </Pastel>
+        )
+
+      | InvalidBinaryName(binaryFile) =>
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red> "Invalid binary file " </Pastel>
+            <Pastel bold=true> binaryFile </Pastel>
+            "\nBinary file must be a .exe file\nMake sure bin property is of the form"
+            <Pastel bold=true> " FooBar.re as BarBaz.exe" </Pastel>
+          </Pastel>
+        )
+      };
+    let message = Pastel.(<Pastel> l </Pastel>);
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | ShouldNotBeNull(e) =>
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red> "Found null value for " </Pastel>
+          <Pastel bold=true> e </Pastel>
+          "\nExpected a non null value."
+        </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | FatalError(e) =>
+    let message =
+      Pastel.(
+        <Pastel> <Pastel color=Red> "Fatal Error " </Pastel> e </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | InvalidRootName(e) =>
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red> "Invalid root name!\n" </Pastel>
+          <Pastel> "Expected package name of the form " </Pastel>
+          <Pastel bold=true> "@myscope/foo-bar" </Pastel>
+          <Pastel> " or " </Pastel>
+          <Pastel bold=true> "foo-bar\n" </Pastel>
+          <Pastel> "Instead found " </Pastel>
+          <Pastel bold=true> e </Pastel>
+        </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | GenericException(e) =>
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red> "Error: " </Pastel>
+          <Pastel> e </Pastel>
+        </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | ResolveRelativePathFailure(e) =>
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red> "Could not find the library\n" </Pastel>
+          <Pastel> e </Pastel>
+        </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | x =>
+    /* let message = Pastel.(<Pastel color=Red> "Failed" </Pastel>); */
+    /* fprintf(stderr, "%s", message); */
+    /* exit(-1); */
+    raise(x)
+  }
+);
