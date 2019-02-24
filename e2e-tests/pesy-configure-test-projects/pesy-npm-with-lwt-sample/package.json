@@ -25,7 +25,6 @@
     "@opam/lwt": "4.1.0",
     "@opam/lwt_ppx": "1.2.1",
     "ocaml": "~4.6.0",
-    "pesy": "*",
     "refmterr": "*"
   },
   "devDependencies": { "@opam/merlin": "*" }

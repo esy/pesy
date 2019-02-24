@@ -62,8 +62,7 @@ let rec copy_rec = (source, dest) => {
   open Unix;
   let infos = lstat(source);
   switch (infos.st_kind) {
-  | S_REG =>
-    file_copy(source, dest);
+  | S_REG => file_copy(source, dest)
   | S_LNK =>
     let link = readlink(source);
     symlink(link, dest);
@@ -87,12 +86,12 @@ let rec copy_rec = (source, dest) => {
 let tmpDir = Filename.get_temp_dir_name();
 let testProject = "test-project";
 let testProjectDir = Filename.concat(tmpDir, testProject);
-let pesyConfigureCommand = Sys.unix ? "pesy-configure": "pesy-configure.cmd";
+let pesyConfigureCommand = Sys.unix ? "pesy" : "pesy.cmd";
 
 let esyCommand =
-  Sys.unix ?
-    "esy" :
-    {
+  Sys.unix
+    ? "esy"
+    : {
       let pathVars =
         Array.to_list(Unix.environment())
         |> List.map(e =>
@@ -198,7 +197,7 @@ List.iter(
       exit(-1);
     };
 
-    Printf.printf("Running `esy pesy-configure`");
+    Printf.printf("Running `esy pesy`");
     print_newline();
     let exitStatus = runCommandWithEnv(esyCommand, [|pesyConfigureCommand|]);
     if (exitStatus != 0) {

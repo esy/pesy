@@ -1233,7 +1233,7 @@ let gen = (projectPath, pkgPath) => {
             Path.(projectPath / rootNameOpamFile),
           );
           Unix.unlink(Path.(projectPath / n));
-          operations := [CREATE(Path.(projectPath / rootNameOpamFile))];
+          operations := [CREATE(rootNameOpamFile)];
         };
       },
     projectPath,
