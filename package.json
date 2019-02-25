@@ -25,5 +25,8 @@
     "ocaml": "~4.6.0",
     "refmterr": "*"
   },
-  "devDependencies": { "@opam/merlin": "*" }
+  "devDependencies": { "@opam/merlin": "*" },
+  "resolutions": {
+    "@reason-native/pastel": "facebookexperimental/reason-native#028b0973b0268530609c3edfa4b4f3ebbf9fbb43"
+  }
 }

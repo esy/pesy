@@ -8,10 +8,10 @@ jobs:
   pool: ${{ parameters.pool }}
   steps:
   - ${{ if eq(parameters.sign, 'true') }}:
-    - script: 'npm install -g @esy-nightly/esy@0.4.10-e6e1e7 --unsafe-perm'
+    - script: 'npm install -g esy --unsafe-perm'
       displayName: 'Installing deps'
   - ${{ if eq(parameters.sign, 'false') }}:
-    - script: 'sudo npm install -g @esy-nightly/esy@0.4.10-e6e1e7 --unsafe-perm'
+    - script: 'sudo npm install -g esy --unsafe-perm'
       displayName: 'Installing deps'
   - script: esy install
     displayName: 'Installing deps'
