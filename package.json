@@ -6,7 +6,7 @@
     "build": [ "refmterr dune build -p #{self.name}" ],
     "buildsInSource": "_build",
     "release": {
-      "bin": [ "pesy", "pesy-configure" ],
+      "bin": [ "pesy" ],
       "includePackages": [ "root" ]
     }
   },
