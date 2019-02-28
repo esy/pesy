@@ -5,20 +5,17 @@
   "esy": {
     "build": "dune build -p #{self.name}",
     "release": {
-      "releasedBinaries": [
-        "<PACKAGE_NAME_UPPER_CAMEL>App.exe"
-      ]
+      "releasedBinaries": ["<PACKAGE_NAME_UPPER_CAMEL>App.exe"]
     }
   },
   "buildDirs": {
     "test": {
-      "require": ["<PUBLIC_LIB_NAME>"],
+      "require": ["<PUBLIC_LIB_NAME>", "rely.lib"],
       "bin": {
         "Test<PACKAGE_NAME_UPPER_CAMEL>.exe": "Test<PACKAGE_NAME_UPPER_CAMEL>.re"
       }
     },
-    "library": {
-    },
+    "library": {},
     "executable": {
       "require": ["<PUBLIC_LIB_NAME>"],
       "bin": {
@@ -34,7 +31,8 @@
     "@esy-ocaml/reason": "*",
     "refmterr": "*",
     "ocaml": "~4.6.0",
-    "pesy": "*"
+    "pesy": "*",
+    "@reason-native/rely": "*"
   },
   "devDependencies": {
     "@opam/merlin": "*"
