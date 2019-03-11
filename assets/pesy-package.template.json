@@ -13,13 +13,17 @@
   "buildDirs": {
     "test": {
       "require": ["<PUBLIC_LIB_NAME>"],
-      "bin": "Test<PACKAGE_NAME_UPPER_CAMEL>.re as Test<PACKAGE_NAME_UPPER_CAMEL>.exe"
+      "bin": {
+        "Test<PACKAGE_NAME_UPPER_CAMEL>.exe": "Test<PACKAGE_NAME_UPPER_CAMEL>.re"
+      }
     },
     "library": {
     },
     "executable": {
       "require": ["<PUBLIC_LIB_NAME>"],
-      "bin": "<PACKAGE_NAME_UPPER_CAMEL>App.re as <PACKAGE_NAME_UPPER_CAMEL>App.exe"
+      "bin": {
+        "<PACKAGE_NAME_UPPER_CAMEL>App.exe": "<PACKAGE_NAME_UPPER_CAMEL>App.re"
+      }
     }
   },
   "scripts": {
