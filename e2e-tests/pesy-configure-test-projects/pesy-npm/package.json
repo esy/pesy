@@ -13,13 +13,17 @@
   "buildDirs": {
     "test": {
       "require": ["pesy-npm/library"],
-      "bin": "TestPesyNpm.re as test-pesy-npm.exe"
+      "bin": {
+        "test-pesy-npm.exe": "TestPesyNpm.re"
+      }
     },
     "library": {},
     "library/foo/bar": {},
     "executable": {
       "require": ["pesy-npm/library/foo/bar", "pesy-npm/library"],
-      "bin": "PesyNpmApp.re as pesy-npm-app.exe"
+      "bin": {
+        "pesy-npm-app.exe": "PesyNpmApp.re"
+      }
     }
   },
   "scripts": {

@@ -13,7 +13,9 @@
   "buildDirs": {
     "test": {
       "require": ["../util"],
-      "bin": "TestPesyNpm.re as test-pesy-npm.exe"
+      "bin": {
+        "test-pesy-npm.exe": "TestPesyNpm.re"
+      }
     },
     "util": {
       "require": ["./foo/bar"]
@@ -21,7 +23,9 @@
     "util/foo/bar": {},
     "executable": {
       "require": ["../util"],
-      "bin": "PesyNpmApp.re as pesy-npm-app.exe"
+      "bin": {
+        "pesy-npm-app.exe": "PesyNpmApp.re"
+      }
     }
   },
   "scripts": {
