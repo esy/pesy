@@ -2,12 +2,8 @@ open Printf;
 open PesyUtils;
 open PesyUtils.NoLwt;
 
-type bte =
-  | InvalidSourceFilename(string)
-  | InvalidBinaryName(string);
-
 /* private */
-exception NullJSONValue(unit);
+exception ShouldHaveRaised(unit);
 
 /* public */
 exception ShouldNotBeNull(string);
@@ -16,7 +12,7 @@ exception ShouldNotBeHere(unit);
 exception InvalidRootName(string);
 exception GenericException(string);
 exception ResolveRelativePathFailure(string);
-exception BinaryTupleNameError(bte);
+exception InvalidBinProperty(string);
 
 module Library: {
   module Mode: {
@@ -504,92 +500,6 @@ let%expect_test _ = {
    |};
 };
 
-module FieldTypes = {
-  type t =
-    | Bool(bool)
-    | String(string)
-    | List(list(t));
-  exception ConversionException(string);
-  let toBool =
-    fun
-    | Bool(b) => b
-    | String(s) =>
-      raise(
-        ConversionException(
-          sprintf("Expected string. Actual string (%s)", s),
-        ),
-      )
-    | List(l) => raise(ConversionException("Expected string. Actual list"));
-  let toString =
-    fun
-    | String(s) => s
-    | Bool(b) =>
-      raise(
-        ConversionException(
-          sprintf("Expected string. Actual bool (%s)", string_of_bool(b)),
-        ),
-      )
-    | List(_) => raise(ConversionException("Expected string. Actual list"));
-  let toList =
-    fun
-    | List(l) => l
-    | Bool(b) =>
-      raise(
-        ConversionException(
-          sprintf("Expected list. Actual bool (%s)", string_of_bool(b)),
-        ),
-      )
-    | String(_) =>
-      raise(ConversionException("Expected list. Actual string"));
-};
-
-/* TODO: Making parsing more lenient? Eg. allow string where single element list is valid */
-module JSON: {
-  type t;
-  let ofString: string => t;
-  let fromFile: string => t;
-  let member: (t, string) => t;
-  let toKeyValuePairs: t => list((string, t));
-  let toValue: t => FieldTypes.t;
-  let debug: t => string;
-} = {
-  open Yojson.Basic;
-  type t = Yojson.Basic.t;
-  exception InvalidJSONValue(string);
-  exception MissingJSONMember(string);
-  let ofString = jstr => from_string(jstr);
-  let fromFile = path => from_file(path);
-  let member = (j, m) =>
-    try (Util.member(m, j)) {
-    | _ =>
-      raise(
-        MissingJSONMember(Printf.sprintf("%s was missing in the json", m)),
-      )
-    };
-  let toKeyValuePairs = (json: Yojson.Basic.t) =>
-    switch (json) {
-    | `Assoc(jsonKeyValuePairs) => jsonKeyValuePairs
-    | _ => raise(InvalidJSONValue("Expected key value pairs"))
-    };
-  let rec toValue = (json: Yojson.Basic.t) =>
-    switch (json) {
-    | `Bool(b) => FieldTypes.Bool(b)
-    | `String(s) => FieldTypes.String(s)
-    | `List(jl) => FieldTypes.List(List.map(j => toValue(j), jl))
-    | `Null => raise(NullJSONValue())
-    | _ =>
-      raise(
-        InvalidJSONValue(
-          sprintf(
-            "Value must be either string, bool or list of string. Found %s",
-            to_string(json),
-          ),
-        ),
-      )
-    };
-  let debug = t => to_string(t);
-};
-
 let moduleNameOf = fileName =>
   Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
 
@@ -657,106 +567,6 @@ let%expect_test _ = {
 
 /* Turns "Foo.re as Foo.exe" => ("Foo.re", "Foo.exe") */
 
-let bte_to_string =
-  fun
-  | InvalidSourceFilename(_) => "InvalidSourceFilename"
-  | InvalidBinaryName(_) => "InvalidBinaryName";
-
-let getBinaryNameTuple = namesString => {
-  let parts = Str.(split(regexp(" +as +"), namesString));
-  switch (parts) {
-  | [a] =>
-    if (!isValidSourceFile(a)) {
-      raise(BinaryTupleNameError(InvalidSourceFilename(a)));
-    };
-    (a, moduleNameOf(a) ++ ".exe");
-  | [a, b, ...r] when List.length(r) == 0 =>
-    if (!isValidSourceFile(a)) {
-      raise(BinaryTupleNameError(InvalidSourceFilename(a)));
-    };
-    if (!isValidBinaryFileName(b)) {
-      raise(BinaryTupleNameError(InvalidBinaryName(b)));
-    };
-    (a, b);
-  | _ => raise(FatalError("Invalid binary name (syntax)"))
-  };
-};
-
-let%expect_test _ = {
-  let (a, b) = getBinaryNameTuple("foo.re as blah.exe");
-  printf("(%s, %s)", a, b);
-  %expect
-  {|
-     (foo.re, blah.exe)
-   |};
-};
-
-let%expect_test _ = {
-  let result =
-    try (
-      {
-        let (a, b) = getBinaryNameTuple("foo as blah.exe");
-        sprintf("(%s, %s)", a, b);
-      }
-    ) {
-    | BinaryTupleNameError(x) =>
-      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
-    | e => raise(e)
-    };
-  print_endline(result);
-  %expect
-  {|
-          BinaryTupleNameError(InvalidSourceFilename)
-     |};
-};
-
-let%expect_test _ = {
-  let result =
-    try (
-      {
-        let (a, b) = getBinaryNameTuple("foo.re as blah");
-        sprintf("(%s, %s)", a, b);
-      }
-    ) {
-    | BinaryTupleNameError(x) =>
-      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
-    | e => raise(e)
-    };
-  print_endline(result);
-  %expect
-  {|
-          BinaryTupleNameError(InvalidBinaryName)
-     |};
-};
-
-let%expect_test _ = {
-  let (a, b) = getBinaryNameTuple("foo.re");
-  printf("(%s, %s)", a, b);
-  %expect
-  {|
-     (foo.re, foo.exe)
-     |};
-};
-
-let%expect_test _ = {
-  let result =
-    try (
-      {
-        let (a, b) = getBinaryNameTuple("foo");
-        sprintf("(%s, %s)", a, b);
-      }
-    ) {
-    | BinaryTupleNameError(x) =>
-      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
-    | e => raise(e)
-    };
-  print_endline(result);
-  %expect
-  {|
-          BinaryTupleNameError(InvalidSourceFilename)
-     |};
-};
-
 /* Turns "foo/bar/baz" => "foo.bar.baz" */
 let pathToOCamlLibName = p => Str.global_replace(Str.regexp("/"), ".", p);
 
@@ -820,7 +630,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
         JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
       )
     ) {
-    | NullJSONValue () => raise(ShouldNotBeNull("name"))
+    | JSON.NullJSONValue () => raise(ShouldNotBeNull("name"))
     | x => raise(x)
     };
   /* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
@@ -833,13 +643,22 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
         let bin =
           try (
             Some(
-              JSON.member(conf, "bin")
-              |> JSON.toValue
-              |> FieldTypes.toString
-              |> getBinaryNameTuple,
+              {
+                let kvPairs = JSON.toKeyValuePairs(JSON.member(conf, "bin"));
+                /* TODO: Multiple executable support */
+                let kv = List.hd(kvPairs);
+                let (k, v) = kv;
+                (
+                  /* Value is the source .re file */
+                  v |> JSON.toValue |> FieldTypes.toString,
+                  /* Key is the target executable name */
+                  k,
+                );
+              },
             )
           ) {
-          | NullJSONValue(_) => None
+          | JSON.NullJSONValue(_) => None
+          | JSON.InvalidJSONValue(_) => raise(InvalidBinProperty(dir))
           | e => raise(e)
           };
 
@@ -849,7 +668,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           try (
             JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString
           ) {
-          | NullJSONValue(_) =>
+          | JSON.NullJSONValue(_) =>
             name_was_guessed := true;
             switch (bin) {
             | Some((_mainFileName, installedBinaryName)) => installedBinaryName
@@ -876,7 +695,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                  <|> pathToOCamlLibName,
                )
           ) {
-          | NullJSONValue(_) => []
+          | JSON.NullJSONValue(_) => []
           | e => raise(e)
           };
 
@@ -948,7 +767,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
               |> FieldTypes.toString,
             )
           ) {
-          | NullJSONValue(_) => None
+          | JSON.NullJSONValue(_) => None
           | e => raise(e)
           };
 
@@ -1000,7 +819,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                 |> JSON.toValue
                 |> FieldTypes.toString
               ) {
-              | NullJSONValue () =>
+              | JSON.NullJSONValue () =>
                 raise(
                   FatalError(
                     sprintf(
@@ -1024,7 +843,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                 ),
               )
             ) {
-            | NullJSONValue () => None
+            | JSON.NullJSONValue () => None
             | e => raise(e)
             };
           {
@@ -1051,7 +870,8 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
               |> JSON.toValue
               |> FieldTypes.toString
             ) {
-            | NullJSONValue () => upperCamelCasify(Filename.basename(dir))
+            | JSON.NullJSONValue () =>
+              upperCamelCasify(Filename.basename(dir))
             | e => raise(e)
             };
           let libraryModes =
@@ -1064,7 +884,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                 |> List.map(Library.Mode.ofString),
               )
             ) {
-            | NullJSONValue () => None
+            | JSON.NullJSONValue () => None
             | e => raise(e)
             };
           let cStubs =
@@ -1076,7 +896,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                 |> List.map(FieldTypes.toString),
               )
             ) {
-            | NullJSONValue () => None
+            | JSON.NullJSONValue () => None
             | e => raise(e)
             };
           let virtualModules =
@@ -1088,7 +908,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                 |> List.map(FieldTypes.toString),
               )
             ) {
-            | NullJSONValue () => None
+            | JSON.NullJSONValue () => None
             | e => raise(e)
             };
           let implements =
@@ -1110,7 +930,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                    ),
               )
             ) {
-            | NullJSONValue () => None
+            | JSON.NullJSONValue () => None
             | e => raise(e)
             };
           let wrapped =
@@ -1121,7 +941,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                 |> FieldTypes.toBool,
               )
             ) {
-            | NullJSONValue () => None
+            | JSON.NullJSONValue () => None
             | e => raise(e)
             };
           {
@@ -1641,6 +1461,57 @@ let%expect_test _ = {
   %expect
   {|
      (executable (name Foo) (public_name Foo.exe)) (install (section share_root) (files (asset.txt as asset.txt)))
+   |};
+};
+
+let%expect_test _ = {
+  let duneFiles =
+    testToPackages(
+      {|
+           {
+             "name": "foo",
+             "buildDirs": {
+               "testexe": {
+                 "bin": { "Foo.exe": "Foo.re" }
+               }
+             }
+           }
+       |},
+    );
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
+  %expect
+  {|
+     (executable (name Foo) (public_name Foo.exe))
+   |};
+};
+
+let%expect_test _ = {
+  let duneFileErrors =
+    try (
+      {
+        ignore(
+          testToPackages(
+            {|
+           {
+             "name": "foo",
+             "buildDirs": {
+               "testexe": {
+                 "bin": []
+               }
+             }
+           }
+       |},
+          ),
+        );
+        raise(ShouldHaveRaised());
+      }
+    ) {
+    | InvalidBinProperty(p) => [sprintf("InvalidBinProperty for %s", p)]
+    };
+  List.iter(print_endline, duneFileErrors);
+  %expect
+  {|
+     InvalidBinProperty for testexe
    |};
 };
 
