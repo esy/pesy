@@ -1,0 +1,2 @@
+(library (name PesyVirtualLib) (public_name pesy-virtual.lib)
+    (libraries pesy-virtual.foo)) 

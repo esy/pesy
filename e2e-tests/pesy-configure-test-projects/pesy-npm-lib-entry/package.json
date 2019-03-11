@@ -1,0 +1,39 @@
+{
+  "name": "pesy-npm",
+  "version": "0.0.0",
+  "description": "My Project",
+  "esy": {
+    "build": "dune build -p #{self.name}",
+    "release": {
+      "releasedBinaries": [
+        "PesyNpmApp.exe"
+      ]
+    }
+  },
+  "buildDirs": {
+    "test": {
+      "require": ["../util"],
+      "bin": "TestPesyNpm.re as test-pesy-npm.exe"
+    },
+    "util": {
+      "require": ["./foo/bar"]
+    },
+    "util/foo/bar": {},
+    "executable": {
+      "require": ["../util"],
+      "bin": "PesyNpmApp.re as pesy-npm-app.exe"
+    }
+  },
+  "scripts": {
+    "test": "esy x test-pesy-npm.exe"
+  },
+  "dependencies": {
+    "@opam/dune": ">=1.6.0",
+    "@esy-ocaml/reason": "*",
+    "refmterr": "*",
+    "ocaml": "^4.4.0"
+  },
+  "devDependencies": {
+    "@opam/merlin": "*"
+  }
+}

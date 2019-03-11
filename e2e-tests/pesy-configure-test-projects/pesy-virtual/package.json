@@ -1,0 +1,50 @@
+{
+  "name": "pesy-virtual",
+  "version": "0.0.0",
+  "description": "My Project",
+  "esy": {
+    "build": "dune build -p #{self.name}",
+    "release": {
+      "releasedBinaries": [
+        "PesyVirtualApp.exe"
+      ]
+    }
+  },
+  "buildDirs": {
+    "lib": {
+      "require": ["pesy-virtual/foo"]
+    },
+    "foo": {
+      "virtualModules": ["VirtualFoo"]
+    },
+    "bar": {
+      "implements": ["pesy-virtual/foo"]
+    },
+    "baz": {
+      "implements": ["pesy-virtual/foo"]
+    },
+    "executable-bar": {
+      "require": ["pesy-virtual/lib", "pesy-virtual/bar"],
+      "bin": "PesyVirtualApp.re as PesyVirtualAppBar.exe"
+    },
+    "executable-baz": {
+      "require": ["pesy-virtual/lib", "pesy-virtual/baz"],
+      "bin": "PesyVirtualApp.re as PesyVirtualAppBaz.exe"
+    }
+  },
+  "scripts": {
+    "pesy": "bash -c 'env PESY_MODE=update pesy'",
+    "test-bar": "esy x PesyVirtualAppBar.exe",
+    "test-baz": "esy x PesyVirtualAppBaz.exe",
+    "test": "esy x PesyVirtualAppBar.exe"
+  },
+  "dependencies": {
+    "dune": "*",
+    "@esy-ocaml/reason": "*",
+    "refmterr": "*",
+    "ocaml": "^4.4.0"
+  },
+  "devDependencies": {
+    "@opam/merlin": "*"
+  }
+}

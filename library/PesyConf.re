@@ -2,11 +2,25 @@ open Printf;
 open PesyUtils;
 open PesyUtils.NoLwt;
 
+type bte =
+  | InvalidSourceFilename(string)
+  | InvalidBinaryName(string);
+
+/* private */
 exception NullJSONValue(unit);
+
+/* public */
+exception ShouldNotBeNull(string);
+exception FatalError(string);
+exception ShouldNotBeHere(unit);
+exception InvalidRootName(string);
+exception GenericException(string);
+exception ResolveRelativePathFailure(string);
+exception BinaryTupleNameError(bte);
 
 module Library: {
   module Mode: {
-    exception InvalidLibraryMode(unit);
+    exception InvalidLibraryMode(string);
     type t;
     let ofString: string => t;
     let toString: t => string;
@@ -22,10 +36,10 @@ module Library: {
       option(bool)
     ) =>
     t;
-  let toDuneStanza: (Common.t, t) => (string, string);
+  let toDuneStanza: (Common.t, t) => (string, list(Stanza.t));
 } = {
   module Mode = {
-    exception InvalidLibraryMode(unit);
+    exception InvalidLibraryMode(string);
     type t =
       | Native
       | Byte
@@ -35,7 +49,7 @@ module Library: {
       | "best" => Best
       | "native" => Native
       | "byte" => Byte
-      | _ => raise(InvalidLibraryMode());
+      | x => raise(InvalidLibraryMode(x));
     let toString =
       fun
       | Best => "best"
@@ -180,7 +194,7 @@ module Library: {
            @ rawBuildConfig,
       ]);
 
-    (path, DuneFile.toString([library, ...rawBuildConfigFooter]));
+    (path, [library, ...rawBuildConfigFooter]);
   };
 };
 
@@ -192,7 +206,7 @@ module Executable: {
     let toList: t => list(string);
   };
   let create: (string, option(Mode.t)) => t;
-  let toDuneStanza: (Common.t, t) => (string, string);
+  let toDuneStanza: (Common.t, t) => (string, list(Stanza.t));
 } = {
   module Mode = {
     exception InvalidCompilationMode(unit);
@@ -290,6 +304,7 @@ module Executable: {
     ) =
       Common.toDuneStanzas(common);
     let path = Common.getPath(common);
+    /* Pesy's main is Dune's name */
     let name = Stanza.create("name", Stanza.createAtom(main));
     /* let public_name = */
     /*   Stanza.create("public_name", Stanza.createAtom(pkgName)); */
@@ -352,7 +367,7 @@ module Executable: {
            @ rawBuildConfig,
       ]);
 
-    (path, DuneFile.toString([executable, ...rawBuildConfigFooter]));
+    (path, [executable, ...rawBuildConfigFooter]);
   };
 };
 
@@ -364,8 +379,6 @@ type package = {
   common: Common.t,
   pkgType,
 };
-
-exception GenericException(string);
 
 let getSuffix = name => {
   let parts = Str.split(Str.regexp("\\."), name);
@@ -413,6 +426,82 @@ let%expect_test _ = {
   {|
      Must throw GenericException
   |};
+};
+
+let resolveRelativePath = path => {
+  let separator = "/";
+  let revParts = List.rev(Str.split(Str.regexp(separator), path));
+
+  let rec resolve = (parts, skipCount, acc) => {
+    switch (parts) {
+    | ["..", ...r] => resolve(r, skipCount + 1, acc)
+    | [".", ...r] => resolve(r, skipCount, acc)
+    | [h, ...r] =>
+      resolve(
+        r,
+        skipCount > 0 ? skipCount - 1 : 0,
+        skipCount == 0 ? [h, ...acc] : acc,
+      )
+    | [] =>
+      if (skipCount == 0) {
+        acc;
+      } else {
+        raise(
+          ResolveRelativePathFailure(
+            sprintf("Failed resolving: %s Too many `../`", path),
+          ),
+        );
+      }
+    };
+  };
+
+  String.concat(separator, resolve(revParts, 0, []));
+};
+
+let%expect_test _ = {
+  print_endline(resolveRelativePath("foo/lib"));
+  %expect
+  {|
+     foo/lib
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(resolveRelativePath("foo/bar/.."));
+  %expect
+  {|
+     foo
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(resolveRelativePath("foo/bar/../.."));
+  %expect
+  {|
+
+   |};
+};
+
+let%expect_test _ = {
+  let result =
+    try (resolveRelativePath("foo/bar/../../..")) {
+    | ResolveRelativePathFailure(x) =>
+      sprintf("ResolveRelativePathFailure(\"%s\")", x)
+    | e => raise(e)
+    };
+  print_endline(result);
+  %expect
+  {|
+          ResolveRelativePathFailure("Failed resolving: foo/bar/../../.. Too many `../`")
+     |};
+};
+
+let%expect_test _ = {
+  print_endline(resolveRelativePath("foo/bar/../baz/"));
+  %expect
+  {|
+     foo/baz
+   |};
 };
 
 module FieldTypes = {
@@ -465,7 +554,7 @@ module JSON: {
   let debug: t => string;
 } = {
   open Yojson.Basic;
-  type t = json;
+  type t = Yojson.Basic.t;
   exception InvalidJSONValue(string);
   exception MissingJSONMember(string);
   let ofString = jstr => from_string(jstr);
@@ -477,12 +566,12 @@ module JSON: {
         MissingJSONMember(Printf.sprintf("%s was missing in the json", m)),
       )
     };
-  let toKeyValuePairs = (json: json) =>
+  let toKeyValuePairs = (json: Yojson.Basic.t) =>
     switch (json) {
     | `Assoc(jsonKeyValuePairs) => jsonKeyValuePairs
     | _ => raise(InvalidJSONValue("Expected key value pairs"))
     };
-  let rec toValue = (json: json) =>
+  let rec toValue = (json: Yojson.Basic.t) =>
     switch (json) {
     | `Bool(b) => FieldTypes.Bool(b)
     | `String(s) => FieldTypes.String(s)
@@ -501,252 +590,571 @@ module JSON: {
   let debug = t => to_string(t);
 };
 
-type t = list(package);
+let moduleNameOf = fileName =>
+  Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
+
+let%expect_test _ = {
+  print_endline(moduleNameOf("Foo.re"));
+  %expect
+  {|
+     Foo
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(moduleNameOf("Foo.ml"));
+  %expect
+  {|
+     Foo
+   |};
+};
+
+let isValidBinaryFileName = fileName =>
+  Str.string_match(Str.regexp("^.+\\.exe$"), fileName, 0);
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidBinaryFileName("Foo.re")));
+  %expect
+  {|
+     false
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidBinaryFileName("Foo.exe")));
+  %expect
+  {|
+     true
+   |};
+};
+
+let isValidSourceFile = fileName =>
+  Str.string_match(Str.regexp("^.+\\.\\(re\\|ml\\)$"), fileName, 0);
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidSourceFile("Foo.re")));
+  %expect
+  {|
+     true
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidSourceFile("Foo.ml")));
+  %expect
+  {|
+     true
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidSourceFile("Foo.mlsss")));
+  %expect
+  {|
+     false
+   |};
+};
+
+/* Turns "Foo.re as Foo.exe" => ("Foo.re", "Foo.exe") */
+
+let bte_to_string =
+  fun
+  | InvalidSourceFilename(_) => "InvalidSourceFilename"
+  | InvalidBinaryName(_) => "InvalidBinaryName";
+
+let getBinaryNameTuple = namesString => {
+  let parts = Str.(split(regexp(" +as +"), namesString));
+  switch (parts) {
+  | [a] =>
+    if (!isValidSourceFile(a)) {
+      raise(BinaryTupleNameError(InvalidSourceFilename(a)));
+    };
+    (a, moduleNameOf(a) ++ ".exe");
+  | [a, b, ...r] when List.length(r) == 0 =>
+    if (!isValidSourceFile(a)) {
+      raise(BinaryTupleNameError(InvalidSourceFilename(a)));
+    };
+    if (!isValidBinaryFileName(b)) {
+      raise(BinaryTupleNameError(InvalidBinaryName(b)));
+    };
+    (a, b);
+  | _ => raise(FatalError("Invalid binary name (syntax)"))
+  };
+};
+
+let%expect_test _ = {
+  let (a, b) = getBinaryNameTuple("foo.re as blah.exe");
+  printf("(%s, %s)", a, b);
+  %expect
+  {|
+     (foo.re, blah.exe)
+   |};
+};
+
+let%expect_test _ = {
+  let result =
+    try (
+      {
+        let (a, b) = getBinaryNameTuple("foo as blah.exe");
+        sprintf("(%s, %s)", a, b);
+      }
+    ) {
+    | BinaryTupleNameError(x) =>
+      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
+    | e => raise(e)
+    };
+  print_endline(result);
+  %expect
+  {|
+          BinaryTupleNameError(InvalidSourceFilename)
+     |};
+};
+
+let%expect_test _ = {
+  let result =
+    try (
+      {
+        let (a, b) = getBinaryNameTuple("foo.re as blah");
+        sprintf("(%s, %s)", a, b);
+      }
+    ) {
+    | BinaryTupleNameError(x) =>
+      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
+    | e => raise(e)
+    };
+  print_endline(result);
+  %expect
+  {|
+          BinaryTupleNameError(InvalidBinaryName)
+     |};
+};
+
+let%expect_test _ = {
+  let (a, b) = getBinaryNameTuple("foo.re");
+  printf("(%s, %s)", a, b);
+  %expect
+  {|
+     (foo.re, foo.exe)
+     |};
+};
+
+let%expect_test _ = {
+  let result =
+    try (
+      {
+        let (a, b) = getBinaryNameTuple("foo");
+        sprintf("(%s, %s)", a, b);
+      }
+    ) {
+    | BinaryTupleNameError(x) =>
+      sprintf("BinaryTupleNameError(%s)", bte_to_string(x))
+    | e => raise(e)
+    };
+  print_endline(result);
+  %expect
+  {|
+          BinaryTupleNameError(InvalidSourceFilename)
+     |};
+};
+
+/* Turns "foo/bar/baz" => "foo.bar.baz" */
+let pathToOCamlLibName = p => Str.global_replace(Str.regexp("/"), ".", p);
+
+let isBinPropertyPresent =
+  fun
+  | Some(_) => true
+  | _ => false;
+
+let isValidScopeName = n => {
+  n.[0] == '@';
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidScopeName("blah")));
+  %expect
+  {|
+     false
+   |};
+};
+
+let%expect_test _ = {
+  print_endline(string_of_bool(isValidScopeName("@myscope")));
+  %expect
+  {|
+     true
+   |};
+};
+
+let stripAtTheRate = s => String.sub(s, 1, String.length(s) - 1);
+
+let doubleKebabifyIfScoped = n => {
+  switch (Str.split(Str.regexp("/"), n)) {
+  | [pkgName] => pkgName
+  | [scope, pkgName, ...rest] =>
+    isValidScopeName(scope)
+      ? String.concat(
+          "/",
+          [stripAtTheRate(scope) ++ "--" ++ pkgName, ...rest],
+        )
+      : raise(InvalidRootName(n))
+  | _ => raise(InvalidRootName(n))
+  };
+};
+
+let%expect_test _ = {
+  print_endline(doubleKebabifyIfScoped("foo-bar"));
+  %expect
+  {|
+     foo-bar
+   |};
+};
+
+type t = (string, list(package));
 let toPesyConf = (projectPath: string, json: JSON.t): t => {
   let pkgs = JSON.toKeyValuePairs(JSON.member(json, "buildDirs"));
-  List.map(
-    pkg => {
-      let (dir, conf) = pkg;
-      let name =
-        JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString;
-      let require =
-        try (
-          JSON.member(conf, "require")
-          |> JSON.toValue
-          |> FieldTypes.toList
-          |> List.map(FieldTypes.toString)
-        ) {
-        | _ => []
-        };
 
-      let flags =
-        try (
-          Some(
-            JSON.member(conf, "flags")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
+  let rootName =
+    /* "name" in root package.json */
+    try (
+      doubleKebabifyIfScoped(
+        JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
+      )
+    ) {
+    | NullJSONValue () => raise(ShouldNotBeNull("name"))
+    | x => raise(x)
+    };
+  /* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
 
-      let ocamlcFlags =
-        try (
-          Some(
-            JSON.member(conf, "ocamlcFlags")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let ocamloptFlags =
-        try (
-          Some(
-            JSON.member(conf, "ocamloptFlags")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let jsooFlags =
-        try (
-          Some(
-            JSON.member(conf, "jsooFlags")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let preprocess =
-        try (
-          Some(
-            JSON.member(conf, "preprocess")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let includeSubdirs =
-        try (
-          Some(
-            JSON.member(conf, "includeSubdirs")
-            |> JSON.toValue
-            |> FieldTypes.toString,
-          )
-        ) {
-        | NullJSONValue(_) => None
-        | e => raise(e)
-        };
-
-      let rawBuildConfig =
-        try (
-          Some(
-            JSON.member(conf, "rawBuildConfig")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let rawBuildConfigFooter =
-        try (
-          Some(
-            JSON.member(conf, "rawBuildConfigFooter")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(FieldTypes.toString),
-          )
-        ) {
-        | _ => None
-        };
-
-      let suffix = getSuffix(name);
-
-      switch (suffix) {
-      | "exe" =>
-        let main =
-          JSON.member(conf, "main") |> JSON.toValue |> FieldTypes.toString;
-        let modes =
+  (
+    rootName ++ ".opam",
+    List.map(
+      pkg => {
+        let (dir, conf) = pkg;
+        let bin =
           try (
             Some(
-              Executable.Mode.ofList(
+              JSON.member(conf, "bin")
+              |> JSON.toValue
+              |> FieldTypes.toString
+              |> getBinaryNameTuple,
+            )
+          ) {
+          | NullJSONValue(_) => None
+          | e => raise(e)
+          };
+
+        let name_was_guessed = ref(false);
+        /* Pesy'name is Dune's public_name */
+        let name =
+          try (
+            JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString
+          ) {
+          | NullJSONValue(_) =>
+            name_was_guessed := true;
+            switch (bin) {
+            | Some((_mainFileName, installedBinaryName)) => installedBinaryName
+            | None => rootName ++ "." ++ pathToOCamlLibName(dir)
+            };
+          | e => raise(e)
+          };
+
+        let (<|>) = (f, g, x) => g(f(x));
+        /* "my-package/lib/here" => "my-package.lib.here" */
+        let require =
+          try (
+            JSON.member(conf, "require")
+            |> JSON.toValue
+            |> FieldTypes.toList
+            |> List.map(
+                 FieldTypes.toString
+                 <|> (
+                   x =>
+                     x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x
+                 )
+                 <|> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x)
+                 <|> resolveRelativePath
+                 <|> pathToOCamlLibName,
+               )
+          ) {
+          | NullJSONValue(_) => []
+          | e => raise(e)
+          };
+
+        let flags =
+          try (
+            Some(
+              JSON.member(conf, "flags")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let ocamlcFlags =
+          try (
+            Some(
+              JSON.member(conf, "ocamlcFlags")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let ocamloptFlags =
+          try (
+            Some(
+              JSON.member(conf, "ocamloptFlags")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let jsooFlags =
+          try (
+            Some(
+              JSON.member(conf, "jsooFlags")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let preprocess =
+          try (
+            Some(
+              JSON.member(conf, "preprocess")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let includeSubdirs =
+          try (
+            Some(
+              JSON.member(conf, "includeSubdirs")
+              |> JSON.toValue
+              |> FieldTypes.toString,
+            )
+          ) {
+          | NullJSONValue(_) => None
+          | e => raise(e)
+          };
+
+        let rawBuildConfig =
+          try (
+            Some(
+              JSON.member(conf, "rawBuildConfig")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let rawBuildConfigFooter =
+          try (
+            Some(
+              JSON.member(conf, "rawBuildConfigFooter")
+              |> JSON.toValue
+              |> FieldTypes.toList
+              |> List.map(FieldTypes.toString),
+            )
+          ) {
+          | _ => None
+          };
+
+        let nameSpecifiedHasBinSuffix =
+          ! name_was_guessed^ && getSuffix(name) == "exe";
+        let binPropertyIsPresent = isBinPropertyPresent(bin);
+
+        let isBinary = nameSpecifiedHasBinSuffix || binPropertyIsPresent;
+        if (! name_was_guessed^
+            && !nameSpecifiedHasBinSuffix
+            && binPropertyIsPresent) {
+          raise(FatalError("Conflicting values for `bin` property `name`"));
+        };
+
+        if (isBinary) {
+          /* Prioritising `bin` over `name` */
+          let main =
+            switch (bin) {
+            | Some((mainFileName, _installedBinaryName)) =>
+              moduleNameOf(mainFileName)
+
+            | _ =>
+              try (
+                JSON.member(conf, "main")
+                |> JSON.toValue
+                |> FieldTypes.toString
+              ) {
+              | NullJSONValue () =>
+                raise(
+                  FatalError(
+                    sprintf(
+                      "Atleast one of `bin` or `main` must be provided for %s",
+                      dir,
+                    ),
+                  ),
+                )
+              | e => raise(e)
+              }
+            };
+
+          let modes =
+            try (
+              Some(
+                Executable.Mode.ofList(
+                  JSON.member(conf, "modes")
+                  |> JSON.toValue
+                  |> FieldTypes.toList
+                  |> List.map(a => a |> FieldTypes.toString),
+                ),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          {
+            common:
+              Common.create(
+                name,
+                Path.(projectPath / dir),
+                require,
+                flags,
+                ocamlcFlags,
+                ocamloptFlags,
+                jsooFlags,
+                preprocess,
+                includeSubdirs,
+                rawBuildConfig,
+                rawBuildConfigFooter,
+              ),
+            pkgType: ExecutablePackage(Executable.create(main, modes)),
+          };
+        } else {
+          let namespace =
+            try (
+              JSON.member(conf, "namespace")
+              |> JSON.toValue
+              |> FieldTypes.toString
+            ) {
+            | NullJSONValue () => upperCamelCasify(Filename.basename(dir))
+            | e => raise(e)
+            };
+          let libraryModes =
+            try (
+              Some(
                 JSON.member(conf, "modes")
                 |> JSON.toValue
                 |> FieldTypes.toList
-                |> List.map(a => a |> FieldTypes.toString),
+                |> List.map(FieldTypes.toString)
+                |> List.map(Library.Mode.ofString),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          let cStubs =
+            try (
+              Some(
+                JSON.member(conf, "cNames")
+                |> JSON.toValue
+                |> FieldTypes.toList
+                |> List.map(FieldTypes.toString),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          let virtualModules =
+            try (
+              Some(
+                JSON.member(conf, "virtualModules")
+                |> JSON.toValue
+                |> FieldTypes.toList
+                |> List.map(FieldTypes.toString),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          let implements =
+            try (
+              Some(
+                JSON.member(conf, "implements")
+                |> JSON.toValue
+                |> FieldTypes.toList
+                |> List.map(
+                     FieldTypes.toString
+                     <|> (
+                       x =>
+                         x.[0] == '.'
+                           ? sprintf("%s/%s/%s", rootName, dir, x) : x
+                     )
+                     <|> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x)
+                     <|> resolveRelativePath
+                     <|> pathToOCamlLibName,
+                   ),
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          let wrapped =
+            try (
+              Some(
+                JSON.member(conf, "wrapped")
+                |> JSON.toValue
+                |> FieldTypes.toBool,
+              )
+            ) {
+            | NullJSONValue () => None
+            | e => raise(e)
+            };
+          {
+            common:
+              Common.create(
+                name,
+                Path.(projectPath / dir),
+                require,
+                flags,
+                ocamlcFlags,
+                ocamloptFlags,
+                jsooFlags,
+                preprocess,
+                includeSubdirs,
+                rawBuildConfig,
+                rawBuildConfigFooter,
               ),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        {
-          common:
-            Common.create(
-              name,
-              Path.(projectPath / dir),
-              require,
-              flags,
-              ocamlcFlags,
-              ocamloptFlags,
-              jsooFlags,
-              preprocess,
-              includeSubdirs,
-              rawBuildConfig,
-              rawBuildConfigFooter,
-            ),
-          pkgType: ExecutablePackage(Executable.create(main, modes)),
-        };
-      | _ =>
-        let namespace =
-          JSON.member(conf, "namespace")
-          |> JSON.toValue
-          |> FieldTypes.toString;
-        let libraryModes =
-          try (
-            Some(
-              JSON.member(conf, "modes")
-              |> JSON.toValue
-              |> FieldTypes.toList
-              |> List.map(FieldTypes.toString)
-              |> List.map(Library.Mode.ofString),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        let cStubs =
-          try (
-            Some(
-              JSON.member(conf, "cNames")
-              |> JSON.toValue
-              |> FieldTypes.toList
-              |> List.map(FieldTypes.toString),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        let virtualModules =
-          try (
-            Some(
-              JSON.member(conf, "virtualModules")
-              |> JSON.toValue
-              |> FieldTypes.toList
-              |> List.map(FieldTypes.toString),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        let implements =
-          try (
-            Some(
-              JSON.member(conf, "implements")
-              |> JSON.toValue
-              |> FieldTypes.toList
-              |> List.map(FieldTypes.toString),
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        let wrapped =
-          try (
-            Some(
-              JSON.member(conf, "wrapped")
-              |> JSON.toValue
-              |> FieldTypes.toBool,
-            )
-          ) {
-          | NullJSONValue () => None
-          | e => raise(e)
-          };
-        {
-          common:
-            Common.create(
-              name,
-              Path.(projectPath / dir),
-              require,
-              flags,
-              ocamlcFlags,
-              ocamloptFlags,
-              jsooFlags,
-              preprocess,
-              includeSubdirs,
-              rawBuildConfig,
-              rawBuildConfigFooter,
-            ),
-          pkgType:
-            LibraryPackage(
-              Library.create(
-                namespace,
-                libraryModes,
-                cStubs,
-                virtualModules,
-                implements,
-                wrapped,
+            pkgType:
+              LibraryPackage(
+                Library.create(
+                  namespace,
+                  libraryModes,
+                  cStubs,
+                  virtualModules,
+                  implements,
+                  wrapped,
+                ),
               ),
-            ),
+          };
         };
-      };
-    },
-    pkgs,
+      },
+      pkgs,
+    ),
   );
 };
 
@@ -760,24 +1168,92 @@ let toPackages = (_prjPath, pkgs) =>
     pkgs,
   );
 
-let gen = (prjPath, pkgPath) => {
+type fileOperation =
+  | UPDATE(string)
+  | CREATE(string);
+let gen = (projectPath, pkgPath) => {
   let json = JSON.fromFile(pkgPath);
-  let pesyPackages = toPesyConf(prjPath, json);
-  let dunePackages = toPackages(prjPath, pesyPackages); /* TODO: Could return added, updated, deleted files i.e. packages updated so that the main exe could log nicely */
+  let (rootNameOpamFile, pesyPackages) = toPesyConf(projectPath, json);
+  let dunePackages = toPackages(projectPath, pesyPackages); /* TODO: Could return added, updated, deleted files i.e. packages updated so that the main exe could log nicely */
+  let operations = ref([]);
   List.iter(
     dpkg => {
       let (path, duneFile) = dpkg;
+      let duneFilePath = Path.(path / "dune");
       mkdirp(path);
-      write(Path.(path / "dune"), duneFile);
+      let duneFileStr = DuneFile.toString(duneFile);
+      try (
+        if (duneFile != DuneFile.ofFile(duneFilePath)) {
+          write(duneFilePath, duneFileStr);
+          operations :=
+            [
+              UPDATE(
+                Str.global_replace(
+                  Str.regexp(Path.(projectPath / "")),
+                  "",
+                  duneFilePath,
+                ),
+              ),
+              ...operations^,
+            ];
+        }
+      ) {
+      | _ =>
+        write(duneFilePath, duneFileStr);
+        operations :=
+          [
+            CREATE(
+              Str.global_replace(
+                Str.regexp(Path.(projectPath / "")),
+                "",
+                duneFilePath,
+              ),
+            ),
+            ...operations^,
+          ];
+      };
     },
     dunePackages,
   );
+
+  let foundAnOpamFile = ref(false);
+  let dirForEachEntry = (f, dirname) => {
+    let d = Unix.opendir(dirname);
+    try (
+      while (true) {
+        f(Unix.readdir(d));
+      }
+    ) {
+    | End_of_file => Unix.closedir(d)
+    };
+  };
+  let contains = (n, s) =>
+    try (Str.search_forward(Str.regexp(s), n, 0) != (-1)) {
+    | Not_found => false
+    };
+
+  dirForEachEntry(
+    n =>
+      if (contains(n, ".opam") && ! foundAnOpamFile^) {
+        foundAnOpamFile := true;
+        if (n != rootNameOpamFile) {
+          copyFile(
+            Path.(projectPath / n),
+            Path.(projectPath / rootNameOpamFile),
+          );
+          Unix.unlink(Path.(projectPath / n));
+          operations := [CREATE(rootNameOpamFile), ...operations^];
+        };
+      },
+    projectPath,
+  );
+  operations^;
 };
 
 /* TODO: Figure better test setup */
 let testToPackages = jsonStr => {
   let json = JSON.ofString(jsonStr);
-  let pesyPackages = toPesyConf("", json);
+  let (_, pesyPackages) = toPesyConf("", json);
   let dunePackages = toPackages("", pesyPackages);
   List.map(
     p => {
@@ -793,6 +1269,7 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
+    "name": "foo",
     "buildDirs": {
       "test": {
         "require": ["foo"],
@@ -803,7 +1280,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (executable (name Bar) (public_name Bar.exe) (libraries foo))
@@ -815,7 +1292,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "require": ["foo"],
         "namespace": "Foo",
@@ -826,7 +1304,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (libraries foo) (modes best))
@@ -838,7 +1316,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "require": ["foo"],
         "namespace": "Foo",
@@ -849,7 +1328,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (libraries foo) (c_names stubs))
@@ -861,7 +1340,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "namespace": "Foo",
         "name": "bar.lib",
@@ -871,7 +1351,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (virtual_modules foo))
@@ -883,7 +1363,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "namespace": "Foo",
         "name": "bar.lib",
@@ -893,7 +1374,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (implements foo))
@@ -905,7 +1386,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "namespace": "Foo",
         "name": "bar.lib",
@@ -915,7 +1397,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (wrapped false))
@@ -927,7 +1409,8 @@ let%expect_test _ = {
     testToPackages(
       {|
   {
-    "buildDirs": {
+      "name": "foo",
+      "buildDirs": {
       "testlib": {
         "main": "Foo",
         "name": "bar.exe",
@@ -937,7 +1420,7 @@ let%expect_test _ = {
   }
        |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (executable (name Foo) (public_name bar.exe) (modes (best c)))
@@ -949,6 +1432,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "require": ["foo"],
@@ -960,7 +1444,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (libraries foo) (flags -w -33+9))
@@ -972,6 +1456,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -982,7 +1467,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (ocamlc_flags -annot -c))
@@ -994,6 +1479,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1004,7 +1490,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib)
@@ -1017,6 +1503,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1027,7 +1514,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (js_of_ocaml -pretty -no-inline))
@@ -1039,6 +1526,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1049,7 +1537,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (preprocess (pps lwt_ppx)))
@@ -1061,6 +1549,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1071,7 +1560,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (include_subdirs unqualified))
@@ -1083,6 +1572,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1096,7 +1586,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib) (libraries lwt lwt.unix raw.lib)
@@ -1109,6 +1599,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testlib": {
                  "namespace": "Foo",
@@ -1121,7 +1612,7 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (library (name Foo) (public_name bar.lib)) (install (section share_root) (files (asset.txt as asset.txt)))
@@ -1133,6 +1624,7 @@ let%expect_test _ = {
     testToPackages(
       {|
            {
+             "name": "foo",
              "buildDirs": {
                "testexe": {
                  "main": "Foo",
@@ -1145,9 +1637,34 @@ let%expect_test _ = {
            }
                 |},
     );
-  List.iter(print_endline, duneFiles);
+  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
      (executable (name Foo) (public_name Foo.exe)) (install (section share_root) (files (asset.txt as asset.txt)))
    |};
+};
+
+let log = operations => {
+  print_newline();
+  List.iter(
+    o => {
+      switch (o) {
+      | CREATE(x) =>
+        print_endline(
+          Pastel.(
+            <Pastel> "    Created " <Pastel bold=true> x </Pastel> </Pastel>
+          ),
+        )
+      | UPDATE(x) =>
+        print_endline(
+          Pastel.(
+            <Pastel> "    Updated " <Pastel bold=true> x </Pastel> </Pastel>
+          ),
+        )
+      };
+      ();
+    },
+    operations,
+  );
+  print_newline();
 };

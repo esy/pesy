@@ -7,3 +7,4 @@ let createExpression = atoms => List(atoms);
 let ofString = s =>
   Sexplib.Parser.sexp(Sexplib.Lexer.main, Lexing.from_string(s));
 let toSexp = x => x;
+let ofSexp = x => x;
