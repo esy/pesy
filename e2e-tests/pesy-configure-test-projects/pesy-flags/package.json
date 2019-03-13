@@ -13,8 +13,9 @@
   "buildDirs": {
     "test": {
       "require": ["pesy-flags.lib"],
-      "main": "TestPesyFlags",
-      "name": "TestPesyFlags.exe"
+      "bin": {
+        "TestPesyFlags.exe": "TestPesyFlags.re"
+      }
     },
     "library": {
       "name": "pesy-flags.lib",
@@ -23,8 +24,9 @@
     },
     "executable": {
       "require": ["pesy-flags.lib"],
-      "main": "PesyFlagsApp",
-      "name": "PesyFlagsApp.exe"
+      "bin": {
+        "PesyFlagsApp.exe": "PesyFlagsApp.re"
+      }
     }
   },
   "scripts": {

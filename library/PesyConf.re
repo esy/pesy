@@ -376,53 +376,10 @@ type package = {
   pkgType,
 };
 
-let getSuffix = name => {
-  let parts = Str.split(Str.regexp("\\."), name);
-  switch (List.rev(parts)) {
-  | [_]
-  | [] =>
-    raise(
-      GenericException(
-        "`name` property of the package must either be <package>.exe (for executables) or <package>.<suffix> for libraries, where of course suffix is not exe for libraries",
-      ),
-    )
-  | [suffix, ...r] => suffix
-  };
-};
-
 /* */
 /*  Inline ppx is supported too. */
 /* let%test "getSuffix(): must return suffix" = getSuffix("foo.lib") == "lib"; */
 /* */
-
-let%expect_test _ = {
-  print_endline(getSuffix("foo.lib"));
-  %expect
-  {|
-     lib
-   |};
-};
-
-let%expect_test _ = {
-  print_endline(getSuffix("foo.bar.lib"));
-  %expect
-  {|
-     lib
-     |};
-};
-
-let%expect_test _ = {
-  print_endline(
-    try (getSuffix("foo")) {
-    | GenericException(_) => "Must throw GenericException"
-    | _ => "Did not throw GenericException"
-    },
-  );
-  %expect
-  {|
-     Must throw GenericException
-  |};
-};
 
 let resolveRelativePath = path => {
   let separator = "/";
@@ -662,18 +619,17 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           | e => raise(e)
           };
 
-        let name_was_guessed = ref(false);
         /* Pesy'name is Dune's public_name */
+        /* If name is provided and binary's public_name is also provided in the bin property, name takes precedence */
         let name =
           try (
             JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString
           ) {
           | JSON.NullJSONValue(_) =>
-            name_was_guessed := true;
             switch (bin) {
             | Some((_mainFileName, installedBinaryName)) => installedBinaryName
             | None => rootName ++ "." ++ pathToOCamlLibName(dir)
-            };
+            }
           | e => raise(e)
           };
 
@@ -795,18 +751,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           | _ => None
           };
 
-        let nameSpecifiedHasBinSuffix =
-          ! name_was_guessed^ && getSuffix(name) == "exe";
-        let binPropertyIsPresent = isBinPropertyPresent(bin);
-
-        let isBinary = nameSpecifiedHasBinSuffix || binPropertyIsPresent;
-        if (! name_was_guessed^
-            && !nameSpecifiedHasBinSuffix
-            && binPropertyIsPresent) {
-          raise(FatalError("Conflicting values for `bin` property `name`"));
-        };
-
-        if (isBinary) {
+        if (isBinPropertyPresent(bin)) {
           /* Prioritising `bin` over `name` */
           let main =
             switch (bin) {
@@ -1093,8 +1038,7 @@ let%expect_test _ = {
     "buildDirs": {
       "test": {
         "require": ["foo"],
-        "main": "Bar",
-        "name": "Bar.exe"
+        "bin": { "Bar.exe": "Bar.re" }
       }
     }
   }
@@ -1232,8 +1176,7 @@ let%expect_test _ = {
       "name": "foo",
       "buildDirs": {
       "testlib": {
-        "main": "Foo",
-        "name": "bar.exe",
+        "bin": { "bar.exe": "Foo.re" },
         "modes": ["best", "c"]
       }
     }
@@ -1447,8 +1390,7 @@ let%expect_test _ = {
              "name": "foo",
              "buildDirs": {
                "testexe": {
-                 "main": "Foo",
-                 "name": "Foo.exe",
+                 "bin": { "Foo.exe": "Foo.re" },
                  "rawBuildConfigFooter": [
                    "(install (section share_root) (files (asset.txt as asset.txt)))"
                  ]

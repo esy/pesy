@@ -9,16 +9,18 @@
   "buildDirs": {
     "test": {
       "require": [ "raw.lib" ],
-      "main": "TestRaw",
-      "name": "TestRaw.exe"
+      "bin": {
+        "TestRaw.exe": "TestRaw.re"
+      }
     },
     "library": {
       "name": "raw.lib",
       "namespace": "Raw"
     },
     "executable": {
-      "main": "RawApp",
-      "name": "RawApp.exe",
+      "bin": {
+        "RawApp.exe": "RawApp.re"
+      },
       "rawBuildConfig": [
         "(libraries lwt lwt.unix raw.lib)",
         "(preprocess (pps lwt_ppx))"
