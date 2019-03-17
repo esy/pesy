@@ -9,12 +9,16 @@
   "buildDirs": {
     "test": {
       "require": [ "test-project/library"],
-      "bin": "TestTestProject.re as TestTestProject.exe"
+      "bin": {
+        "TestTestProject.exe": "TestTestProject.re"
+      }
     },
     "library": {},
     "executable": {
       "require": [ "test-project/library", "lwt", "lwt/unix" ],
-      "bin": "TestProjectApp.re as TestProjectApp.exe",
+      "bin": {
+        "TestProjectApp.exe": "TestProjectApp.re"
+      },
       "preprocess": [ "pps", "lwt_ppx" ]
     }
   },

@@ -139,30 +139,18 @@ let main = () => {
 
 PesyLib.PesyConf.(
   try (main()) {
-  | BinaryTupleNameError(e) =>
-    let l =
-      switch (e) {
-      | InvalidSourceFilename(sourceFile) =>
-        Pastel.(
+  | InvalidBinProperty(pkgName) =>
+    let mStr =
+      sprintf("Invalid value in subpackage %s's bin property\n", pkgName);
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red> mStr </Pastel>
           <Pastel>
-            <Pastel color=Red> "Invalid source file " </Pastel>
-            <Pastel bold=true> sourceFile </Pastel>
-            "\nSource file must be a .re file\nMake sure bin property its of the form"
-            <Pastel bold=true> " FooBar.re as BarBaz.exe" </Pastel>
+            "'bin' property is usually of the form { \"target.exe\": \"sourceFilename.re\" } "
           </Pastel>
-        )
-
-      | InvalidBinaryName(binaryFile) =>
-        Pastel.(
-          <Pastel>
-            <Pastel color=Red> "Invalid binary file " </Pastel>
-            <Pastel bold=true> binaryFile </Pastel>
-            "\nBinary file must be a .exe file\nMake sure bin property is of the form"
-            <Pastel bold=true> " FooBar.re as BarBaz.exe" </Pastel>
-          </Pastel>
-        )
-      };
-    let message = Pastel.(<Pastel> l </Pastel>);
+        </Pastel>
+      );
     fprintf(stderr, "%s\n", message);
     exit(-1);
   | ShouldNotBeNull(e) =>

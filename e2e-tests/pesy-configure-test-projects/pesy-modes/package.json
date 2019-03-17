@@ -14,9 +14,10 @@
   "buildDirs": {
     "test": {
       "require": ["pesy-mode.lib"],
-      "main": "TestPesyMode",
-      "name": "TestPesyMode.exe",
-        "modes": ["byte", "exe"]
+      "bin": {
+        "TestPesyMode.exe": "TestPesyMode.re"
+      },
+      "modes": ["byte", "exe"]
     },
     "library": {
       "name": "pesy-mode.lib",
@@ -25,9 +26,10 @@
     },
     "executable": {
       "require": ["pesy-mode.lib"],
-      "main": "PesyModeApp",
-      "name": "PesyModeApp.exe",
-        "modes": ["byte", "exe"]
+      "bin": {
+        "PesyModeApp.exe": "PesyModeApp.re"
+      },
+      "modes": ["byte", "exe"]
     }
   },
   "scripts": {

@@ -9,8 +9,9 @@
   "buildDirs": {
     "test": {
       "require": [ "pesy-preprocess.lib" ],
-      "main": "TestPesyPreprocess",
-      "name": "TestPesyPreprocess.exe"
+      "bin": {
+        "TestPesyPreprocess.exe": "TestPesyPreprocess.re"
+      }
     },
     "library": {
       "name": "pesy-preprocess.lib",
@@ -18,8 +19,9 @@
     },
     "executable": {
       "require": [  "lwt", "lwt.unix", "pesy-preprocess.lib" ],
-      "main": "PesyPreprocessApp",
-      "name": "PesyPreprocessApp.exe",
+      "bin": {
+        "PesyPreprocessApp.exe": "PesyPreprocessApp.re"
+      },
       "preprocess": [ "pps", "lwt_ppx" ]
     }
   },

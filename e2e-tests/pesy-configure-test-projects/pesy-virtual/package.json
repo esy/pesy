@@ -25,11 +25,15 @@
     },
     "executable-bar": {
       "require": ["pesy-virtual/lib", "pesy-virtual/bar"],
-      "bin": "PesyVirtualApp.re as PesyVirtualAppBar.exe"
+      "bin": {
+        "PesyVirtualAppBar.exe": "PesyVirtualApp.re"
+      }
     },
     "executable-baz": {
       "require": ["pesy-virtual/lib", "pesy-virtual/baz"],
-      "bin": "PesyVirtualApp.re as PesyVirtualAppBaz.exe"
+      "bin": {
+        "PesyVirtualAppBaz.exe": "PesyVirtualApp.re"
+      }
     }
   },
   "scripts": {

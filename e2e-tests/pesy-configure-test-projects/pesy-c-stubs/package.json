@@ -13,8 +13,9 @@
   "buildDirs": {
     "test": {
       "require": ["pesy-c-stubs.lib"],
-      "main": "TestPesyCStubs",
-      "name": "TestPesyCStubs.exe"
+      "bin": {
+        "TestPesyCStubs.exe": "TestPesyCStubs.re"
+      }
     },
     "library": {
       "name": "pesy-c-stubs.lib",
@@ -23,8 +24,9 @@
     },
     "executable": {
       "require": ["pesy-c-stubs.lib"],
-      "main": "PesyCStubsApp",
-      "name": "PesyCStubsApp.exe"
+      "bin": {
+        "PesyCStubsApp.exe": "PesyCStubsApp.re"
+      }
     }
   },
   "scripts": {
