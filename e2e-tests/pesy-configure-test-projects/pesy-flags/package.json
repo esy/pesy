@@ -13,9 +13,7 @@
   "buildDirs": {
     "test": {
       "require": ["pesy-flags.lib"],
-      "bin": {
-        "TestPesyFlags.exe": "TestPesyFlags.re"
-      }
+      "bin": "TestPesyFlags.re"
     },
     "library": {
       "name": "pesy-flags.lib",
@@ -30,8 +28,7 @@
     }
   },
   "scripts": {
-    "pesy": "bash -c 'env PESY_MODE=update pesy'",
-    "test": "esy x TestPesyFlags.exe"
+    "test": "esy b dune runtest"
   },
   "dependencies": {
     "@opam/dune": ">=1.6.0",

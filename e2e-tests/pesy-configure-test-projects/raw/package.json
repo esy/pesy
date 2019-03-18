@@ -9,9 +9,7 @@
   "buildDirs": {
     "test": {
       "require": [ "raw.lib" ],
-      "bin": {
-        "TestRaw.exe": "TestRaw.re"
-      }
+      "bin": "TestRaw.re"
     },
     "library": {
       "name": "raw.lib",
@@ -34,7 +32,9 @@
       ]
     }
   },
-  "scripts": { "test": "esy x TestRaw.exe" },
+  "scripts": {
+    "test": "esy b dune runtest"
+  },
   "dependencies": {
     "@esy-ocaml/reason": "*",
     "@opam/dune": "*",

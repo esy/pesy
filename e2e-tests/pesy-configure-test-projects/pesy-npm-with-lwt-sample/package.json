@@ -9,9 +9,7 @@
   "buildDirs": {
     "test": {
       "require": [ "test-project/library"],
-      "bin": {
-        "TestTestProject.exe": "TestTestProject.re"
-      }
+      "bin": "TestTestProject.re"
     },
     "library": {},
     "executable": {
@@ -22,7 +20,9 @@
       "preprocess": [ "pps", "lwt_ppx" ]
     }
   },
-  "scripts": { "test": "esy x TestTestProject.exe" },
+  "scripts": {
+    "test": "esy b dune runtest"
+  },
   "dependencies": {
     "@esy-ocaml/reason": "*",
     "@opam/dune": "*",

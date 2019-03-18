@@ -24,7 +24,7 @@
     }
   },
   "scripts": {
-    "test": "esy x Test<PACKAGE_NAME_UPPER_CAMEL>.exe"
+    "test": "esy b dune runtest"
   },
   "dependencies": {
     "@opam/dune": "*",
