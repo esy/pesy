@@ -59,9 +59,9 @@ let testProjectDir = Filename.concat(tmpDir, testProject);
 let pesyBinPath = "pesy";
 
 let esyCommand =
-  Sys.unix ?
-    "esy" :
-    {
+  Sys.unix
+    ? "esy"
+    : {
       let pathVars =
         Array.to_list(Unix.environment())
         |> List.map(e =>
@@ -139,13 +139,12 @@ if (exitStatus != 0) {
   exit(-1);
 };
 
-let exitStatus =
-  runCommandWithEnv(esyCommand, [|"x", "TestTestProject.exe"|]);
+let exitStatus = runCommandWithEnv(esyCommand, [|"b", "dune", "runtest"|]);
 
 if (exitStatus != 0) {
   Printf.fprintf(
     stderr,
-    "Test failed: Non zero exit when running TestTestProject.exe\n Code: %d\n",
+    "Test failed: Non zero exit when running 'esy b dune runtest'\n Code: %d\n",
     exitStatus,
   );
   exit(-1);

@@ -14,9 +14,7 @@
   "buildDirs": {
     "test": {
       "require": ["pesy-mode.lib"],
-      "bin": {
-        "TestPesyMode.exe": "TestPesyMode.re"
-      },
+      "bin": "TestPesyMode.re",
       "modes": ["byte", "exe"]
     },
     "library": {
@@ -34,7 +32,7 @@
   },
   "scripts": {
     "pesy": "bash -c 'env PESY_MODE=update pesy'",
-    "test": "esy x TestPesyMode.exe"
+    "test": "esy b dune runtest"
   },
   "dependencies": {
     "@opam/dune": ">=1.6.0",

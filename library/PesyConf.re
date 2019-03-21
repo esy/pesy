@@ -14,362 +14,10 @@ exception GenericException(string);
 exception ResolveRelativePathFailure(string);
 exception InvalidBinProperty(string);
 
-module Library: {
-  module Mode: {
-    exception InvalidLibraryMode(string);
-    type t;
-    let ofString: string => t;
-    let toString: t => string;
-  };
-  type t;
-  let create:
-    (
-      string,
-      option(list(Mode.t)),
-      option(list(string)),
-      option(list(string)),
-      option(list(string)),
-      option(bool)
-    ) =>
-    t;
-  let toDuneStanza: (Common.t, t) => (string, list(Stanza.t));
-} = {
-  module Mode = {
-    exception InvalidLibraryMode(string);
-    type t =
-      | Native
-      | Byte
-      | Best;
-    let ofString =
-      fun
-      | "best" => Best
-      | "native" => Native
-      | "byte" => Byte
-      | x => raise(InvalidLibraryMode(x));
-    let toString =
-      fun
-      | Best => "best"
-      | Native => "native"
-      | Byte => "byte";
-  };
-  type t = {
-    namespace: string,
-    modes: option(list(Mode.t)),
-    cNames: option(list(string)),
-    virtualModules: option(list(string)),
-    implements: option(list(string)),
-    wrapped: option(bool),
-  };
-  let create = (namespace, modes, cNames, virtualModules, implements, wrapped) => {
-    namespace,
-    modes,
-    cNames,
-    virtualModules,
-    implements,
-    wrapped,
-  };
-  let toDuneStanza = (common, lib) => {
-    /* let {name: pkgName, require, path} = common */
-    let {
-      namespace,
-      modes: modesP,
-      cNames: cNamesP,
-      virtualModules: virtualModulesP,
-      implements: implementsP,
-      wrapped: wrappedP,
-    } = lib;
-    let (
-      public_name,
-      libraries,
-      flags,
-      ocamlcFlags,
-      ocamloptFlags,
-      jsooFlags,
-      preprocess,
-      includeSubdirs,
-      rawBuildConfig,
-      rawBuildConfigFooter,
-    ) =
-      Common.toDuneStanzas(common);
-    let path = Common.getPath(common);
-    let name = Stanza.create("name", Stanza.createAtom(namespace));
-
-    let modesD =
-      switch (modesP) {
-      | None => None
-      | Some(l) =>
-        Some(
-          Stanza.createExpression([
-            Stanza.createAtom("modes"),
-            ...List.map(m => m |> Mode.toString |> Stanza.createAtom, l),
-          ]),
-        )
-      };
-
-    let cNamesD =
-      switch (cNamesP) {
-      | None => None
-      | Some(l) =>
-        Some(
-          Stanza.createExpression([
-            Stanza.createAtom("c_names"),
-            ...List.map(Stanza.createAtom, l),
-          ]),
-        )
-      };
-
-    let virtualModulesD =
-      switch (virtualModulesP) {
-      | None => None
-      | Some(l) =>
-        Some(
-          Stanza.createExpression([
-            Stanza.createAtom("virtual_modules"),
-            ...List.map(Stanza.createAtom, l),
-          ]),
-        )
-      };
-
-    let implementsD =
-      switch (implementsP) {
-      | None => None
-      | Some(l) =>
-        Some(
-          Stanza.createExpression([
-            Stanza.createAtom("implements"),
-            ...List.map(Stanza.createAtom, l),
-          ]),
-        )
-      };
-
-    let wrappedD =
-      switch (wrappedP) {
-      | None => None
-      | Some(w) =>
-        Some(
-          Stanza.createExpression([
-            Stanza.createAtom("wrapped"),
-            Stanza.createAtom(string_of_bool(w)),
-          ]),
-        )
-      };
-
-    let mandatoryExpressions = [name, public_name];
-    let optionalExpressions = [
-      libraries,
-      modesD,
-      cNamesD,
-      virtualModulesD,
-      implementsD,
-      wrappedD,
-      flags,
-      ocamlcFlags,
-      ocamloptFlags,
-      jsooFlags,
-      preprocess,
-      includeSubdirs,
-    ];
-
-    let rawBuildConfig =
-      switch (rawBuildConfig) {
-      | Some(l) => l
-      | None => []
-      };
-
-    let rawBuildConfigFooter =
-      switch (rawBuildConfigFooter) {
-      | Some(l) => l
-      | None => []
-      };
-
-    let library =
-      Stanza.createExpression([
-        Stanza.createAtom("library"),
-        ...mandatoryExpressions
-           @ filterNone(optionalExpressions)
-           @ rawBuildConfig,
-      ]);
-
-    (path, [library, ...rawBuildConfigFooter]);
-  };
-};
-
-module Executable: {
-  type t;
-  module Mode: {
-    type t;
-    let ofList: list(string) => t;
-    let toList: t => list(string);
-  };
-  let create: (string, option(Mode.t)) => t;
-  let toDuneStanza: (Common.t, t) => (string, list(Stanza.t));
-} = {
-  module Mode = {
-    exception InvalidCompilationMode(unit);
-    exception InvalidBinaryKind(unit);
-    module Compilation: {
-      type t;
-      let toString: t => string;
-      let ofString: string => t;
-    } = {
-      type t =
-        | Byte
-        | Native
-        | Best;
-
-      let toString =
-        fun
-        | Byte => "byte"
-        | Native => "native"
-        | Best => "best";
-
-      let ofString =
-        fun
-        | "byte" => Byte
-        | "native" => Native
-        | "best" => Best
-        | _ => raise(InvalidCompilationMode());
-    };
-
-    module BinaryKind: {
-      type t;
-      let toString: t => string;
-      let ofString: string => t;
-    } = {
-      type t =
-        | C
-        | Exe
-        | Object
-        | Shared_object;
-
-      let toString =
-        fun
-        | C => "c"
-        | Exe => "exe"
-        | Object => "object"
-        | Shared_object => "shared_object";
-
-      let ofString =
-        fun
-        | "c" => C
-        | "exe" => Exe
-        | "object" => Object
-        | "shared_object" => Shared_object
-        | _ => raise(InvalidBinaryKind());
-    };
-
-    type t = (Compilation.t, BinaryKind.t);
-    exception InvalidExecutableMode(string);
-    let ofList = parts =>
-      switch (parts) {
-      | [c, b] => (Compilation.ofString(c), BinaryKind.ofString(b))
-      | _ =>
-        raise(
-          InvalidExecutableMode(
-            sprintf(
-              "Invalid executable mode: expected of the form (<compilation mode>, <binary_kind>). Got %s",
-              List.fold_left((a, e) => sprintf("%s %s", a, e), "", parts),
-            ),
-          ),
-        )
-      };
-    let toList = m => {
-      let (c, b) = m;
-      [Compilation.toString(c), BinaryKind.toString(b)];
-    };
-  };
-  type t = {
-    main: string,
-    modes: option(Mode.t),
-  };
-  let create = (main, modes) => {main, modes};
-  let toDuneStanza = (common: Common.t, e) => {
-    /* let {name: pkgName, require, path} = common; */
-    let {main, modes: modesP} = e;
-    let (
-      public_name,
-      libraries,
-      flags,
-      ocamlcFlags,
-      ocamloptFlags,
-      jsooFlags,
-      preprocess,
-      includeSubdirs,
-      rawBuildConfig,
-      rawBuildConfigFooter,
-    ) =
-      Common.toDuneStanzas(common);
-    let path = Common.getPath(common);
-    /* Pesy's main is Dune's name */
-    let name = Stanza.create("name", Stanza.createAtom(main));
-    /* let public_name = */
-    /*   Stanza.create("public_name", Stanza.createAtom(pkgName)); */
-
-    /* let libraries = */
-    /*   switch (require) { */
-    /*   | [] => None */
-    /*   | libs => */
-    /*     Some( */
-    /*       Stanza.createExpression([ */
-    /*         Stanza.createAtom("libraries"), */
-    /*         ...List.map(r => Stanza.createAtom(r), libs), */
-    /*       ]), */
-    /*     ) */
-    /*   }; */
-
-    let modesD =
-      switch (modesP) {
-      | None => None
-      | Some(m) =>
-        Some(
-          Stanza.createExpression([
-            Stanza.createAtom("modes"),
-            Stanza.createExpression(
-              m |> Mode.toList |> List.map(Stanza.createAtom),
-            ),
-          ]),
-        )
-      };
-
-    let mandatoryExpressions = [name, public_name];
-    let optionalExpressions = [
-      libraries,
-      modesD,
-      flags,
-      ocamlcFlags,
-      ocamloptFlags,
-      jsooFlags,
-      preprocess,
-      includeSubdirs,
-    ];
-
-    let rawBuildConfig =
-      switch (rawBuildConfig) {
-      | Some(l) => l
-      | None => []
-      };
-
-    let rawBuildConfigFooter =
-      switch (rawBuildConfigFooter) {
-      | Some(l) => l
-      | None => []
-      };
-
-    let executable =
-      Stanza.createExpression([
-        Stanza.createAtom("executable"),
-        ...mandatoryExpressions
-           @ filterNone(optionalExpressions)
-           @ rawBuildConfig,
-      ]);
-
-    (path, [executable, ...rawBuildConfigFooter]);
-  };
-};
-
 type pkgType =
   | ExecutablePackage(Executable.t)
-  | LibraryPackage(Library.t);
+  | LibraryPackage(Library.t)
+  | TestPackage(Test.t);
 
 type package = {
   common: Common.t,
@@ -597,11 +245,15 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
     List.map(
       pkg => {
         let (dir, conf) = pkg;
+
+        let isTestRunner = dir == "test";
+
+        let binJSON = JSON.member(conf, "bin");
         let bin =
           try (
             Some(
               {
-                let kvPairs = JSON.toKeyValuePairs(JSON.member(conf, "bin"));
+                let kvPairs = JSON.toKeyValuePairs(binJSON);
                 /* TODO: Multiple executable support */
                 let kv = List.hd(kvPairs);
                 let (k, v) = kv;
@@ -615,7 +267,16 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             )
           ) {
           | JSON.NullJSONValue(_) => None
-          | JSON.InvalidJSONValue(_) => raise(InvalidBinProperty(dir))
+          /* If its a string and not a JSON */
+          | JSON.InvalidJSONValue(_) =>
+            let binaryMainFile =
+              try (binJSON |> JSON.toValue |> FieldTypes.toString) {
+              | _ => raise(InvalidBinProperty(dir))
+              };
+            if (!isValidSourceFile(binaryMainFile)) {
+              raise(InvalidBinProperty(dir));
+            };
+            Some((binaryMainFile, moduleNameOf(binaryMainFile) ++ ".exe"));
           | e => raise(e)
           };
 
@@ -751,7 +412,64 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           | _ => None
           };
 
-        if (isBinPropertyPresent(bin)) {
+        if (isTestRunner) {
+          let main =
+            switch (bin) {
+            | Some((mainFileName, _installedBinaryName)) =>
+              moduleNameOf(mainFileName)
+
+            | _ =>
+              try (
+                JSON.member(conf, "main")
+                |> JSON.toValue
+                |> FieldTypes.toString
+              ) {
+              | JSON.NullJSONValue () =>
+                raise(
+                  FatalError(
+                    sprintf(
+                      "Atleast one of `bin` or `main` must be provided for %s",
+                      dir,
+                    ),
+                  ),
+                )
+              | e => raise(e)
+              }
+            };
+
+          let modes =
+            try (
+              Some(
+                Test.Mode.ofList(
+                  JSON.member(conf, "modes")
+                  |> JSON.toValue
+                  |> FieldTypes.toList
+                  |> List.map(a => a |> FieldTypes.toString),
+                ),
+              )
+            ) {
+            | JSON.NullJSONValue () => None
+            | e => raise(e)
+            };
+
+          {
+            common:
+              Common.create(
+                name,
+                Path.(projectPath / dir),
+                require,
+                flags,
+                ocamlcFlags,
+                ocamloptFlags,
+                jsooFlags,
+                preprocess,
+                includeSubdirs,
+                rawBuildConfig,
+                rawBuildConfigFooter,
+              ),
+            pkgType: TestPackage(Test.create(main, modes)),
+          };
+        } else if (isBinPropertyPresent(bin)) {
           /* Prioritising `bin` over `name` */
           let main =
             switch (bin) {
@@ -929,6 +647,7 @@ let toPackages = (_prjPath, pkgs) =>
       switch (pkg.pkgType) {
       | LibraryPackage(l) => Library.toDuneStanza(pkg.common, l)
       | ExecutablePackage(e) => Executable.toDuneStanza(pkg.common, e)
+      | TestPackage(e) => Test.toDuneStanza(pkg.common, e)
       },
     pkgs,
   );
@@ -1047,7 +766,7 @@ let%expect_test _ = {
   List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
-     (executable (name Bar) (public_name Bar.exe) (libraries foo))
+     (test (name Bar) (libraries foo))
    |};
 };
 
