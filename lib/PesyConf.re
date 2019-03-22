@@ -1,6 +1,6 @@
 open Printf;
-open PesyUtils;
-open PesyUtils.NoLwt;
+open Utils;
+open Utils.NoLwt;
 
 /* private */
 exception ShouldHaveRaised(unit);

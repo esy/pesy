@@ -1,4 +1,4 @@
-open PesyUtils;
+open Utils;
 
 module Mode = {
   exception InvalidLibraryMode(string);

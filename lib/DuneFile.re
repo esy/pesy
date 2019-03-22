@@ -11,7 +11,7 @@ let toString = (stanzas: list(Stanza.t)) =>
 
 let ofFile = n => {
   open Sexplib;
-  let contentStr = PesyUtils.readFile(n);
+  let contentStr = Utils.readFile(n);
   Sexp.(
     switch (Sexp.of_string(sprintf("(%s)", contentStr))) {
     | List(l) => List.map(Stanza.ofSexp, l)
