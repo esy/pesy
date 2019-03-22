@@ -3,14 +3,70 @@
   "version": "0.0.0",
   "description": "Pesy.",
   "esy": {
-    "build": [ "refmterr dune build -p #{self.name}" ],
+    "build": [
+      "refmterr dune build -p #{self.name}"
+    ],
     "buildsInSource": "_build",
     "release": {
-      "bin": [ "pesy" ],
-      "includePackages": [ "root" ]
+      "bin": [
+        "pesy"
+      ],
+      "includePackages": [
+        "root"
+      ]
     }
   },
-  "scripts": { "test": "esy dune runtest" },
+  "buildDirs": {
+    "bin": {
+      "pesy": "Pesy.re",
+      "require": [
+        "pesy/lib"
+      ]
+    },
+    "lib": {
+      "require": [
+        "str",
+        "sexplib",
+        "yojson",
+        "ppx_inline_test/runtime-lib",
+        "pesy/utils"
+      ],
+      "preprocess": [
+        "pps",
+        "ppx_expect",
+        "ppx_inline_test"
+      ],
+      "flags": [
+        "-w",
+        "-33+9"
+      ],
+      "rawBuildConfig": [
+        "(inline_tests (flags -verbose))"
+      ]
+    },
+    "utils": {
+      "require": [
+        "unix",
+        "str",
+        "pastel/lib"
+      ],
+      "flags": [
+        "-w",
+        "-33+9"
+      ],
+      "preprocess": [
+        "pps",
+        "ppx_expect",
+        "ppx_inline_test"
+      ],
+      "rawBuildConfig": [
+        "(inline_tests (flags -verbose))"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "esy dune runtest"
+  },
   "dependencies": {
     "@esy-ocaml/reason": "*",
     "@opam/bos": "*",
@@ -25,7 +81,9 @@
     "ocaml": "~4.6.0",
     "refmterr": "*"
   },
-  "devDependencies": { "@opam/merlin": "*" },
+  "devDependencies": {
+    "@opam/merlin": "*"
+  },
   "resolutions": {
     "@reason-native/pastel": "facebookexperimental/reason-native#028b0973b0268530609c3edfa4b4f3ebbf9fbb43"
   }
