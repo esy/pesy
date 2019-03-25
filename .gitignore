@@ -10,4 +10,3 @@ pesy.install
 .DS_Store
 *.install
 *~
-**/dune
