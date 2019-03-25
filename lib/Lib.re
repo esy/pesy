@@ -1,10 +1,11 @@
-open PesyUtils;
 open Utils;
 open NoLwt;
 open Printf;
 module Mode = Mode;
 module PesyConf = PesyConf;
 exception BootstrappingError(string);
+
+let isEsyInstalled = () => true;
 
 let bootstrapIfNecessary = projectPath =>
   if (!isEsyInstalled()) {

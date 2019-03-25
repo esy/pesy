@@ -1,5 +1,5 @@
 open Printf;
-open PesyUtils;
+open Utils;
 
 module Mode = {
   exception InvalidCompilationMode(unit);

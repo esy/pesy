@@ -1,4 +1,5 @@
-open PesyUtils;
+open Lib;
+open Utils;
 open Printf;
 open EsyCommand;
 
@@ -8,12 +9,12 @@ let bootstrap = projectRoot => {
 
   /* use readFileOpt to read previously computed directory path */
   let (pkgName, versionString, packageNameUpperCamelCase, packageLibName) =
-    PesyLib.bootstrapIfNecessary(projectRoot);
+    Lib.bootstrapIfNecessary(projectRoot);
 
   let packageNameVersion = sprintf("%s@%s", pkgName, versionString);
   print_endline(Pastel.(<Pastel bold=true> packageNameVersion </Pastel>));
 
-  PesyUtils.renderAscTree([
+  Utils.renderAscTree([
     [
       "executable",
       sprintf(
@@ -46,20 +47,20 @@ let bootstrap = projectRoot => {
   ]);
   print_newline();
 
-  ignore(PesyLib.generateBuildFiles(projectRoot));
+  ignore(Lib.generateBuildFiles(projectRoot));
 
   print_endline(
     Pastel.(<Pastel bold=true> "Running 'esy install'" </Pastel>),
   );
 
-  let setupStatus = PesyUtils.runCommandWithEnv(esyCommand, [|"install"|]);
+  let setupStatus = Utils.runCommandWithEnv(esyCommand, [|"install"|]);
   if (setupStatus != 0) {
     fprintf(stderr, "esy (%s) install failed!", esyCommand);
     exit(-1);
   };
 
   print_endline(Pastel.(<Pastel bold=true> "Running 'esy build'" </Pastel>));
-  let setupStatus = PesyUtils.runCommandWithEnv(esyCommand, [|"build"|]);
+  let setupStatus = Utils.runCommandWithEnv(esyCommand, [|"build"|]);
   if (setupStatus != 0) {
     fprintf(stderr, "esy (%s) build failed!", esyCommand);
     exit(-1);
@@ -72,11 +73,11 @@ let bootstrap = projectRoot => {
 let reconcile = projectRoot => {
   /* use readFileOpt to read previously computed directory path */
   let packageJSONPath = Path.(projectRoot / "package.json");
-  let operations = PesyLib.PesyConf.gen(projectRoot, packageJSONPath);
+  let operations = Lib.PesyConf.gen(projectRoot, packageJSONPath);
 
   switch (operations) {
   | [] => ()
-  | _ as operations => PesyLib.PesyConf.log(operations)
+  | _ as operations => Lib.PesyConf.log(operations)
   };
 
   print_endline(
@@ -107,7 +108,7 @@ let main = () => {
      * 4. esy b pesy build
      */
     /* use readFileOpt to read previously computed directory path */
-    PesyLib.Mode.EsyEnv.(
+    Lib.Mode.EsyEnv.(
       switch (userCommand) {
       | Some(c) =>
         switch (c) {
@@ -137,7 +138,7 @@ let main = () => {
   ();
 };
 
-PesyLib.PesyConf.(
+PesyConf.(
   try (main()) {
   | InvalidBinProperty(pkgName) =>
     let mStr =

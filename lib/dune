@@ -1,0 +1,4 @@
+(library (name Lib) (public_name pesy.lib)
+    (libraries str sexplib yojson ppx_inline_test.runtime-lib pesy.utils)
+    (flags -w -33+9) (preprocess (pps ppx_expect ppx_inline_test))
+    (inline_tests (flags -verbose))) 

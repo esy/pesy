@@ -3,14 +3,73 @@
   "version": "0.0.0",
   "description": "Pesy.",
   "esy": {
-    "build": [ "refmterr dune build -p #{self.name}" ],
+    "build": [
+      "refmterr dune build -p #{self.name}"
+    ],
     "buildsInSource": "_build",
     "release": {
-      "bin": [ "pesy" ],
-      "includePackages": [ "root" ]
+      "bin": [
+        "pesy"
+      ],
+      "includePackages": [
+        "root"
+      ]
     }
   },
-  "scripts": { "test": "esy dune runtest" },
+  "buildDirs": {
+    "bin": {
+      "bin": {
+        "pesy": "Pesy.re"
+      },
+      "require": [
+        "pesy/lib",
+        "pesy/utils"
+      ]
+    },
+    "lib": {
+      "require": [
+        "str",
+        "sexplib",
+        "yojson",
+        "ppx_inline_test/runtime-lib",
+        "pesy/utils"
+      ],
+      "preprocess": [
+        "pps",
+        "ppx_expect",
+        "ppx_inline_test"
+      ],
+      "flags": [
+        "-w",
+        "-33+9"
+      ],
+      "rawBuildConfig": [
+        "(inline_tests (flags -verbose))"
+      ]
+    },
+    "utils": {
+      "require": [
+        "unix",
+        "str",
+        "pastel/lib"
+      ],
+      "flags": [
+        "-w",
+        "-6"
+      ],
+      "preprocess": [
+        "pps",
+        "ppx_expect",
+        "ppx_inline_test"
+      ],
+      "rawBuildConfig": [
+        "(inline_tests (flags -verbose))"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "esy dune runtest"
+  },
   "dependencies": {
     "@esy-ocaml/reason": "*",
     "@opam/bos": "*",
@@ -23,10 +82,14 @@
     "@reason-native/pastel": "^0.2.0",
     "dune": "^0.2.1",
     "ocaml": "~4.6.0",
-    "refmterr": "*"
+    "refmterr": "*",
+    "pesy-self": "*"
   },
-  "devDependencies": { "@opam/merlin": "*" },
+  "devDependencies": {
+    "@opam/merlin": "*"
+  },
   "resolutions": {
-    "@reason-native/pastel": "facebookexperimental/reason-native#028b0973b0268530609c3edfa4b4f3ebbf9fbb43"
+    "@reason-native/pastel": "facebookexperimental/reason-native#028b0973b0268530609c3edfa4b4f3ebbf9fbb43",
+    "pesy-self": "esy/pesy#fde323697a0357003d16fb6e057d7c7b0ee293fd"
   }
 }
