@@ -26,8 +26,9 @@ jobs:
         displayName: "esy install"
       - script: "esy build"
         displayName: "esy build"
-      - script: "esy test"
-        displayName: "Test command"
+      - ${{ if ne(parameters.platform, 'Windows') }}:
+          - script: esy test
+            displayName: 'Running inline tests'
       - script: "esy release"
         displayName: "esy release"
       - template: utils/publish-build-cache.yml
