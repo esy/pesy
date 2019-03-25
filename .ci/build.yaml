@@ -15,8 +15,6 @@ jobs:
       displayName: 'Installing deps'
   - script: esy install
     displayName: 'Installing deps'
-  - script: esy pesy
-    displayName: 'esy pesy'
   - script: esy build
     displayName: 'Building'
   - ${{ if ne(parameters.sign, 'true') }}:
