@@ -35,15 +35,15 @@ jobs:
         displayName: 'NPM packing...'
         workingDirectory: '_release'
       - ${{ if eq(parameters.platform, 'Windows') }}:
-        - script: 'npm install -g .\pesy-0.0.0.tgz --unsafe-perm=true'
+        - script: 'npm install -g .\pesy-0.5.0.tgz --unsafe-perm=true'
           displayName: 'npm link... for tests'
           workingDirectory: '_release'
-      - ${{ if eq(parameters.host, 'Linux') }}:
-        - script: 'sudo npm install -g ./pesy-0.0.0.tgz --unsafe-perm=true'
+      - ${{ if eq(parameters.platform, 'Linux') }}:
+        - script: 'sudo npm install -g ./pesy-0.5.0.tgz --unsafe-perm=true'
           displayName: 'npm link... for tests'
           workingDirectory: '_release'
-      - ${{ if eq(parameters.host, 'macOS') }}:
-        - script: 'sudo npm install -g ./pesy-0.0.0.tgz --unsafe-perm=false'
+      - ${{ if eq(parameters.platform, 'macOS') }}:
+        - script: 'sudo npm install -g ./pesy-0.5.0.tgz --unsafe-perm=false'
           displayName: 'npm link... for tests'
           workingDirectory: '_release'
       - ${{ if ne(parameters.platform, 'Windows') }}:
