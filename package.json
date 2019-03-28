@@ -82,14 +82,12 @@
     "@reason-native/pastel": "^0.2.0",
     "dune": "^0.2.1",
     "ocaml": "~4.6.0",
-    "refmterr": "*",
-    "pesy-self": "*"
+    "refmterr": "*"
   },
   "devDependencies": {
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "@reason-native/pastel": "facebookexperimental/reason-native#028b0973b0268530609c3edfa4b4f3ebbf9fbb43",
-    "pesy-self": "esy/pesy#fde323697a0357003d16fb6e057d7c7b0ee293fd"
+    "@reason-native/pastel": "facebookexperimental/reason-native#028b0973b0268530609c3edfa4b4f3ebbf9fbb43"
   }
 }
