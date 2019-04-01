@@ -4,9 +4,22 @@ open Printf;
 open EsyCommand;
 open Cmdliner;
 
+exception BootstrappingError(string);
+
 let bootstrap = projectRoot => {
   /* TODO: prompt user for their choice */
   let projectRoot = Sys.getcwd();
+
+  let esyCommand =
+    switch (resolveEsyCommand()) {
+    | Some(x) => x
+    | None =>
+      raise(
+        BootstrappingError(
+          "You haven't installed esy globally. First install esy then try again",
+        ),
+      )
+    };
 
   /* use readFileOpt to read previously computed directory path */
   let (pkgName, versionString, packageNameUpperCamelCase, packageLibName) =
@@ -142,6 +155,22 @@ let main = () => {
 let main = () => {
   PesyConf.(
     try (main()) {
+    | BootstrappingError(message) =>
+      let message =
+        Pastel.(
+          <Pastel>
+            <Pastel> "You have " </Pastel>
+            <Pastel color=Red> "not installed" </Pastel>
+            <Pastel> " esy\n" </Pastel>
+            <Pastel>
+              "pesy works together with esy to simplify your workflow. Please install esy.\n"
+            </Pastel>
+            <Pastel> "You could try\n\n" </Pastel>
+            <Pastel bold=true> "    npm install -g esy\n" </Pastel>
+          </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
     | InvalidBinProperty(pkgName) =>
       let mStr =
         sprintf("Invalid value in subpackage %s's bin property\n", pkgName);
