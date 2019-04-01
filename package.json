@@ -1,7 +1,7 @@
 {
   "name": "pesy",
-  "version": "0.5.0",
-  "description": "Pesy.",
+  "version": "0.5.0-alpha.1",
+  "description": "\"Esy Pesy\" - Your Esy Assistant.",
   "esy": {
     "build": [
       "refmterr dune build -p #{self.name}"
