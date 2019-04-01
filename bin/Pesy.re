@@ -2,6 +2,7 @@ open Lib;
 open Utils;
 open Printf;
 open EsyCommand;
+open Cmdliner;
 
 let bootstrap = projectRoot => {
   /* TODO: prompt user for their choice */
@@ -138,79 +139,93 @@ let main = () => {
   ();
 };
 
-PesyConf.(
-  try (main()) {
-  | InvalidBinProperty(pkgName) =>
-    let mStr =
-      sprintf("Invalid value in subpackage %s's bin property\n", pkgName);
-    let message =
-      Pastel.(
-        <Pastel>
-          <Pastel color=Red> mStr </Pastel>
+let main = () => {
+  PesyConf.(
+    try (main()) {
+    | InvalidBinProperty(pkgName) =>
+      let mStr =
+        sprintf("Invalid value in subpackage %s's bin property\n", pkgName);
+      let message =
+        Pastel.(
           <Pastel>
-            "'bin' property is usually of the form { \"target.exe\": \"sourceFilename.re\" } "
+            <Pastel color=Red> mStr </Pastel>
+            <Pastel>
+              "'bin' property is usually of the form { \"target.exe\": \"sourceFilename.re\" } "
+            </Pastel>
           </Pastel>
-        </Pastel>
-      );
-    fprintf(stderr, "%s\n", message);
-    exit(-1);
-  | ShouldNotBeNull(e) =>
-    let message =
-      Pastel.(
-        <Pastel>
-          <Pastel color=Red> "Found null value for " </Pastel>
-          <Pastel bold=true> e </Pastel>
-          "\nExpected a non null value."
-        </Pastel>
-      );
-    fprintf(stderr, "%s\n", message);
-    exit(-1);
-  | FatalError(e) =>
-    let message =
-      Pastel.(
-        <Pastel> <Pastel color=Red> "Fatal Error " </Pastel> e </Pastel>
-      );
-    fprintf(stderr, "%s\n", message);
-    exit(-1);
-  | InvalidRootName(e) =>
-    let message =
-      Pastel.(
-        <Pastel>
-          <Pastel color=Red> "Invalid root name!\n" </Pastel>
-          <Pastel> "Expected package name of the form " </Pastel>
-          <Pastel bold=true> "@myscope/foo-bar" </Pastel>
-          <Pastel> " or " </Pastel>
-          <Pastel bold=true> "foo-bar\n" </Pastel>
-          <Pastel> "Instead found " </Pastel>
-          <Pastel bold=true> e </Pastel>
-        </Pastel>
-      );
-    fprintf(stderr, "%s\n", message);
-    exit(-1);
-  | GenericException(e) =>
-    let message =
-      Pastel.(
-        <Pastel>
-          <Pastel color=Red> "Error: " </Pastel>
-          <Pastel> e </Pastel>
-        </Pastel>
-      );
-    fprintf(stderr, "%s\n", message);
-    exit(-1);
-  | ResolveRelativePathFailure(e) =>
-    let message =
-      Pastel.(
-        <Pastel>
-          <Pastel color=Red> "Could not find the library\n" </Pastel>
-          <Pastel> e </Pastel>
-        </Pastel>
-      );
-    fprintf(stderr, "%s\n", message);
-    exit(-1);
-  | x =>
-    /* let message = Pastel.(<Pastel color=Red> "Failed" </Pastel>); */
-    /* fprintf(stderr, "%s", message); */
-    /* exit(-1); */
-    raise(x)
-  }
-);
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    | ShouldNotBeNull(e) =>
+      let message =
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red> "Found null value for " </Pastel>
+            <Pastel bold=true> e </Pastel>
+            "\nExpected a non null value."
+          </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    | FatalError(e) =>
+      let message =
+        Pastel.(
+          <Pastel> <Pastel color=Red> "Fatal Error " </Pastel> e </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    | InvalidRootName(e) =>
+      let message =
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red> "Invalid root name!\n" </Pastel>
+            <Pastel> "Expected package name of the form " </Pastel>
+            <Pastel bold=true> "@myscope/foo-bar" </Pastel>
+            <Pastel> " or " </Pastel>
+            <Pastel bold=true> "foo-bar\n" </Pastel>
+            <Pastel> "Instead found " </Pastel>
+            <Pastel bold=true> e </Pastel>
+          </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    | GenericException(e) =>
+      let message =
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red> "Error: " </Pastel>
+            <Pastel> e </Pastel>
+          </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    | ResolveRelativePathFailure(e) =>
+      let message =
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red> "Could not find the library\n" </Pastel>
+            <Pastel> e </Pastel>
+          </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    | x =>
+      /* let message = Pastel.(<Pastel color=Red> "Failed" </Pastel>); */
+      /* fprintf(stderr, "%s", message); */
+      /* exit(-1); */
+      raise(x)
+    }
+  );
+};
+
+let main_t = Term.(const(main) $ const());
+
+open Cmdliner.Term;
+let cmd = "pesy";
+let envs: list(env_info) = [];
+let exits: list(exit_info) = [];
+let doc = "Esy Pesy - Your Esy Assistant.";
+let version = "0.5.0-alpha.2";
+
+Term.exit @@
+Term.eval((main_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version)));
