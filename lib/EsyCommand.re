@@ -38,13 +38,18 @@ let resolveEsyCommand = () =>
            );
 
       let paths =
-        List.fold_right(
-          (e, acc) => {
-            let (_, v) = e;
-            [v, ...acc];
-          },
-          pathVars,
-          [],
+        Str.split(
+          Str.regexp( Sys.unix ? ": ": ";"),
+          String.concat(
+            Sys.unix ? ": ": ";",
+              List.map(
+              (e) => {
+                let (_, v) = e;
+                v;
+              },
+              pathVars,
+            )
+          )
         );
 
       /* Unix.putenv("PATH", v); /\* This didn't work! *\/ */
