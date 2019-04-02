@@ -1,9 +1,16 @@
 open Printf;
 
+let esy_command = "esy";
+
 /*  @esy-ocaml/foo-package -> foo-package */
-let esyCommand =
+let resolveEsyCommand = () =>
   Sys.unix
-    ? "esy"
+    ? try (
+        Sys.command(sprintf("%s --version &>/dev/null", esy_command)) == 0
+          ? Some(esy_command) : None
+      ) {
+      | _ => None
+      }
     : {
       let pathVars =
         Array.to_list(Unix.environment())
@@ -30,19 +37,22 @@ let esyCommand =
              | None => ("", "") /* Why not filter_map? */
            );
 
-      let v =
-        List.fold_right(
-          (e, acc) => {
-            let (_, v) = e;
-            acc ++ (Sys.unix ? ":" : ";") ++ v;
-          },
-          pathVars,
-          "",
+      let paths =
+        Str.split(
+          Str.regexp( Sys.unix ? ": ": ";"),
+          String.concat(
+            Sys.unix ? ": ": ";",
+              List.map(
+              (e) => {
+                let (_, v) = e;
+                v;
+              },
+              pathVars,
+            )
+          )
         );
 
       /* Unix.putenv("PATH", v); /\* This didn't work! *\/ */
-
-      let paths = Str.split(Str.regexp(Sys.unix ? ":" : ";"), v);
 
       let npmPaths =
         List.filter(
@@ -50,9 +60,7 @@ let esyCommand =
           paths,
         );
       switch (npmPaths) {
-      | [] =>
-        fprintf(stderr, "No npm bin path found");
-        exit(-1);
-      | [h, ..._] => Filename.concat(h, "esy.cmd")
+      | [] => None
+      | [h, ..._] => Some(Filename.concat(h, "esy.cmd"))
       };
     };
