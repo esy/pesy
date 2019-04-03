@@ -105,51 +105,23 @@ let reconcile = projectRoot => {
 };
 
 let main = () => {
-  let userCommand =
-    if (Array.length(Sys.argv) > 1) {
-      Some(Sys.argv[1]);
-    } else {
-      None;
-    };
-  switch (Sys.getenv_opt("cur__root")) {
-  | Some(curRoot) =>
-    /**
+  ignore(
+    switch (Sys.getenv_opt("cur__root")) {
+    | Some(curRoot) =>
+      /**
      * This means the user ran pesy in an esy environment.
-     * Either as
-     * 1. esy pesy
-     * 2. esy b pesy
-     * 3. esy pesy build
-     * 4. esy b pesy build
+     * as esy pesy
+     * TODO: when run as esy b pesy, it must exit early with an error
      */
-    /* use readFileOpt to read previously computed directory path */
-    Lib.Mode.EsyEnv.(
-      switch (userCommand) {
-      | Some(c) =>
-        switch (c) {
-        | "build" => print_endline("TODO: build")
-        | _ as userCommand =>
-          let message =
-            Pastel.(
-              <Pastel>
-                <Pastel color=Red> "Error" </Pastel>
-                "Unrecognised command: "
-                <Pastel> userCommand </Pastel>
-              </Pastel>
-            );
-          fprintf(stderr, "%s", message);
-        }
-      | None => reconcile(curRoot)
-      }
-    )
-
-  | None =>
-    /**
+      reconcile(curRoot)
+    | None =>
+      /**
      * This mean pesy is being run naked on the shell.
-     * Either it was:
+     * TODO: use readFileOpt to read previously computed directory path
      */
-    bootstrap(Sys.getcwd())
-  };
-  ();
+      bootstrap(Sys.getcwd())
+    },
+  );
 };
 
 let main = () => {
@@ -247,14 +219,28 @@ let main = () => {
   );
 };
 
-let main_t = Term.(const(main) $ const());
+let pesy_build = () => print_endline("pesy-build");
 
-open Cmdliner.Term;
-let cmd = "pesy";
-let envs: list(env_info) = [];
-let exits: list(exit_info) = [];
-let doc = "Esy Pesy - Your Esy Assistant.";
 let version = "0.5.0-alpha.2";
 
-Term.exit @@
-Term.eval((main_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version)));
+let cmd = () => {
+  open Cmdliner.Term;
+  let cmd = "pesy";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "Esy Pesy - Your Esy Assistant.";
+  let cmd_t = Term.(const(main) $ const());
+  (cmd_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
+let build = () => {
+  open Cmdliner.Term;
+  let cmd = "build";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "pesy-build - builds your pesy managed project";
+  let build_t = Term.(const(pesy_build) $ const());
+  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
+Term.exit @@ Term.eval_choice(cmd(), [build()]);
