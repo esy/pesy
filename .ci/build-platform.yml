@@ -49,9 +49,11 @@ jobs:
       - ${{ if ne(parameters.platform, 'Windows') }}:
         - script: ./_build/install/default/bin/TestBootstrapper.exe
           displayName: 'Running bootstrapper tests'
+          continueOnError: true
       - ${{ if eq(parameters.platform, 'Windows') }}:
         - script: .\_build\install\default\bin\TestBootstrapper.exe
           displayName: 'Running bootstrapper tests'
+          continueOnError: true
       - ${{ if ne(parameters.platform, 'Windows') }}:
         - script: ./_build/install/default/bin/TestPesyConfigure.exe
           displayName: 'Running pesy configure tests'
