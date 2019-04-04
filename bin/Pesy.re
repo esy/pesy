@@ -219,7 +219,27 @@ let main = () => {
   );
 };
 
-let pesy_build = () => print_endline("pesy-build");
+let pesy_build = () => {
+  ignore(
+    switch (Sys.getenv_opt("cur__root")) {
+    | Some(curRoot) =>
+      let buildTarget = build(curRoot);
+      Sys.command("refmterr dune build -p " ++ buildTarget);
+    | None =>
+      let message =
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red>
+              "'pesy build' must be run the build environment only\n"
+            </Pastel>
+            <Pastel> "Try esy b pesy build" </Pastel>
+          </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    },
+  );
+};
 
 let version = "0.5.0-alpha.2";
 
