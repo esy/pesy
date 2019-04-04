@@ -219,27 +219,75 @@ let main = () => {
   );
 };
 
-let pesy_build = () => {
-  ignore(
-    switch (Sys.getenv_opt("cur__root")) {
-    | Some(curRoot) =>
-      let buildTarget = build(curRoot);
-      Sys.command("refmterr dune build -p " ++ buildTarget);
-    | None =>
-      let message =
-        Pastel.(
-          <Pastel>
-            <Pastel color=Red>
-              "'pesy build' must be run the build environment only\n"
+let pesy_build = () =>
+  PesyConf.(
+    ignore(
+      switch (Sys.getenv_opt("cur__root")) {
+      | Some(curRoot) =>
+        let buildTarget =
+          try (build(curRoot)) {
+          | BuildValidationFailures(failures) =>
+            let errorMessages =
+              String.concat(
+                "\n",
+                failures
+                |> List.map(
+                     fun
+                     | StaleDuneFile(f) => {
+                         let duneFile =
+                           Str.global_replace(
+                             Str.regexp(curRoot ++ (Sys.unix ? "/" : "\\")),
+                             "",
+                             f,
+                           );
+                         sprintf(
+                           "      Dune file %s is stale",
+                           Pastel.(<Pastel bold=true> duneFile </Pastel>),
+                         );
+                       }
+                     | StaleOpamFile((o, n)) =>
+                       sprintf(
+                         "      Project target name has changed. Found %s instead of %s",
+                         Pastel.(<Pastel bold=true> o </Pastel>),
+                         Pastel.(<Pastel bold=true> n </Pastel>),
+                       ),
+                   ),
+              );
+
+            fprintf(
+              stderr,
+              "%s",
+              Pastel.(
+                <Pastel color=Red>
+                  "\n  Found the following issues: \n\n"
+                </Pastel>
+              ),
+            );
+            fprintf(stderr, "%s\n", errorMessages);
+            fprintf(
+              stderr,
+              "\n  These can be fixed by running %s \n\n",
+              Pastel.(<Pastel color=Green> "esy pesy" </Pastel>),
+            );
+            exit(-1);
+          };
+
+        Sys.command("refmterr dune build -p " ++ buildTarget);
+      | None =>
+        let message =
+          Pastel.(
+            <Pastel>
+              <Pastel color=Red>
+                "'pesy build' must be run the build environment only\n"
+              </Pastel>
+              <Pastel> "Try esy b pesy build" </Pastel>
             </Pastel>
-            <Pastel> "Try esy b pesy build" </Pastel>
-          </Pastel>
-        );
-      fprintf(stderr, "%s\n", message);
-      exit(-1);
-    },
+          );
+        fprintf(stderr, "%s\n", message);
+        exit(-1);
+      },
+    )
   );
-};
 
 let version = "0.5.0-alpha.2";
 
