@@ -83,7 +83,7 @@
     "@opam/yojson": "^1.4.1",
     "@reason-native/pastel": "^0.2.0",
     "dune": "^0.2.1",
-    "ocaml": "~4.6.0",
+    "ocaml": "*",
     "refmterr": "*"
   },
   "devDependencies": {
