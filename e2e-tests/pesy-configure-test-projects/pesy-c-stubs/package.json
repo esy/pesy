@@ -12,16 +12,22 @@
   },
   "buildDirs": {
     "test": {
-      "require": ["pesy-c-stubs.lib"],
+      "require": [
+        "pesy-c-stubs.lib"
+      ],
       "bin": "TestPesyCStubs.re"
     },
     "library": {
       "name": "pesy-c-stubs.lib",
-      "cNames": ["stubs"],
+      "cNames": [
+        "stubs"
+      ],
       "namespace": "PesyCStubs"
     },
     "executable": {
-      "require": ["pesy-c-stubs.lib"],
+      "require": [
+        "pesy-c-stubs.lib"
+      ],
       "bin": {
         "PesyCStubsApp.exe": "PesyCStubsApp.re"
       }
@@ -34,6 +40,7 @@
     "@opam/dune": ">=1.6.0",
     "@esy-ocaml/reason": "*",
     "refmterr": "*",
+    "pesy": "*",
     "ocaml": "^4.4.0"
   },
   "devDependencies": {

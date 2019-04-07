@@ -12,16 +12,23 @@
   },
   "buildDirs": {
     "test": {
-      "require": ["pesy-flags.lib"],
+      "require": [
+        "pesy-flags.lib"
+      ],
       "bin": "TestPesyFlags.re"
     },
     "library": {
       "name": "pesy-flags.lib",
       "namespace": "PesyFlags",
-      "flags": [ "-color",  "always"]
+      "flags": [
+        "-color",
+        "always"
+      ]
     },
     "executable": {
-      "require": ["pesy-flags.lib"],
+      "require": [
+        "pesy-flags.lib"
+      ],
       "bin": {
         "PesyFlagsApp.exe": "PesyFlagsApp.re"
       }
@@ -34,6 +41,7 @@
     "@opam/dune": ">=1.6.0",
     "@esy-ocaml/reason": "*",
     "refmterr": "*",
+    "pesy": "*",
     "ocaml": "^4.4.0"
   },
   "devDependencies": {

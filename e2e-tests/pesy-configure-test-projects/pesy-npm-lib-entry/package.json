@@ -12,15 +12,21 @@
   },
   "buildDirs": {
     "test": {
-      "require": ["../util"],
+      "require": [
+        "../util"
+      ],
       "bin": "TestPesyNpm.re"
     },
     "util": {
-      "require": ["./foo/bar"]
+      "require": [
+        "./foo/bar"
+      ]
     },
     "util/foo/bar": {},
     "executable": {
-      "require": ["../util"],
+      "require": [
+        "../util"
+      ],
       "bin": {
         "pesy-npm-app.exe": "PesyNpmApp.re"
       }
@@ -33,6 +39,7 @@
     "@opam/dune": ">=1.6.0",
     "@esy-ocaml/reason": "*",
     "refmterr": "*",
+    "pesy": "*",
     "ocaml": "^4.4.0"
   },
   "devDependencies": {
