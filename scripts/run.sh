@@ -1,13 +1,86 @@
 #! /bin/bash
 
-rm -rf _release
-esy i &&
-esy b &&
-esy npm-release &&
-cd _release &&
-npm pack &&
-npm i -g ./pesy-0.5.0-alpha.2.tgz &&
-cd ..
-./_build/install/default/bin/TestBootstrapper.exe
-./_build/install/default/bin/TestPesyConfigure.exe
+# TODO: Add npm install -g verdaccio
 
+root=$PWD
+custom_registry_url=http://localhost:4873
+original_npm_registry_url=https://registry.npmjs.org # `npm get registry`
+original_yarn_registry_url=https://registry.yarnpkg.com # `yarn config get registry`
+version=0.5.0-alpha.2
+
+function cleanup {
+
+  if [[ ! -z "$root" ]]
+  then
+      rm -rf $root/scripts/storage
+      rm -rf $root/scripts/htpasswd
+  fi
+
+  # TODO: kill verdaccio. Makes it convenient for local dev
+  # ps -aux | grep 'verdaccio' | grep -v grep | awk '{print $2}' | xargs kill -9
+
+  echo Resetting registries
+  npm set registry "$original_npm_registry_url" # https://registry.npmjs.org
+  yarn config set registry "$original_yarn_registry_url" # http://registry.yarnpkg.com/
+  export NPM_CONFIG_REGISTRY=
+  
+  echo Clean up _release
+  rm -rf _release
+}
+
+
+# echo 'Cleaning up.'
+# cleanup
+
+# echo esy install
+# esy i
+
+# echo esy build
+# esy b
+
+# echo esy npm-release
+# esy npm-release
+
+# echo Entering _release
+# cd _release
+
+# # echo Simulate latest stable release
+# # node $root/scripts/simulate-latest.js $root/_release/package.json $version
+
+# echo Npm packing...
+# npm pack
+
+# echo Globally instaling the packed pesy
+# npm i -g ./pesy-$version.tgz
+
+# tmp_registry_log=`mktemp`
+# echo "Booting up verdaccio (log: $tmp_registry_log) (config: $root/scripts/verdaccio.yaml) "
+
+# (cd && nohup npx verdaccio@3.8.2 -c $root/scripts/verdaccio.yaml | tee $tmp_registry_log &)
+# grep -q 'http address' <(tail -f $tmp_registry_log)
+
+# echo Set registry to local registry
+# npm set registry "$custom_registry_url"
+# yarn config set registry "$custom_registry_url"
+
+# (cd && npx npm-auth-to-token@1.0.0 -u user -p password -e user@example.com -r "$custom_registry_url")
+
+# echo Publishing to local npm
+# npm publish ./pesy-$version.tgz
+
+# echo NPM info
+# npm info pesy
+
+# # echo Writing pesy meta data to pesy-meta.jso
+# # curl -H "Accept: application/vnd.npm.install-v1+json" http://localhost:4873/pesy | python -m json.tool > $root/pesy-meta.json
+
+# echo Entering root again
+# cd ..
+
+
+# export NPM_CONFIG_REGISTRY="$custom_registry_url"
+# ./_build/install/default/bin/TestBootstrapper.exe
+# ./_build/install/default/bin/TestPesyConfigure.exe
+
+echo 'Cleaning up again'
+cleanup

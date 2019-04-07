@@ -1,4 +1,4 @@
-open Printf;
+open Utils;
 
 let rimraf = s =>
   switch (Bos.OS.Dir.delete(~recurse=true, Fpath.v(s))) {
@@ -87,62 +87,6 @@ let tmpDir = Filename.get_temp_dir_name();
 let testProject = "test-project";
 let testProjectDir = Filename.concat(tmpDir, testProject);
 let pesyConfigureCommand = Sys.unix ? "pesy" : "pesy.cmd";
-
-let esyCommand =
-  Sys.unix
-    ? "esy"
-    : {
-      let pathVars =
-        Array.to_list(Unix.environment())
-        |> List.map(e =>
-             switch (Str.split(Str.regexp("="), e)) {
-             | [k, v, ...rest] => Some((k, v))
-             | _ => None
-             }
-           )
-        |> List.filter(
-             fun
-             | None => false
-             | _ => true,
-           )
-        |> List.filter(e =>
-             switch (e) {
-             | Some((k, _)) => String.lowercase_ascii(k) == "path"
-             | _ => false
-             }
-           )
-        |> List.map(
-             fun
-             | Some(x) => x
-             | None => ("", "") /* Why not filter_map? */
-           );
-
-      let v =
-        List.fold_right(
-          (e, acc) => {
-            let (_, v) = e;
-            acc ++ (Sys.unix ? ":" : ";") ++ v;
-          },
-          pathVars,
-          "",
-        );
-
-      Unix.putenv("PATH", v);
-
-      let paths = Str.split(Str.regexp(Sys.unix ? ":" : ";"), v);
-      List.iter(print_endline, paths);
-      let npmPaths =
-        List.filter(
-          path => Sys.file_exists(Filename.concat(path, "esy.cmd")),
-          paths,
-        );
-      switch (npmPaths) {
-      | [] =>
-        fprintf(stderr, "No npm bin path found");
-        exit(-1);
-      | [h, ..._] => Filename.concat(h, "esy.cmd")
-      };
-    };
 
 let mkdir = (~perms=?, p) =>
   switch (perms) {
