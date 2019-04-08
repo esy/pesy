@@ -2,6 +2,20 @@ open Printf;
 open Utils;
 open Utils.NoLwt;
 
+type pkgType =
+  | ExecutablePackage(Executable.t)
+  | LibraryPackage(Library.t)
+  | TestPackage(Test.t);
+
+type package = {
+  common: Common.t,
+  pkgType,
+};
+
+type validationError =
+  | StaleDuneFile(string)
+  | StaleOpamFile((string, string));
+
 /* private */
 exception ShouldHaveRaised(unit);
 
@@ -13,16 +27,7 @@ exception InvalidRootName(string);
 exception GenericException(string);
 exception ResolveRelativePathFailure(string);
 exception InvalidBinProperty(string);
-
-type pkgType =
-  | ExecutablePackage(Executable.t)
-  | LibraryPackage(Library.t)
-  | TestPackage(Test.t);
-
-type package = {
-  common: Common.t,
-  pkgType,
-};
+exception BuildValidationFailures(list(validationError));
 
 /* */
 /*  Inline ppx is supported too. */
@@ -658,7 +663,7 @@ type fileOperation =
 let gen = (projectPath, pkgPath) => {
   let json = JSON.fromFile(pkgPath);
   let (rootNameOpamFile, pesyPackages) = toPesyConf(projectPath, json);
-  let dunePackages = toPackages(projectPath, pesyPackages); /* TODO: Could return added, updated, deleted files i.e. packages updated so that the main exe could log nicely */
+  let dunePackages = toPackages(projectPath, pesyPackages);
   let operations = ref([]);
   List.iter(
     dpkg => {
@@ -1199,4 +1204,68 @@ let log = operations => {
     operations,
   );
   print_newline();
+};
+
+let validateDuneFiles = (projectPath, pkgPath) => {
+  let json = JSON.fromFile(pkgPath);
+  let (rootNameOpamFile, pesyPackages) = toPesyConf(projectPath, json);
+  let dunePackages = toPackages(projectPath, pesyPackages);
+  let staleDuneFiles =
+    dunePackages
+    |> List.map(dpkg => {
+         let (path, updatedDuneFile) = dpkg;
+         let currentDuneFilePath = Path.(path / "dune");
+         (updatedDuneFile, currentDuneFilePath);
+       })
+    |> List.filter(dpkg => {
+         let (updatedDuneFile, currentDuneFilePath) = dpkg;
+         updatedDuneFile != DuneFile.ofFile(currentDuneFilePath);
+       })
+    |> List.map(t => {
+         let (_updatedDuneFile, currentDuneFilePath) = t;
+         currentDuneFilePath;
+       });
+
+  let foundAnOpamFile = ref(false);
+  let dirForEachEntry = (f, dirname) => {
+    let d = Unix.opendir(dirname);
+    try (
+      while (true) {
+        f(Unix.readdir(d));
+      }
+    ) {
+    | End_of_file => Unix.closedir(d)
+    };
+  };
+  let contains = (n, s) =>
+    try (Str.search_forward(Str.regexp(s), n, 0) != (-1)) {
+    | Not_found => false
+    };
+
+  let staleOpamFile = ref(None);
+  dirForEachEntry(
+    n =>
+      if (contains(n, ".opam") && ! foundAnOpamFile^) {
+        foundAnOpamFile := true;
+        if (n != rootNameOpamFile) {
+          staleOpamFile := Some((n, rootNameOpamFile));
+        };
+      },
+    projectPath,
+  );
+
+  let errors =
+    List.map(x => StaleDuneFile(x), staleDuneFiles)
+    @ (
+      switch (staleOpamFile^) {
+      | Some(x) => [StaleOpamFile(x)]
+      | None => []
+      }
+    );
+
+  if (List.length(errors) != 0) {
+    raise(BuildValidationFailures(errors));
+  };
+
+  Str.global_replace(Str.regexp(".opam"), "", rootNameOpamFile);
 };

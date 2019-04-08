@@ -13,21 +13,33 @@
   },
   "buildDirs": {
     "test": {
-      "require": ["pesy-mode.lib"],
+      "require": [
+        "pesy-mode.lib"
+      ],
       "bin": "TestPesyMode.re",
-      "modes": ["byte", "exe"]
+      "modes": [
+        "byte",
+        "exe"
+      ]
     },
     "library": {
       "name": "pesy-mode.lib",
       "namespace": "PesyMode",
-      "modes": ["byte"]
+      "modes": [
+        "byte"
+      ]
     },
     "executable": {
-      "require": ["pesy-mode.lib"],
+      "require": [
+        "pesy-mode.lib"
+      ],
       "bin": {
         "PesyModeApp.exe": "PesyModeApp.re"
       },
-      "modes": ["byte", "exe"]
+      "modes": [
+        "byte",
+        "exe"
+      ]
     }
   },
   "scripts": {
@@ -38,9 +50,13 @@
     "@opam/dune": ">=1.6.0",
     "@esy-ocaml/reason": "*",
     "refmterr": "*",
+    "pesy": "*",
     "ocaml": "^4.4.0"
   },
   "devDependencies": {
     "@opam/merlin": "*"
+  },
+  "resolutions": {
+    "pesy": "esy/pesy#595f01ccc2ff251c1860063014bc6a6924a64a19"
   }
 }

@@ -12,25 +12,39 @@
   },
   "buildDirs": {
     "lib": {
-      "require": ["pesy-virtual/foo"]
+      "require": [
+        "pesy-virtual/foo"
+      ]
     },
     "foo": {
-      "virtualModules": ["VirtualFoo"]
+      "virtualModules": [
+        "VirtualFoo"
+      ]
     },
     "bar": {
-      "implements": ["pesy-virtual/foo"]
+      "implements": [
+        "pesy-virtual/foo"
+      ]
     },
     "baz": {
-      "implements": ["pesy-virtual/foo"]
+      "implements": [
+        "pesy-virtual/foo"
+      ]
     },
     "executable-bar": {
-      "require": ["pesy-virtual/lib", "pesy-virtual/bar"],
+      "require": [
+        "pesy-virtual/lib",
+        "pesy-virtual/bar"
+      ],
       "bin": {
         "PesyVirtualAppBar.exe": "PesyVirtualApp.re"
       }
     },
     "executable-baz": {
-      "require": ["pesy-virtual/lib", "pesy-virtual/baz"],
+      "require": [
+        "pesy-virtual/lib",
+        "pesy-virtual/baz"
+      ],
       "bin": {
         "PesyVirtualAppBaz.exe": "PesyVirtualApp.re"
       }
@@ -45,10 +59,14 @@
   "dependencies": {
     "dune": "*",
     "@esy-ocaml/reason": "*",
-    "refmterr": "*",
-    "ocaml": "^4.4.0"
+    "ocaml": "^4.4.0",
+    "pesy": "*",
+    "refmterr": "*"
   },
   "devDependencies": {
     "@opam/merlin": "*"
+  },
+  "resolutions": {
+    "pesy": "esy/pesy#595f01ccc2ff251c1860063014bc6a6924a64a19"
   }
 }

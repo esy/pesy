@@ -4,11 +4,17 @@
   "description": "My Project",
   "esy": {
     "build": "dune build -p #{self.name}",
-    "release": { "releasedBinaries": [ "RawApp.exe" ] }
+    "release": {
+      "releasedBinaries": [
+        "RawApp.exe"
+      ]
+    }
   },
   "buildDirs": {
     "test": {
-      "require": [ "raw.lib" ],
+      "require": [
+        "raw.lib"
+      ],
       "bin": "TestRaw.re"
     },
     "library": {
@@ -40,8 +46,13 @@
     "@opam/dune": "*",
     "@opam/lwt": "4.1.0",
     "@opam/lwt_ppx": "1.2.1",
-    "ocaml": "^4.4.0",
+    "pesy": "*",
     "refmterr": "*"
   },
-  "devDependencies": { "@opam/merlin": "*" }
+  "devDependencies": {
+    "@opam/merlin": "*"
+  },
+  "resolutions": {
+    "pesy": "esy/pesy#595f01ccc2ff251c1860063014bc6a6924a64a19"
+  }
 }
