@@ -43,6 +43,6 @@
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "pesy": "esy/pesy#595f01ccc2ff251c1860063014bc6a6924a64a19"
+    "pesy": "esy/pesy#ba6359f25621280a8105d2ffc99d75d849c0d95a"
   }
 }
