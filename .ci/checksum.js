@@ -5,8 +5,11 @@ let crypto = require("crypto"),
 let algorithm = "sha1",
   shasum = crypto.createHash(algorithm);
 
-let filename = path.join(process.cwd(), process.argv[2]),
-  s = fs.ReadStream(filename);
+let cwd = process.cwd();
+let pkg = require(path.join(cwd, "package.json")),
+  s = fs.ReadStream(
+    path.join(cwd, "_release", `${pkg.name}-${pkg.version}.tgz`)
+  );
 
 s.on("data", function(data) {
   shasum.update(data);

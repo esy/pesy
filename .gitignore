@@ -10,3 +10,4 @@ pesy.install
 .DS_Store
 *.install
 *~
+scripts/storage
