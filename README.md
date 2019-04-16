@@ -15,6 +15,7 @@ npm install -g pesy
 
 This installs a prebuilt binary on your system. For checksum verification - refer [these steps](#checksum-verification)
 
+> Note: The new native rewrite of `pesy` has been published to `npm install -g pesy@next` and is undergoing alpha/beta testing.
 
 ### Create New Project:
 
