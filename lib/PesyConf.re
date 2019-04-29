@@ -712,7 +712,7 @@ let%expect_test _ = {
   List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
-     (test (name Bar) (libraries foo))
+     (executable (name Bar) (public_name Bar.exe) (libraries foo))
    |};
 };
 
