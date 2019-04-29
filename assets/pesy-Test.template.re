@@ -1,12 +1,3 @@
-module TestFramework =
-  Rely.Make({
-    let config =
-      Rely.TestFrameworkConfig.initialize({
-        snapshotDir: "test/_snapshots",
-        projectDir: "",
-      });
-  });
-
 open TestFramework;
 
 describe("my first test suite", ({test, _}) =>
@@ -14,5 +5,3 @@ describe("my first test suite", ({test, _}) =>
     expect.int(1 + 1).toBe(2)
   )
 );
-
-cli();
