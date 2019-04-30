@@ -88,7 +88,9 @@ let bootstrapIfNecessary = projectPath => {
     ();
   };
 
-  let runTestsPath = Path.(testExeDir / "RunTests.re");
+  let testExeFileName =
+    "Run<PACKAGE_NAME_UPPER_CAMEL>Tests.re" |> substituteTemplateValues;
+  let runTestsPath = Path.(testExeDir / testExeFileName);
   if (!exists(runTestsPath)) {
     let runTests = runTestsTemplate |> substituteTemplateValues;
 
