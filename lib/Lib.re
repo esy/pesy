@@ -15,6 +15,8 @@ let bootstrapIfNecessary = projectPath => {
   let packageJSONTemplate = loadTemplate("pesy-package.template.json");
   let appReTemplate = loadTemplate("pesy-App.template.re");
   let testReTemplate = loadTemplate("pesy-Test.template.re");
+  let runTestsTemplate = loadTemplate("pesy-RunTests.template.re");
+  let testFrameworkTemplate = loadTemplate("pesy-TestFramework.template.re");
   let utilRe = loadTemplate("pesy-Util.template.re");
   let readMeTemplate = loadTemplate("pesy-README.template.md");
   let gitignoreTemplate = loadTemplate("pesy-gitignore.template");
@@ -23,17 +25,22 @@ let bootstrapIfNecessary = projectPath => {
       Path.("azure-pipeline-templates" / "pesy-esy-build-steps.template.yml"),
     );
   let packageLibName = packageNameKebabSansScope ++ "/library";
+  let packageTestName = packageNameKebabSansScope ++ "/test";
+
+  let substituteTemplateValues = s =>
+    s
+    |> Str.global_replace(r("<PACKAGE_NAME_FULL>"), packageNameKebab)
+    |> Str.global_replace(r("<VERSION>"), version)
+    |> Str.global_replace(r("<PUBLIC_LIB_NAME>"), packageLibName)
+    |> Str.global_replace(r("<TEST_LIB_NAME>"), packageTestName)
+    |> Str.global_replace(r("<PACKAGE_NAME>"), packageNameKebab)
+    |> Str.global_replace(
+         r("<PACKAGE_NAME_UPPER_CAMEL>"),
+         packageNameUpperCamelCase,
+       );
 
   if (!exists("package.json")) {
-    let packageJSON =
-      packageJSONTemplate
-      |> Str.global_replace(r("<PACKAGE_NAME_FULL>"), packageNameKebab)
-      |> Str.global_replace(r("<VERSION>"), version)
-      |> Str.global_replace(r("<PUBLIC_LIB_NAME>"), packageLibName)
-      |> Str.global_replace(
-           r("<PACKAGE_NAME_UPPER_CAMEL>"),
-           packageNameUpperCamelCase,
-         );
+    let packageJSON = packageJSONTemplate |> substituteTemplateValues;
     write("package.json", packageJSON);
   };
 
@@ -41,12 +48,7 @@ let bootstrapIfNecessary = projectPath => {
   let appRePath = Path.(appReDir / packageNameUpperCamelCase ++ "App.re");
 
   if (!exists(appRePath)) {
-    let appRe =
-      Str.global_replace(
-        r("<PACKAGE_NAME_UPPER_CAMEL>"),
-        packageNameUpperCamelCase,
-        appReTemplate,
-      );
+    let appRe = appReTemplate |> substituteTemplateValues;
     let _ = mkdirp(appReDir);
     write(appRePath, appRe);
   };
@@ -60,58 +62,62 @@ let bootstrapIfNecessary = projectPath => {
   };
 
   let testReDir = Path.(projectPath / "test");
+
+  if (!exists(testReDir)) {
+    let _ = mkdirp(testReDir);
+    ();
+  };
+
   let testRePath =
     Path.(testReDir / "Test" ++ packageNameUpperCamelCase ++ ".re");
 
   if (!exists(testRePath)) {
-    let testRe =
-      Str.global_replace(
-        r("<PACKAGE_NAME_UPPER_CAMEL>"),
-        packageNameUpperCamelCase,
-        testReTemplate,
-      );
-    let _ = mkdirp(testReDir);
+    let testRe = testReTemplate |> substituteTemplateValues;
     write(testRePath, testRe);
+  };
+
+  let testFrameworkPath = Path.(testReDir / "TestFramework.re");
+  if (!exists(testFrameworkPath)) {
+    let testFramework = testFrameworkTemplate |> substituteTemplateValues;
+    write(testFrameworkPath, testFramework);
+  };
+
+  let testExeDir = Path.(projectPath / "testExe");
+  if (!exists(testExeDir)) {
+    let _ = mkdirp(testExeDir);
+    ();
+  };
+
+  let testExeFileName =
+    "Run<PACKAGE_NAME_UPPER_CAMEL>Tests.re" |> substituteTemplateValues;
+  let runTestsPath = Path.(testExeDir / testExeFileName);
+  if (!exists(runTestsPath)) {
+    let runTests = runTestsTemplate |> substituteTemplateValues;
+
+    write(runTestsPath, runTests);
   };
 
   let readMePath = Path.(projectPath / "README.md");
 
   if (!exists(readMePath)) {
-    let readMe =
-      readMeTemplate
-      |> Str.global_replace(r("<PACKAGE_NAME_FULL>"), packageNameKebab)
-      |> Str.global_replace(r("<PACKAGE_NAME>"), packageNameKebab)
-      |> Str.global_replace(r("<PUBLIC_LIB_NAME>"), packageLibName)
-      |> Str.global_replace(
-           r("<PACKAGE_NAME_UPPER_CAMEL>"),
-           packageNameUpperCamelCase,
-         );
+    let readMe = readMeTemplate |> substituteTemplateValues;
+
     write(readMePath, readMe);
   };
 
   let gitignorePath = Path.(projectPath / ".gitignore");
 
   if (!exists(gitignorePath)) {
-    let gitignore =
-      gitignoreTemplate
-      |> Str.global_replace(r("<PACKAGE_NAME>"), packageNameKebab)
-      |> Str.global_replace(r("<PUBLIC_LIB_NAME>"), packageLibName)
-      |> Str.global_replace(
-           r("<PACKAGE_NAME_UPPER_CAMEL>"),
-           packageNameUpperCamelCase,
-         );
+    let gitignore = gitignoreTemplate |> substituteTemplateValues;
+
     write(".gitignore", gitignore);
   };
 
   let azurePipelinesPath = Path.(projectPath / "azure-pipelines.yml");
 
   if (!exists(azurePipelinesPath)) {
-    let esyBuildSteps =
-      esyBuildStepsTemplate
-      |> Str.global_replace(
-           r("<PACKAGE_NAME_UPPER_CAMEL>"),
-           packageNameUpperCamelCase,
-         );
+    let esyBuildSteps = esyBuildStepsTemplate |> substituteTemplateValues;
+
     copyTemplate(
       Path.("azure-pipeline-templates" / "pesy-azure-pipelines.yml"),
       Path.(projectPath / "azure-pipelines.yml"),

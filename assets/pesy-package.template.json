@@ -11,8 +11,12 @@
   "buildDirs": {
     "test": {
       "require": ["<PUBLIC_LIB_NAME>", "rely.lib"],
+      "flags": ["-linkall", "-g"]
+    },
+    "testExe": {
+      "require": ["<TEST_LIB_NAME>"],
       "bin": {
-        "Test<PACKAGE_NAME_UPPER_CAMEL>.exe": "Test<PACKAGE_NAME_UPPER_CAMEL>.re"
+        "Run<PACKAGE_NAME_UPPER_CAMEL>Tests.exe": "Run<PACKAGE_NAME_UPPER_CAMEL>Tests.re"
       }
     },
     "library": {},
@@ -24,7 +28,7 @@
     }
   },
   "scripts": {
-    "test": "esy b dune runtest"
+    "test": "esy x Run<PACKAGE_NAME_UPPER_CAMEL>Tests.exe"
   },
   "dependencies": {
     "@opam/dune": "*",

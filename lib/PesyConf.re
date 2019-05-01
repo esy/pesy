@@ -251,8 +251,6 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
       pkg => {
         let (dir, conf) = pkg;
 
-        let isTestRunner = dir == "test";
-
         let binJSON = JSON.member(conf, "bin");
         let bin =
           try (
@@ -417,64 +415,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           | _ => None
           };
 
-        if (isTestRunner) {
-          let main =
-            switch (bin) {
-            | Some((mainFileName, _installedBinaryName)) =>
-              moduleNameOf(mainFileName)
-
-            | _ =>
-              try (
-                JSON.member(conf, "main")
-                |> JSON.toValue
-                |> FieldTypes.toString
-              ) {
-              | JSON.NullJSONValue () =>
-                raise(
-                  FatalError(
-                    sprintf(
-                      "Atleast one of `bin` or `main` must be provided for %s",
-                      dir,
-                    ),
-                  ),
-                )
-              | e => raise(e)
-              }
-            };
-
-          let modes =
-            try (
-              Some(
-                Test.Mode.ofList(
-                  JSON.member(conf, "modes")
-                  |> JSON.toValue
-                  |> FieldTypes.toList
-                  |> List.map(a => a |> FieldTypes.toString),
-                ),
-              )
-            ) {
-            | JSON.NullJSONValue () => None
-            | e => raise(e)
-            };
-
-          {
-            common:
-              Common.create(
-                name,
-                Path.(projectPath / dir),
-                require,
-                flags,
-                ocamlcFlags,
-                ocamloptFlags,
-                jsooFlags,
-                preprocess,
-                includeSubdirs,
-                rawBuildConfig,
-                rawBuildConfigFooter,
-              ),
-            pkgType: TestPackage(Test.create(main, modes)),
-          };
-        } else if (isBinPropertyPresent(bin)) {
+        if (isBinPropertyPresent(bin)) {
           /* Prioritising `bin` over `name` */
           let main =
             switch (bin) {
@@ -771,7 +712,7 @@ let%expect_test _ = {
   List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
   %expect
   {|
-     (test (name Bar) (libraries foo))
+     (executable (name Bar) (public_name Bar.exe) (libraries foo))
    |};
 };
 
