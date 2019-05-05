@@ -97,20 +97,20 @@ run(makeCommand("esy"), [|"npm-release"|]);
 
 chdir(Path.(cwd / "_release"));
 
-run(
-  makeCommand("npx"),
-  [|
-    "npm-auth-to-token@1.0.0",
-    "-u",
-    "user",
-    "-p",
-    "password",
-    "-e",
-    "user@example.com",
-    "-r",
-    custom_registry_url,
-  |],
-);
+/* run( */
+/*   makeCommand("npx"), */
+/*   [| */
+/*     "npm-auth-to-token@1.0.0", */
+/*     "-u", */
+/*     "user", */
+/*     "-p", */
+/*     "password", */
+/*     "-e", */
+/*     "user@example.com", */
+/*     "-r", */
+/*     custom_registry_url, */
+/*   |], */
+/* ); */
 
 print_endline("Publishing to local npm");
 run(makeCommand("npm"), [|"publish", "--registry", custom_registry_url|]);
