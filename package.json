@@ -32,20 +32,7 @@
         "str",
         "sexplib",
         "yojson",
-        "ppx_inline_test/runtime-lib",
         "pesy/utils"
-      ],
-      "preprocess": [
-        "pps",
-        "ppx_expect",
-        "ppx_inline_test"
-      ],
-      "flags": [
-        "-w",
-        "-33+9"
-      ],
-      "rawBuildConfig": [
-        "(inline_tests (flags -verbose))"
       ]
     },
     "utils": {
@@ -53,18 +40,6 @@
         "unix",
         "str",
         "pastel/lib"
-      ],
-      "flags": [
-        "-w",
-        "-6"
-      ],
-      "preprocess": [
-        "pps",
-        "ppx_expect",
-        "ppx_inline_test"
-      ],
-      "rawBuildConfig": [
-        "(inline_tests (flags -verbose))"
       ]
     }
   },
@@ -73,23 +48,17 @@
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
-    "@opam/bos": "*",
-    "@opam/cmdliner": "1.0.3",
+    "@opam/cmdliner": "*",
     "@opam/dune": "*",
-    "@opam/fpath": "*",
-    "@opam/ppx_expect": "v0.11.1",
-    "@opam/ppx_inline_test": "v0.11.0",
     "@opam/sexplib": "v0.11.0",
     "@opam/yojson": "^1.4.1",
     "@reason-native/pastel": "^0.2.0",
-    "dune": "^0.2.1",
-    "ocaml": "*",
-    "refmterr": "*"
+    "ocaml": "4.7.x"
   },
   "devDependencies": {
+    "refmterr": "*",
+    "@opam/bos": "*",
+    "@opam/fpath": "*",
     "@opam/merlin": "*"
-  },
-  "resolutions": {
-    "@reason-native/pastel": "facebookexperimental/reason-native#028b0973b0268530609c3edfa4b4f3ebbf9fbb43"
   }
 }

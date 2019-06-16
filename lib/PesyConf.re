@@ -64,116 +64,116 @@ let resolveRelativePath = path => {
   String.concat(separator, resolve(revParts, 0, []));
 };
 
-let%expect_test _ = {
-  print_endline(resolveRelativePath("foo/lib"));
-  %expect
-  {|
-     foo/lib
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(resolveRelativePath("foo/lib")); */
+/*   %expect */
+/*   {| */
+/*      foo/lib */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  print_endline(resolveRelativePath("foo/bar/.."));
-  %expect
-  {|
-     foo
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(resolveRelativePath("foo/bar/..")); */
+/*   %expect */
+/*   {| */
+/*      foo */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  print_endline(resolveRelativePath("foo/bar/../.."));
-  %expect
-  {|
+/* let%expect_test _ = { */
+/*   print_endline(resolveRelativePath("foo/bar/../..")); */
+/*   %expect */
+/*   {| */
 
-   |};
-};
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let result =
-    try (resolveRelativePath("foo/bar/../../..")) {
-    | ResolveRelativePathFailure(x) =>
-      sprintf("ResolveRelativePathFailure(\"%s\")", x)
-    | e => raise(e)
-    };
-  print_endline(result);
-  %expect
-  {|
-          ResolveRelativePathFailure("Failed resolving: foo/bar/../../.. Too many `../`")
-     |};
-};
+/* let%expect_test _ = { */
+/*   let result = */
+/*     try (resolveRelativePath("foo/bar/../../..")) { */
+/*     | ResolveRelativePathFailure(x) => */
+/*       sprintf("ResolveRelativePathFailure(\"%s\")", x) */
+/*     | e => raise(e) */
+/*     }; */
+/*   print_endline(result); */
+/*   %expect */
+/*   {| */
+/*           ResolveRelativePathFailure("Failed resolving: foo/bar/../../.. Too many `../`") */
+/*      |}; */
+/* }; */
 
-let%expect_test _ = {
-  print_endline(resolveRelativePath("foo/bar/../baz/"));
-  %expect
-  {|
-     foo/baz
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(resolveRelativePath("foo/bar/../baz/")); */
+/*   %expect */
+/*   {| */
+/*      foo/baz */
+/*    |}; */
+/* }; */
 
 let moduleNameOf = fileName =>
   Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
 
-let%expect_test _ = {
-  print_endline(moduleNameOf("Foo.re"));
-  %expect
-  {|
-     Foo
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(moduleNameOf("Foo.re")); */
+/*   %expect */
+/*   {| */
+/*      Foo */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  print_endline(moduleNameOf("Foo.ml"));
-  %expect
-  {|
-     Foo
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(moduleNameOf("Foo.ml")); */
+/*   %expect */
+/*   {| */
+/*      Foo */
+/*    |}; */
+/* }; */
 
 let isValidBinaryFileName = fileName =>
   Str.string_match(Str.regexp("^.+\\.exe$"), fileName, 0);
 
-let%expect_test _ = {
-  print_endline(string_of_bool(isValidBinaryFileName("Foo.re")));
-  %expect
-  {|
-     false
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(string_of_bool(isValidBinaryFileName("Foo.re"))); */
+/*   %expect */
+/*   {| */
+/*      false */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  print_endline(string_of_bool(isValidBinaryFileName("Foo.exe")));
-  %expect
-  {|
-     true
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(string_of_bool(isValidBinaryFileName("Foo.exe"))); */
+/*   %expect */
+/*   {| */
+/*      true */
+/*    |}; */
+/* }; */
 
 let isValidSourceFile = fileName =>
   Str.string_match(Str.regexp("^.+\\.\\(re\\|ml\\)$"), fileName, 0);
 
-let%expect_test _ = {
-  print_endline(string_of_bool(isValidSourceFile("Foo.re")));
-  %expect
-  {|
-     true
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(string_of_bool(isValidSourceFile("Foo.re"))); */
+/*   %expect */
+/*   {| */
+/*      true */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  print_endline(string_of_bool(isValidSourceFile("Foo.ml")));
-  %expect
-  {|
-     true
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(string_of_bool(isValidSourceFile("Foo.ml"))); */
+/*   %expect */
+/*   {| */
+/*      true */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  print_endline(string_of_bool(isValidSourceFile("Foo.mlsss")));
-  %expect
-  {|
-     false
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(string_of_bool(isValidSourceFile("Foo.mlsss"))); */
+/*   %expect */
+/*   {| */
+/*      false */
+/*    |}; */
+/* }; */
 
 /* Turns "Foo.re as Foo.exe" => ("Foo.re", "Foo.exe") */
 
@@ -189,21 +189,21 @@ let isValidScopeName = n => {
   n.[0] == '@';
 };
 
-let%expect_test _ = {
-  print_endline(string_of_bool(isValidScopeName("blah")));
-  %expect
-  {|
-     false
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(string_of_bool(isValidScopeName("blah"))); */
+/*   %expect */
+/*   {| */
+/*      false */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  print_endline(string_of_bool(isValidScopeName("@myscope")));
-  %expect
-  {|
-     true
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(string_of_bool(isValidScopeName("@myscope"))); */
+/*   %expect */
+/*   {| */
+/*      true */
+/*    |}; */
+/* }; */
 
 let stripAtTheRate = s => String.sub(s, 1, String.length(s) - 1);
 
@@ -221,13 +221,13 @@ let doubleKebabifyIfScoped = n => {
   };
 };
 
-let%expect_test _ = {
-  print_endline(doubleKebabifyIfScoped("foo-bar"));
-  %expect
-  {|
-     foo-bar
-   |};
-};
+/* let%expect_test _ = { */
+/*   print_endline(doubleKebabifyIfScoped("foo-bar")); */
+/*   %expect */
+/*   {| */
+/*      foo-bar */
+/*    |}; */
+/* }; */
 
 type t = (string, list(package));
 let toPesyConf = (projectPath: string, json: JSON.t): t => {
@@ -694,433 +694,433 @@ let testToPackages = jsonStr => {
   );
 };
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-  {
-    "name": "foo",
-    "buildDirs": {
-      "test": {
-        "require": ["foo"],
-        "bin": { "Bar.exe": "Bar.re" }
-      }
-    }
-  }
-       |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (executable (name Bar) (public_name Bar.exe) (libraries foo))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*   { */
+/*     "name": "foo", */
+/*     "buildDirs": { */
+/*       "test": { */
+/*         "require": ["foo"], */
+/*         "bin": { "Bar.exe": "Bar.re" } */
+/*       } */
+/*     } */
+/*   } */
+/*        |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (executable (name Bar) (public_name Bar.exe) (libraries foo)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-  {
-      "name": "foo",
-      "buildDirs": {
-      "testlib": {
-        "require": ["foo"],
-        "namespace": "Foo",
-        "name": "bar.lib",
-       "modes": ["best"]
-      }
-    }
-  }
-       |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (libraries foo) (modes best))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*   { */
+/*       "name": "foo", */
+/*       "buildDirs": { */
+/*       "testlib": { */
+/*         "require": ["foo"], */
+/*         "namespace": "Foo", */
+/*         "name": "bar.lib", */
+/*        "modes": ["best"] */
+/*       } */
+/*     } */
+/*   } */
+/*        |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (libraries foo) (modes best)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-  {
-      "name": "foo",
-      "buildDirs": {
-      "testlib": {
-        "require": ["foo"],
-        "namespace": "Foo",
-        "name": "bar.lib",
-        "cNames": ["stubs"]
-      }
-    }
-  }
-       |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (libraries foo) (c_names stubs))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*   { */
+/*       "name": "foo", */
+/*       "buildDirs": { */
+/*       "testlib": { */
+/*         "require": ["foo"], */
+/*         "namespace": "Foo", */
+/*         "name": "bar.lib", */
+/*         "cNames": ["stubs"] */
+/*       } */
+/*     } */
+/*   } */
+/*        |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (libraries foo) (c_names stubs)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-  {
-      "name": "foo",
-      "buildDirs": {
-      "testlib": {
-        "namespace": "Foo",
-        "name": "bar.lib",
-        "virtualModules": ["foo"]
-      }
-    }
-  }
-       |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (virtual_modules foo))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*   { */
+/*       "name": "foo", */
+/*       "buildDirs": { */
+/*       "testlib": { */
+/*         "namespace": "Foo", */
+/*         "name": "bar.lib", */
+/*         "virtualModules": ["foo"] */
+/*       } */
+/*     } */
+/*   } */
+/*        |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (virtual_modules foo)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-  {
-      "name": "foo",
-      "buildDirs": {
-      "testlib": {
-        "namespace": "Foo",
-        "name": "bar.lib",
-        "implements": ["foo"]
-      }
-    }
-  }
-       |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (implements foo))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*   { */
+/*       "name": "foo", */
+/*       "buildDirs": { */
+/*       "testlib": { */
+/*         "namespace": "Foo", */
+/*         "name": "bar.lib", */
+/*         "implements": ["foo"] */
+/*       } */
+/*     } */
+/*   } */
+/*        |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (implements foo)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-  {
-      "name": "foo",
-      "buildDirs": {
-      "testlib": {
-        "namespace": "Foo",
-        "name": "bar.lib",
-        "wrapped": false
-      }
-    }
-  }
-       |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (wrapped false))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*   { */
+/*       "name": "foo", */
+/*       "buildDirs": { */
+/*       "testlib": { */
+/*         "namespace": "Foo", */
+/*         "name": "bar.lib", */
+/*         "wrapped": false */
+/*       } */
+/*     } */
+/*   } */
+/*        |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (wrapped false)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-  {
-      "name": "foo",
-      "buildDirs": {
-      "testlib": {
-        "bin": { "bar.exe": "Foo.re" },
-        "modes": ["best", "c"]
-      }
-    }
-  }
-       |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (executable (name Foo) (public_name bar.exe) (modes (best c)))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*   { */
+/*       "name": "foo", */
+/*       "buildDirs": { */
+/*       "testlib": { */
+/*         "bin": { "bar.exe": "Foo.re" }, */
+/*         "modes": ["best", "c"] */
+/*       } */
+/*     } */
+/*   } */
+/*        |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (executable (name Foo) (public_name bar.exe) (modes (best c))) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testlib": {
-                 "require": ["foo"],
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                 "flags": ["-w", "-33+9"]
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (libraries foo) (flags -w -33+9))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testlib": { */
+/*                  "require": ["foo"], */
+/*                  "namespace": "Foo", */
+/*                  "name": "bar.lib", */
+/*                  "flags": ["-w", "-33+9"] */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (libraries foo) (flags -w -33+9)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testlib": {
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                 "ocamlcFlags": ["-annot", "-c"]
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (ocamlc_flags -annot -c))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testlib": { */
+/*                  "namespace": "Foo", */
+/*                  "name": "bar.lib", */
+/*                  "ocamlcFlags": ["-annot", "-c"] */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (ocamlc_flags -annot -c)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testlib": {
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                 "ocamloptFlags": ["-rectypes", "-nostdlib"]
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib)
-         (ocamlopt_flags -rectypes -nostdlib))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testlib": { */
+/*                  "namespace": "Foo", */
+/*                  "name": "bar.lib", */
+/*                  "ocamloptFlags": ["-rectypes", "-nostdlib"] */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) */
+/*          (ocamlopt_flags -rectypes -nostdlib)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testlib": {
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                 "jsooFlags": ["-pretty", "-no-inline"]
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (js_of_ocaml -pretty -no-inline))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testlib": { */
+/*                  "namespace": "Foo", */
+/*                  "name": "bar.lib", */
+/*                  "jsooFlags": ["-pretty", "-no-inline"] */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (js_of_ocaml -pretty -no-inline)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testlib": {
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                 "preprocess": [ "pps", "lwt_ppx" ]
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (preprocess (pps lwt_ppx)))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testlib": { */
+/*                  "namespace": "Foo", */
+/*                  "name": "bar.lib", */
+/*                  "preprocess": [ "pps", "lwt_ppx" ] */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (preprocess (pps lwt_ppx))) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testlib": {
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                 "includeSubdirs": "unqualified"
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (include_subdirs unqualified))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testlib": { */
+/*                  "namespace": "Foo", */
+/*                  "name": "bar.lib", */
+/*                  "includeSubdirs": "unqualified" */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (include_subdirs unqualified)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testlib": {
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                 "rawBuildConfig": [
-                   "(libraries lwt lwt.unix raw.lib)",
-                   "(preprocess (pps lwt_ppx))"
-                 ]
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib) (libraries lwt lwt.unix raw.lib)
-         (preprocess (pps lwt_ppx)))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testlib": { */
+/*                  "namespace": "Foo", */
+/*                  "name": "bar.lib", */
+/*                  "rawBuildConfig": [ */
+/*                    "(libraries lwt lwt.unix raw.lib)", */
+/*                    "(preprocess (pps lwt_ppx))" */
+/*                  ] */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib) (libraries lwt lwt.unix raw.lib) */
+/*          (preprocess (pps lwt_ppx))) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testlib": {
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                 "rawBuildConfigFooter": [
-                   "(install (section share_root) (files (asset.txt as asset.txt)))"
-                 ]
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (library (name Foo) (public_name bar.lib)) (install (section share_root) (files (asset.txt as asset.txt)))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testlib": { */
+/*                  "namespace": "Foo", */
+/*                  "name": "bar.lib", */
+/*                  "rawBuildConfigFooter": [ */
+/*                    "(install (section share_root) (files (asset.txt as asset.txt)))" */
+/*                  ] */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (library (name Foo) (public_name bar.lib)) (install (section share_root) (files (asset.txt as asset.txt))) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testexe": {
-                 "bin": { "Foo.exe": "Foo.re" },
-                 "rawBuildConfigFooter": [
-                   "(install (section share_root) (files (asset.txt as asset.txt)))"
-                 ]
-               }
-             }
-           }
-                |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (executable (name Foo) (public_name Foo.exe)) (install (section share_root) (files (asset.txt as asset.txt)))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testexe": { */
+/*                  "bin": { "Foo.exe": "Foo.re" }, */
+/*                  "rawBuildConfigFooter": [ */
+/*                    "(install (section share_root) (files (asset.txt as asset.txt)))" */
+/*                  ] */
+/*                } */
+/*              } */
+/*            } */
+/*                 |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (executable (name Foo) (public_name Foo.exe)) (install (section share_root) (files (asset.txt as asset.txt))) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFiles =
-    testToPackages(
-      {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testexe": {
-                 "bin": { "Foo.exe": "Foo.re" }
-               }
-             }
-           }
-       |},
-    );
-  List.iter(print_endline, List.map(DuneFile.toString, duneFiles));
-  %expect
-  {|
-     (executable (name Foo) (public_name Foo.exe))
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFiles = */
+/*     testToPackages( */
+/*       {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testexe": { */
+/*                  "bin": { "Foo.exe": "Foo.re" } */
+/*                } */
+/*              } */
+/*            } */
+/*        |}, */
+/*     ); */
+/*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
+/*   %expect */
+/*   {| */
+/*      (executable (name Foo) (public_name Foo.exe)) */
+/*    |}; */
+/* }; */
 
-let%expect_test _ = {
-  let duneFileErrors =
-    try (
-      {
-        ignore(
-          testToPackages(
-            {|
-           {
-             "name": "foo",
-             "buildDirs": {
-               "testexe": {
-                 "bin": []
-               }
-             }
-           }
-       |},
-          ),
-        );
-        raise(ShouldHaveRaised());
-      }
-    ) {
-    | InvalidBinProperty(p) => [sprintf("InvalidBinProperty for %s", p)]
-    };
-  List.iter(print_endline, duneFileErrors);
-  %expect
-  {|
-     InvalidBinProperty for testexe
-   |};
-};
+/* let%expect_test _ = { */
+/*   let duneFileErrors = */
+/*     try ( */
+/*       { */
+/*         ignore( */
+/*           testToPackages( */
+/*             {| */
+/*            { */
+/*              "name": "foo", */
+/*              "buildDirs": { */
+/*                "testexe": { */
+/*                  "bin": [] */
+/*                } */
+/*              } */
+/*            } */
+/*        |}, */
+/*           ), */
+/*         ); */
+/*         raise(ShouldHaveRaised()); */
+/*       } */
+/*     ) { */
+/*     | InvalidBinProperty(p) => [sprintf("InvalidBinProperty for %s", p)] */
+/*     }; */
+/*   List.iter(print_endline, duneFileErrors); */
+/*   %expect */
+/*   {| */
+/*      InvalidBinProperty for testexe */
+/*    |}; */
+/* }; */
 
 let log = operations => {
   print_newline();
