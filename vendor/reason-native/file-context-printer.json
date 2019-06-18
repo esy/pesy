@@ -1,0 +1,28 @@
+{
+  "name": "@reason-native/file-context-printer",
+  "version": "0.0.3",
+  "description": "A utility for pretty printing source code",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/facebookexperimental/reason-native/tree/master/src/file-context-printer"
+  },
+  "license": "MIT",
+  "esy": {
+    "build": "dune build -p file-context-printer",
+    "install": "esy-installer file-context-printer.install"
+  },
+  "scripts": {
+    "release": "node ./scripts/esy-prepublish.js file-context-printer.json"
+  },
+  "dependencies": {
+    "@opam/dune": "*",
+    "@esy-ocaml/reason": "*",
+    "ocaml": "^4.2.0",
+    "@opam/re": "*",
+    "@reason-native/pastel": "*"
+  },
+  "devDependencies": {
+    "@esy-ocaml/merlin": "*",
+    "ocaml": "~4.6.0"
+  }
+}

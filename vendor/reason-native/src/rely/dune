@@ -1,0 +1,20 @@
+(library
+   (name Rely)
+   (public_name rely.lib)
+   (libraries rely.internal)
+   (modules Rely)
+)
+(
+    library
+    (name RelyInternal)
+    (public_name rely.internal)
+    (libraries pastel.lib file-context-printer.lib unix junit re)
+    (modules (:standard \ Rely))
+)
+(copy_files# ../../shared-src/common/*)
+; objectPrinter lives separately from Common for now because Common has an
+; implicit dependency on Pastel which Console does not want. Common should
+; ideally be split up into sub directories/packages which can be more precisely
+; consumed
+(copy_files# ../../shared-src/objectPrinter/*)
+(include_subdirs unqualified)

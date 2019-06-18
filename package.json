@@ -3,10 +3,13 @@
   "version": "0.5.0-alpha.3",
   "description": "\"Esy Pesy\" - Your Esy Assistant.",
   "esy": {
+    "buildsInSource": "_build",
     "build": [
+      "dune build -p #{self.name}"
+    ],
+    "buildDev": [
       "refmterr dune build -p #{self.name}"
     ],
-    "buildsInSource": "_build",
     "release": {
       "bin": [
         "pesy"
@@ -50,15 +53,21 @@
     "@esy-ocaml/reason": "*",
     "@opam/cmdliner": "*",
     "@opam/dune": "*",
-    "@opam/sexplib": "v0.11.0",
-    "@opam/yojson": "^1.4.1",
-    "@reason-native/pastel": "^0.2.0",
+    "@opam/sexplib": "*",
+    "@opam/yojson": "*",
+    "@reason-native/pastel": "*",
     "ocaml": "4.7.x"
   },
   "devDependencies": {
     "refmterr": "*",
-    "@opam/bos": "*",
-    "@opam/fpath": "*",
     "@opam/merlin": "*"
+  },
+  "resolutions": {
+    "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
+    "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
+    "@opam/dune": "link:./vendor/dune/dune.opam",
+    "@opam/yojson": "link:./vendor/yojson/yojson.opam",
+    "@reason-native/pastel": "link:./vendor/reason-native/pastel.json",
+    "ocaml": "4.7.1004"
   }
 }

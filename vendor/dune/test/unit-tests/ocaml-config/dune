@@ -1,0 +1,4 @@
+(test
+ (name gh637)
+ (libraries stdune ocaml_config)
+ (deps Makefile.config))

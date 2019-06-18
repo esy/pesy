@@ -29,58 +29,70 @@ function cleanup {
 }
 
 
-echo 'Cleaning up.'
-cleanup
+function main {
+    echo 'Cleaning up.'
+    cleanup
 
-echo esy install
-esy i
+    echo esy install
+    esy i
 
-echo esy build
-esy b
+    echo esy build
+    esy b --install
 
-echo esy npm-release
-esy npm-release
+    echo esy npm-release
+    esy npm-release || exit -1
 
-echo Entering _release
-cd _release
+    echo Entering _release
+    cd _release || exit -1
 
-# echo Simulate latest stable release
-# node $root/scripts/simulate-latest.js $root/_release/package.json $version
+    # echo Simulate latest stable release
+    # node $root/scripts/simulate-latest.js $root/_release/package.json $version
 
-echo Npm packing...
-npm pack
+    echo Npm packing...
+    npm pack
 
-echo Globally instaling the packed pesy
-npm i -g ./pesy-$version.tgz
+    echo Globally instaling the packed pesy
+    npm i -g ./pesy-$version.tgz
 
-tmp_registry_log=`mktemp`
-echo "Booting up verdaccio (log: $tmp_registry_log) (config: $root/scripts/verdaccio.yaml) "
+    tmp_registry_log=`mktemp`
+    echo "Booting up verdaccio (log: $tmp_registry_log) (config: $root/scripts/verdaccio.yaml) "
 
-(cd && nohup npx verdaccio@3.8.2 -c $root/scripts/verdaccio.yaml | tee $tmp_registry_log &)
-grep -q 'http address' <(tail -f $tmp_registry_log)
+    (cd && nohup npx verdaccio@3.8.2 -c $root/scripts/verdaccio.yaml | tee $tmp_registry_log &)
+    grep -q 'http address' <(tail -f $tmp_registry_log)
 
-echo Set registry to local registry
-npm set registry "$custom_registry_url"
-yarn config set registry "$custom_registry_url"
+    echo Set registry to local registry
+    npm set registry "$custom_registry_url"
+    yarn config set registry "$custom_registry_url"
 
-(cd && npx npm-auth-to-token@1.0.0 -u user -p password -e user@example.com -r "$custom_registry_url")
+    (npx npm-auth-to-token@1.0.0 -u user -p password -e user@example.com -r "$custom_registry_url")
 
-echo Publishing to local npm
-npm publish ./pesy-$version.tgz
+    echo Publishing to local npm
+    npm publish ./pesy-$version.tgz
 
-echo NPM info
-npm info pesy
+    echo NPM info
+    npm info pesy
 
-# echo Writing pesy meta data to pesy-meta.jso
-# curl -H "Accept: application/vnd.npm.install-v1+json" http://localhost:4873/pesy | python -m json.tool > $root/pesy-meta.json
+    # echo Writing pesy meta data to pesy-meta.jso
+    # curl -H "Accept: application/vnd.npm.install-v1+json" http://localhost:4873/pesy | python -m json.tool > $root/pesy-meta.json
 
-echo Entering root again
-cd ..
+    pwd
 
+    echo Entering root again
+    cd ..
 
-export NPM_CONFIG_REGISTRY="$custom_registry_url"
-./_build/install/default/bin/TestBootstrapper.exe
-./_build/install/default/bin/TestPesyConfigure.exe
+    pwd
 
-echo 'Cleaning up again'
-cleanup
+    export NPM_CONFIG_REGISTRY="$custom_registry_url"
+    ./_build/install/default/bin/TestBootstrapper.exe
+    ./_build/install/default/bin/TestPesyConfigure.exe
+
+    echo 'Cleaning up again'
+    cleanup
+}
+
+if [ ! -z "$1" ] && [ "$1" == "clean" ]
+then
+    cleanup
+else
+    main
+fi

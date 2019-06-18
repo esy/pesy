@@ -1,0 +1,44 @@
+{
+  "name": "rimraf",
+  "version": "0.0.0",
+  "description": "My Project",
+  "esy": {
+    "buildEnv": {
+      "OCAMLRUNPARAM": "b"
+    },
+    "build": "dune build -p #{self.name}",
+    "release": {
+      "releasedBinaries": [
+        "RimrafApp.exe"
+      ]
+    }
+  },
+  "buildDirs": {
+    "test": {
+      "require": [
+        "rimraf/lib"
+      ],
+      "bin": {
+        "TestRimraf.exe": "TestRimraf.re"
+      }
+    },
+    "lib": {
+      "require": [
+        "unix"
+      ],
+      "namespace": "Rimraf"
+    }
+  },
+  "scripts": {
+    "test": "esy b dune runtest"
+  },
+  "dependencies": {
+    "@opam/dune": "*",
+    "@esy-ocaml/reason": "*",
+    "refmterr": "*",
+    "ocaml": "*"
+  },
+  "devDependencies": {
+    "@opam/merlin": "*"
+  }
+}

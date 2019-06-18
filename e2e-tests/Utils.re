@@ -43,7 +43,6 @@ let makeCommand = cmd =>
           "",
         );
 
-
       let paths = Str.split(Str.regexp(Sys.unix ? ":" : ";"), v);
       let npmPaths =
         List.filter(
@@ -59,13 +58,8 @@ let makeCommand = cmd =>
       };
     };
 
+let rimraf = p => ignore(Rimraf.run(p));
 let esyCommand = makeCommand("esy");
-
-let rimraf = s =>
-  switch (Bos.OS.Dir.delete(~recurse=true, Fpath.v(s))) {
-  | Ok () => ()
-  | _ => Printf.fprintf(stdout, "Warning: Could not delete %s\n", s)
-  };
 
 let buffer_size = 8192;
 let buffer = Bytes.create(buffer_size);

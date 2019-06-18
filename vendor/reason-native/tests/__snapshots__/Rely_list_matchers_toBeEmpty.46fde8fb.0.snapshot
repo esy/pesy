@@ -1,0 +1,14 @@
+Rely list matchers › toBeEmpty › expect.list.toBeEmpty output
+Running 1 test suite
+<red><bold><inverse> FAIL </inverse></bold></red> <whiteBright>expect.list.toBeEmpty output</whiteBright>
+<bold><red>  \226\128\162 expect.list.toBeEmpty output \226\128\186 something should be empty failure output</red></bold>
+
+    <dim>expect.list(</dim><red>received</red><dim>).toBeEmpty(</dim><green></green><dim>)</dim>
+    
+    Received: <red>[\"something\"]</red>
+
+
+<whiteBright><bold>Test Suites: </bold></whiteBright><red><bold>1 failed</bold></red>, 0 passed, 1 total
+<whiteBright><bold>Tests:       </bold></whiteBright><red><bold>1 failed</bold></red>, 0 passed, 1 total
+<whiteBright><bold>Time:        </bold></whiteBright>< 1ms
+

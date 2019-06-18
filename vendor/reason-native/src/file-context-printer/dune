@@ -1,0 +1,6 @@
+
+(library
+   (name FileContextPrinter)
+   (public_name file-context-printer.lib)
+   (libraries  str re pastel.lib )
+)
