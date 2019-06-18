@@ -28,9 +28,6 @@ jobs:
         displayName: "esy install"
       - script: "esy build"
         displayName: "esy build"
-      - ${{ if ne(parameters.platform, 'Windows') }}:
-          - script: esy test
-            displayName: 'Running inline tests'
       - ${{ if eq(parameters.platform, 'Windows') }}:
           - script: .\_build\install\default\bin\Runner.exe
             displayName: 'Running e2e tests'
