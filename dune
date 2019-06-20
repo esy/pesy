@@ -1,1 +1,1 @@
-(dirs :standard \ node_modules tmp)
+(dirs :standard \ node_modules tmp npm-cli)

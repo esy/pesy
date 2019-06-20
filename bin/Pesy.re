@@ -6,84 +6,6 @@ open Cmdliner;
 
 exception BootstrappingError(string);
 
-let bootstrap = projectRoot => {
-  /* TODO: prompt user for their choice */
-  let projectRoot = Sys.getcwd();
-
-  let esyCommand =
-    switch (resolveEsyCommand()) {
-    | Some(x) => x
-    | None =>
-      raise(
-        BootstrappingError(
-          "You haven't installed esy globally. First install esy then try again",
-        ),
-      )
-    };
-
-  /* use readFileOpt to read previously computed directory path */
-  let (pkgName, versionString, packageNameUpperCamelCase, packageLibName) =
-    Lib.bootstrapIfNecessary(projectRoot);
-
-  let packageNameVersion = sprintf("%s@%s", pkgName, versionString);
-  print_endline(Pastel.(<Pastel bold=true> packageNameVersion </Pastel>));
-
-  Utils.renderAscTree([
-    [
-      "executable",
-      sprintf(
-        "bin:    %sApp.re as %sApp.exe",
-        packageNameUpperCamelCase,
-        packageNameUpperCamelCase,
-      ),
-      sprintf(
-        "require: [%s]",
-        List.fold_left(
-          (acc, e) => acc ++ " " ++ e,
-          "",
-          [sprintf("\"%s\"", packageLibName)],
-        ),
-      ),
-    ],
-    ["library", "require: []"],
-    [
-      "test",
-      sprintf(
-        "bin:    Test%s.re as Test%s.exe",
-        packageNameUpperCamelCase,
-        packageNameUpperCamelCase,
-      ),
-      sprintf(
-        "require: [%s]",
-        String.concat(", ", [sprintf("\"%s\"", packageLibName)]),
-      ),
-    ],
-  ]);
-  print_newline();
-
-  ignore(Lib.generateBuildFiles(projectRoot));
-
-  print_endline(
-    Pastel.(<Pastel bold=true> "Running 'esy install'" </Pastel>),
-  );
-
-  let setupStatus = Utils.runCommandWithEnv(esyCommand, [|"install"|]);
-  if (setupStatus != 0) {
-    fprintf(stderr, "esy (%s) install failed!", esyCommand);
-    exit(-1);
-  };
-
-  print_endline(Pastel.(<Pastel bold=true> "Running 'esy build'" </Pastel>));
-  let setupStatus = Utils.runCommandWithEnv(esyCommand, [|"build"|]);
-  if (setupStatus != 0) {
-    fprintf(stderr, "esy (%s) build failed!", esyCommand);
-    exit(-1);
-  };
-  print_endline(
-    Pastel.(<Pastel color=Green> "You can now run 'esy test'" </Pastel>),
-  );
-};
-
 let reconcile = projectRoot => {
   /* use readFileOpt to read previously computed directory path */
   let packageJSONPath = Path.(projectRoot / "package.json");
@@ -119,7 +41,7 @@ let main = () => {
      * This mean pesy is being run naked on the shell.
      * TODO: use readFileOpt to read previously computed directory path
      */
-      bootstrap(Sys.getcwd())
+      print_endline("Pesy installed in the sandbox cannot be run globally.")
     },
   );
 };

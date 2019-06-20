@@ -1,0 +1,24 @@
+{
+  "name": "pesy-bootstrapper",
+  "version": "0.1.0",
+  "bin": {
+    "pesy": "pesy"
+  },
+  "scripts": {
+    "build": "bsb -make-world",
+    "start": "bsb -make-world -w",
+    "clean": "bsb -clean-world"
+  },
+  "keywords": [
+    "BuckleScript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "bs-platform": "^5.0.4"
+  },
+  "dependencies": {
+    "bs-node": "github:reasonml-community/bs-node",
+    "tablecloth-bucklescript": "0.0.6"
+  }
+}
