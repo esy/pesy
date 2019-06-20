@@ -1,0 +1,53 @@
+{
+  "name": "reason-native-dev",
+  "version": "0.0.0",
+  "description": "My Project",
+  "license": "MIT",
+  "esy": {
+    "build": "refmterr dune build --profile=release",
+    "exportedEnv": {
+      "BETTERERROR_DEV_BUILD_EXE": {
+        "val": "#{self.root/'_esy'/'default'/'build'/'default'/'src'/'refmterr'/'bin'/'berror.exe'}"
+      },
+      "REASON_NATIVE_ROOT": {
+        "val": "#{self.root}"
+      }
+    },
+    "install": [
+      "esy-installer console.install",
+      "esy-installer file-context-printer.install",
+      "esy-installer fs.install",
+      "esy-installer pastel.install",
+      "esy-installer pastel-console.install",
+      "esy-installer path.install",
+      "esy-installer qcheck-rely.install",
+      "esy-installer refmterr.install",
+      "esy-installer rely.install",
+      "esy-installer tests.install",
+      "esy-installer unicode.install",
+      "esy-installer unicode-config.install"
+    ]
+  },
+  "scripts": {
+    "bootstrap": "esy x bash -cx ./bootstrap.cmd",
+    "all": "./scripts/run-all.sh",
+    "test": "esy x bash -cx ./scripts/test-dev.cmd",
+    "test-ci": "esy x bash -cx ./scripts/test-ci.cmd"
+  },
+  "dependencies": {
+    "@opam/dune": "*",
+    "@esy-ocaml/reason": "*",
+    "refmterr": "*",
+    "ocaml": "^4.2.0",
+    "@opam/re": "*",
+    "@opam/atdgen": "*",
+    "@opam/junit": "*",
+    "@opam/qcheck-core": ">= 0.9 < 0.10"
+  },
+  "devDependencies": {
+    "@opam/merlin": "*",
+    "ocaml": "~4.6.4",
+    "@esy-ocaml/reason": "3.4.0",
+    "@opam/sexplib0": "*"
+  }
+}

@@ -1,0 +1,13 @@
+type t = unit
+type re = unit
+let compile () = ()
+let execp _ _ = failwith "evaluating regex in bootstrap is not allowed"
+let str _ = ()
+let empty = ()
+let seq _ = ()
+let bos = ()
+let eos = ()
+let set _ = ()
+let rep _ = ()
+let any _ = ()
+let alt _ = ()

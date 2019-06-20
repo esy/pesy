@@ -1,4 +1,2 @@
 (library (name Utils) (public_name pesy.utils)
-    (libraries unix str pastel.lib) (flags -w -6)
-    (preprocess (pps ppx_expect ppx_inline_test))
-    (inline_tests (flags -verbose))) 
+    (libraries unix str pastel.lib)) 

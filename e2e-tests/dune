@@ -1,6 +1,6 @@
 (executables
 (names Runner TestBootstrapper TestPesyConfigure)
 (public_names Runner.exe TestBootstrapper.exe TestPesyConfigure.exe)
-(libraries unix pesy.lib bos fpath))
+(libraries unix pesy.lib))
 
 (data_only_dirs pesy-configure-test-projects)

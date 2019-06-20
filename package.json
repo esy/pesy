@@ -3,10 +3,13 @@
   "version": "0.5.0-alpha.3",
   "description": "\"Esy Pesy\" - Your Esy Assistant.",
   "esy": {
+    "buildsInSource": "_build",
     "build": [
+      "dune build -p #{self.name}"
+    ],
+    "buildDev": [
       "refmterr dune build -p #{self.name}"
     ],
-    "buildsInSource": "_build",
     "release": {
       "bin": [
         "pesy"
@@ -32,20 +35,7 @@
         "str",
         "sexplib",
         "yojson",
-        "ppx_inline_test/runtime-lib",
         "pesy/utils"
-      ],
-      "preprocess": [
-        "pps",
-        "ppx_expect",
-        "ppx_inline_test"
-      ],
-      "flags": [
-        "-w",
-        "-33+9"
-      ],
-      "rawBuildConfig": [
-        "(inline_tests (flags -verbose))"
       ]
     },
     "utils": {
@@ -53,18 +43,6 @@
         "unix",
         "str",
         "pastel/lib"
-      ],
-      "flags": [
-        "-w",
-        "-6"
-      ],
-      "preprocess": [
-        "pps",
-        "ppx_expect",
-        "ppx_inline_test"
-      ],
-      "rawBuildConfig": [
-        "(inline_tests (flags -verbose))"
       ]
     }
   },
@@ -73,23 +51,23 @@
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
-    "@opam/bos": "*",
-    "@opam/cmdliner": "1.0.3",
+    "@opam/cmdliner": "*",
     "@opam/dune": "*",
-    "@opam/fpath": "*",
-    "@opam/ppx_expect": "v0.11.1",
-    "@opam/ppx_inline_test": "v0.11.0",
-    "@opam/sexplib": "v0.11.0",
-    "@opam/yojson": "^1.4.1",
-    "@reason-native/pastel": "^0.2.0",
-    "dune": "^0.2.1",
-    "ocaml": "*",
-    "refmterr": "*"
+    "@opam/sexplib": "*",
+    "@opam/yojson": "*",
+    "@reason-native/pastel": "*",
+    "ocaml": "4.7.x"
   },
   "devDependencies": {
+    "refmterr": "*",
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "@reason-native/pastel": "facebookexperimental/reason-native#028b0973b0268530609c3edfa4b4f3ebbf9fbb43"
+    "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
+    "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
+    "@opam/dune": "link:./vendor/dune/dune.opam",
+    "@opam/yojson": "link:./vendor/yojson/yojson.opam",
+    "@reason-native/pastel": "link:./vendor/reason-native/pastel.json",
+    "ocaml": "4.7.1004"
   }
 }

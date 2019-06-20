@@ -1,0 +1,12 @@
+test/
+*~
+_esy
+npm-debug.log
+.merlin
+yarn-error.log
+node_modules/
+_build
+_release
+rimraf.install
+.DS_Store
+*.install

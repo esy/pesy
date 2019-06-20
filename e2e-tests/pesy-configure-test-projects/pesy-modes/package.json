@@ -47,6 +47,7 @@
     "test": "esy b dune runtest"
   },
   "dependencies": {
+    "ocaml": "4.7.x",
     "@opam/dune": ">=1.6.0",
     "@esy-ocaml/reason": "*",
     "refmterr": "*",

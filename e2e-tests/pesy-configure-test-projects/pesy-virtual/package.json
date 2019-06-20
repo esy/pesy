@@ -57,6 +57,7 @@
     "test": "esy x PesyVirtualAppBar.exe"
   },
   "dependencies": {
+    "ocaml": "4.7.x",
     "dune": "*",
     "@esy-ocaml/reason": "*",
     "ocaml": "^4.4.0",
