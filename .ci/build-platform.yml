@@ -22,12 +22,24 @@ jobs:
       - template: utils/use-node.yml
       - template: utils/use-esy.yml
       - template: utils/restore-build-cache.yml
-      - script: "npm i -g verdaccio"
-        displayName: "Install verdaccio"
       - script: "esy install"
         displayName: "esy install"
       - script: "esy build"
         displayName: "esy build"
+      - script: "esy npm-release"
+        displayName: "esy npm-release"
+      - script: "npm install"
+        displayName: "npm install"
+        workingDirectory: "npm-cli"
+      - script: "npm build"
+        displayName: "Building pesy npm cli (bsb)"
+        workingDirectory: "npm-cli"
+      - ${{ if eq(parameters.platform, 'Windows') }}:
+          - script: "npm i -g esy-bash"
+            displayName: 'Install esy-bash (for e2e)'
+      - script: "npm run rollup"
+        displayName: "Building pesy npm cli (bundling)"
+        workingDirectory: "npm-cli"
       - ${{ if eq(parameters.platform, 'Windows') }}:
           - script: .\_build\install\default\bin\Runner.exe
             displayName: 'Running e2e tests'

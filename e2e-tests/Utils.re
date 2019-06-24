@@ -101,3 +101,63 @@ let file_copy = (input_name, output_name) => {
   close(fd_in);
   close(fd_out);
 };
+
+module IO = {
+  let write = (file, str) => {
+    let oc = open_out(file);
+    fprintf(oc, "%s", str);
+    close_out(oc);
+  };
+
+  let read = file => {
+    let buf = ref("");
+    let breakOut = ref(false);
+    let ic = open_in(file);
+    while (! breakOut^) {
+      let line =
+        try (input_line(ic)) {
+        | End_of_file =>
+          breakOut := true;
+          "";
+        };
+      buf := buf^ ++ "\n" ++ line;
+    };
+    buf^;
+  };
+};
+
+let contains = (s1, s2) => {
+  let re = Str.regexp_string(s2);
+  try (Str.search_forward(re, s1, 0)) {
+  | Not_found => (-1)
+  };
+};
+
+let rec fetch_files = (f, p) => {
+  let rec walk = (dh, acc) => {
+    let read_dir = dh =>
+      try (Some(Unix.readdir(dh))) {
+      | End_of_file => None
+      };
+
+    switch (read_dir(dh)) {
+    | Some("..")
+    | Some(".") => walk(dh, acc)
+    | Some(entry) =>
+      walk(dh, [Path.(p / entry), ...acc])
+      @ fetch_files(f, Path.(p / entry))
+    | None =>
+      Unix.closedir(dh);
+      acc;
+    };
+  };
+
+  if (try (Sys.is_directory(p)) {
+      | _ => false
+      }) {
+    let dh = Unix.opendir(p);
+    List.filter(f, walk(dh, []));
+  } else {
+    [];
+  };
+};

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "My Project",
   "esy": {
-    "build": "pesy build",
+    "build": "dune build -p #{self.name}",
     "release": {
       "releasedBinaries": [
         "PesyPreprocessApp.exe"
@@ -45,7 +45,6 @@
     "@opam/dune": ">=1.6.0",
     "@opam/lwt": "4.1.0",
     "@opam/lwt_ppx": "1.2.1",
-    "ocaml": "^4.4.0",
     "pesy": "*",
     "refmterr": "*"
   },
@@ -53,6 +52,6 @@
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "pesy": "esy/pesy#ba6359f25621280a8105d2ffc99d75d849c0d95a"
+    "pesy": "<RESOLUTION_LINK>"
   }
 }

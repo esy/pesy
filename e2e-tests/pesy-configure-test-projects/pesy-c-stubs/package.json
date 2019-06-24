@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "My Project",
   "esy": {
-    "build": "pesy build",
+    "build": "dune build -p #{self.name}",
     "release": {
       "releasedBinaries": [
         "PesyCStubsApp.exe"
@@ -37,7 +37,7 @@
     "test": "esy b dune runtest"
   },
   "dependencies": {
-    "ocaml": "~4.6.0",
+    "ocaml": "4.7.x",
     "@opam/dune": ">=1.6.0",
     "@esy-ocaml/reason": "*",
     "refmterr": "*",
@@ -48,6 +48,6 @@
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "pesy": "esy/pesy#ba6359f25621280a8105d2ffc99d75d849c0d95a"
+    "pesy": "<RESOLUTION_LINK>"
   }
 }

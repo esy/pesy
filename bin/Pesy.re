@@ -41,7 +41,7 @@ let main = () => {
      * This mean pesy is being run naked on the shell.
      * TODO: use readFileOpt to read previously computed directory path
      */
-      print_endline("Pesy installed in the sandbox cannot be run globally.")
+      print_endline("Prebuilt Pesy must not be run globally.")
     },
   );
 };

@@ -32,7 +32,7 @@ function readFile(file) {
 }
 
 function copyTemplate(a, b) {
-  return write(b, Fs.readFileSync(Path$PesyBootstrapper.$slash(Path$PesyBootstrapper.$slash(Path$PesyBootstrapper.$slash(Curry._1(Filename.dirname, __dirname), "share"), "template-repo"), a), "utf8"));
+  return write(b, Fs.readFileSync(Path$PesyBootstrapper.$slash(Path$PesyBootstrapper.$slash(Path$PesyBootstrapper.$slash(__dirname, "share"), "template-repo"), a), "utf8"));
 }
 
 function kebab(str) {
@@ -67,7 +67,7 @@ function upperCamelCasify(kebab) {
 }
 
 function loadTemplate(name) {
-  return Fs.readFileSync(Path$PesyBootstrapper.$slash(Path$PesyBootstrapper.$slash(Path$PesyBootstrapper.$slash(Curry._1(Filename.dirname, __dirname), "share"), "template-repo"), name), "utf8");
+  return Fs.readFileSync(Path$PesyBootstrapper.$slash(Path$PesyBootstrapper.$slash(Path$PesyBootstrapper.$slash(__dirname, "share"), "template-repo"), name), "utf8");
 }
 
 function mkdirp(p) {

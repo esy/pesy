@@ -21,10 +21,7 @@ let readFile = file => {
 let parent = Filename.dirname;
 
 let copyTemplate = (a, b) => {
-  write(
-    b,
-    readFile(Path.((scriptPath |> parent) / "share" / "template-repo" / a)),
-  );
+  write(b, readFile(Path.(scriptPath / "share" / "template-repo" / a)));
 };
 
 let kebab = str => {
@@ -65,7 +62,7 @@ let upperCamelCasify = kebab => {
 };
 
 let loadTemplate = name =>
-  readFile(Path.((scriptPath |> parent) / "share" / "template-repo" / name));
+  readFile(Path.(scriptPath / "share" / "template-repo" / name));
 let rec mkdirp = p => {
   let directory_created = exists(p);
   if (!directory_created) {

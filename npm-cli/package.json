@@ -1,24 +1,28 @@
 {
-  "name": "pesy-bootstrapper",
-  "version": "0.1.0",
+  "name": "pesy",
+  "version": "0.5.0-alpha.3",
   "bin": {
     "pesy": "pesy"
   },
   "scripts": {
     "build": "bsb -make-world",
     "start": "bsb -make-world -w",
-    "clean": "bsb -clean-world"
+    "clean": "bsb -clean-world",
+    "rollup": "rollup -c rollup.config.js"
   },
   "keywords": [
-    "BuckleScript"
+    "esy",
+    "pesy",
+    "reason",
+    "ocaml"
   ],
-  "author": "",
   "license": "MIT",
   "devDependencies": {
-    "bs-platform": "^5.0.4"
-  },
-  "dependencies": {
     "bs-node": "github:reasonml-community/bs-node",
+    "bs-platform": "^5.0.4",
+    "rollup": "^1.16.2",
+    "rollup-plugin-commonjs": "^10.0.0",
+    "rollup-plugin-node-resolve": "^5.0.4",
     "tablecloth-bucklescript": "0.0.6"
   }
 }

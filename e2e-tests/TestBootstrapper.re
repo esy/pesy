@@ -6,7 +6,7 @@ let parent = Filename.dirname;
 let tmpDir = Filename.get_temp_dir_name();
 let testProject = "test-project";
 let testProjectDir = Filename.concat(tmpDir, testProject);
-let pesyBinPath = "pesy";
+let pesyBinPath = makeCommand("pesy");
 
 rimraf(testProjectDir); /* So that we can run it stateless locally */
 mkdir(testProjectDir);

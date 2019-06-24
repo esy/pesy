@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "My Project",
   "esy": {
-    "build": "pesy build",
+    "build": "dune build -p #{self.name}",
     "buildsInSource": "_build",
     "release": {
       "releasedBinaries": [
@@ -43,7 +43,6 @@
     }
   },
   "scripts": {
-    "pesy": "bash -c 'env PESY_MODE=update pesy'",
     "test": "esy b dune runtest"
   },
   "dependencies": {
@@ -51,13 +50,12 @@
     "@opam/dune": ">=1.6.0",
     "@esy-ocaml/reason": "*",
     "refmterr": "*",
-    "pesy": "*",
-    "ocaml": "*"
+    "pesy": "*"
   },
   "devDependencies": {
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "pesy": "esy/pesy#ba6359f25621280a8105d2ffc99d75d849c0d95a"
+    "pesy": "<RESOLUTION_LINK>"
   }
 }
