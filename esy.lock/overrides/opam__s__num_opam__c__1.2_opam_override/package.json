@@ -1,11 +1,6 @@
 {
   "build": [
     [
-      "bash",
-      "-c",
-      "#{os == 'windows' ? 'patch -p1 < num-1.1.patch' : 'true'}"
-    ],
-    [
       "make"
     ]
   ],
