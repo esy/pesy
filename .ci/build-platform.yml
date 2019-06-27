@@ -47,7 +47,7 @@ jobs:
           - script: ./_build/install/default/bin/Runner.exe
             displayName: 'Running e2e tests'
             env:
-              - OCAMLRUNPARAM: 'b'
+              OCAMLRUNPARAM: 'b'
       - template: utils/publish-build-cache.yml
       - task: PublishBuildArtifacts@1
         displayName: "Publish Artifact: ${{ parameters.platform }}"
