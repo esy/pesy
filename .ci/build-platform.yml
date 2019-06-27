@@ -31,6 +31,8 @@ jobs:
       - ${{ if eq(parameters.platform, 'Windows') }}:
           - script: .\_build\install\default\bin\Runner.exe
             displayName: 'Running e2e tests'
+            env:
+              - OCAMLRUNPARAM: 'b'
       - ${{ if ne(parameters.platform, 'Windows') }}:
           - script: ./_build/install/default/bin/Runner.exe
             displayName: 'Running e2e tests'
