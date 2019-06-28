@@ -53,7 +53,13 @@ exit(
     [||],
     ~env=
       Array.append(
-        [|sprintf("PESY_CLONE_PATH=%s", Sys.getcwd())|],
+        [|sprintf("PESY_CLONE_PATH=%s",
+          Str.global_replace(
+            Str.regexp("\\"),
+            "/",
+            Sys.getcwd(),
+          ),
+        )|],
         Unix.environment(),
       ),
   ),
