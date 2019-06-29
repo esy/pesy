@@ -41,12 +41,12 @@ jobs:
         displayName: "Building pesy npm cli (bundling)"
         workingDirectory: "npm-cli"
       - ${{ if eq(parameters.platform, 'Windows') }}:
-          - script: mkdir $(System.DefaultWorkingDirectory)\tests-tmp-dir
+          - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
             displayName: 'Creating temporary workspace for tests'
           - script: .\_build\install\default\bin\Runner.exe
             displayName: 'Running e2e tests'
             env:
-              TEMP: $(System.DefaultWorkingDirectory)/tests-tmp-dir
+              TEMP: $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
       - ${{ if ne(parameters.platform, 'Windows') }}:
           - script: ./_build/install/default/bin/Runner.exe
             displayName: 'Running e2e tests'
