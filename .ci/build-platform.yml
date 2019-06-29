@@ -44,7 +44,7 @@ jobs:
           - script: .\_build\install\default\bin\Runner.exe
             displayName: 'Running e2e tests'
             env:
-              TEMP: $(HomeDirectory)
+              TEMP: $(Agent.HomeDirectory)
       - ${{ if ne(parameters.platform, 'Windows') }}:
           - script: ./_build/install/default/bin/Runner.exe
             displayName: 'Running e2e tests'
