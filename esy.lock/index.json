@@ -130,13 +130,13 @@
       "overrides": [],
       "dependencies": [
         "ocaml@4.7.1004@d41d8cd9", "@opam/sexplib0@opam:v0.12.0@e823b4e9",
-        "@opam/parsexp@opam:v0.12.0@66f48735", "@opam/num@opam:1.1@dcdca088",
+        "@opam/parsexp@opam:v0.12.0@66f48735", "@opam/num@opam:1.2@3595a888",
         "@opam/dune@link:vendor/dune/dune.opam",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
         "ocaml@4.7.1004@d41d8cd9", "@opam/sexplib0@opam:v0.12.0@e823b4e9",
-        "@opam/parsexp@opam:v0.12.0@66f48735", "@opam/num@opam:1.1@dcdca088"
+        "@opam/parsexp@opam:v0.12.0@66f48735", "@opam/num@opam:1.2@3595a888"
       ]
     },
     "@opam/seq@opam:base@d8d7de1d": {
@@ -342,26 +342,26 @@
         "@opam/ppx_derivers@opam:1.2.1@0b458500"
       ]
     },
-    "@opam/num@opam:1.1@dcdca088": {
-      "id": "@opam/num@opam:1.1@dcdca088",
+    "@opam/num@opam:1.2@3595a888": {
+      "id": "@opam/num@opam:1.2@3595a888",
       "name": "@opam/num",
-      "version": "opam:1.1",
+      "version": "opam:1.2",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/md5/71/710cbe18b144955687a03ebab439ff2b#md5:710cbe18b144955687a03ebab439ff2b",
-          "archive:https://github.com/ocaml/num/archive/v1.1.tar.gz#md5:710cbe18b144955687a03ebab439ff2b"
+          "archive:https://opam.ocaml.org/cache/md5/4f/4f43ce8e44db68692bee50f2f8ef911c#md5:4f43ce8e44db68692bee50f2f8ef911c",
+          "archive:https://github.com/ocaml/num/archive/v1.2.tar.gz#md5:4f43ce8e44db68692bee50f2f8ef911c"
         ],
         "opam": {
           "name": "num",
-          "version": "1.1",
-          "path": "esy.lock/opam/num.1.1"
+          "version": "1.2",
+          "path": "esy.lock/opam/num.1.2"
         }
       },
       "overrides": [
         {
           "opamoverride":
-            "esy.lock/overrides/opam__s__num_opam__c__1.1_opam_override"
+            "esy.lock/overrides/opam__s__num_opam__c__1.2_opam_override"
         }
       ],
       "dependencies": [
@@ -370,30 +370,25 @@
       ],
       "devDependencies": [ "ocaml@4.7.1004@d41d8cd9" ]
     },
-    "@opam/merlin-extend@opam:0.3@0af73a50": {
-      "id": "@opam/merlin-extend@opam:0.3@0af73a50",
+    "@opam/merlin-extend@opam:0.4@9e025201": {
+      "id": "@opam/merlin-extend@opam:0.4@9e025201",
       "name": "@opam/merlin-extend",
-      "version": "opam:0.3",
+      "version": "opam:0.4",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/md5/9c/9c6dfd4f53328f02f12fcc265f4e2dda#md5:9c6dfd4f53328f02f12fcc265f4e2dda",
-          "archive:https://github.com/let-def/merlin-extend/archive/v0.3.tar.gz#md5:9c6dfd4f53328f02f12fcc265f4e2dda"
+          "archive:https://opam.ocaml.org/cache/md5/06/0663a58f2c45fad71615fbf0f6dd2e51#md5:0663a58f2c45fad71615fbf0f6dd2e51",
+          "archive:https://github.com/let-def/merlin-extend/archive/v0.4.tar.gz#md5:0663a58f2c45fad71615fbf0f6dd2e51"
         ],
         "opam": {
           "name": "merlin-extend",
-          "version": "0.3",
-          "path": "esy.lock/opam/merlin-extend.0.3"
+          "version": "0.4",
+          "path": "esy.lock/opam/merlin-extend.0.4"
         }
       },
-      "overrides": [
-        {
-          "opamoverride":
-            "esy.lock/overrides/opam__s__merlin_extend_opam__c__0.3_opam_override"
-        }
-      ],
+      "overrides": [],
       "dependencies": [
-        "ocaml@4.7.1004@d41d8cd9", "@opam/ocamlfind@opam:1.8.0@f744a0c5",
+        "ocaml@4.7.1004@d41d8cd9", "@opam/dune@link:vendor/dune/dune.opam",
         "@opam/cppo@opam:1.6.6@25eb99ce", "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [ "ocaml@4.7.1004@d41d8cd9" ]
@@ -428,20 +423,20 @@
         "@opam/ocamlfind@opam:1.8.0@f744a0c5"
       ]
     },
-    "@opam/menhir@opam:20190613@ea48c81c": {
-      "id": "@opam/menhir@opam:20190613@ea48c81c",
+    "@opam/menhir@opam:20190620@a914c43f": {
+      "id": "@opam/menhir@opam:20190620@a914c43f",
       "name": "@opam/menhir",
-      "version": "opam:20190613",
+      "version": "opam:20190620",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/md5/23/23c380e23903e1974c923f3a6ff25ad4#md5:23c380e23903e1974c923f3a6ff25ad4",
-          "archive:https://gitlab.inria.fr/fpottier/menhir/repository/20190613/archive.tar.gz#md5:23c380e23903e1974c923f3a6ff25ad4"
+          "archive:https://opam.ocaml.org/cache/md5/f7/f77d327a6203dfa031a9b94466b0c560#md5:f77d327a6203dfa031a9b94466b0c560",
+          "archive:https://gitlab.inria.fr/fpottier/menhir/repository/20190620/archive.tar.gz#md5:f77d327a6203dfa031a9b94466b0c560"
         ],
         "opam": {
           "name": "menhir",
-          "version": "20190613",
-          "path": "esy.lock/opam/menhir.20190613"
+          "version": "20190620",
+          "path": "esy.lock/opam/menhir.20190620"
         }
       },
       "overrides": [],
@@ -708,8 +703,8 @@
         "ocaml@4.7.1004@d41d8cd9", "@opam/result@opam:1.4@7add0d71",
         "@opam/ocamlfind@opam:1.8.0@f744a0c5",
         "@opam/ocaml-migrate-parsetree@opam:1.3.1@266527bd",
-        "@opam/merlin-extend@opam:0.3@0af73a50",
-        "@opam/menhir@opam:20190613@ea48c81c",
+        "@opam/merlin-extend@opam:0.4@9e025201",
+        "@opam/menhir@opam:20190620@a914c43f",
         "@opam/dune@link:vendor/dune/dune.opam"
       ],
       "devDependencies": []

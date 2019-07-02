@@ -1,5 +1,7 @@
 open Utils;
 
+let ($) = (f, x) => f(x);
+
 let buffer_size = 8192;
 let buffer = Bytes.create(buffer_size);
 
@@ -80,7 +82,7 @@ let rec copy_rec = (source, dest) => {
 let tmpDir = Filename.get_temp_dir_name();
 let testProject = "test-project";
 let testProjectDir = Filename.concat(tmpDir, testProject);
-let pesyConfigureCommand = Sys.unix ? "pesy" : "pesy.cmd";
+let pesyConfigureCommand = "pesy";
 
 let mkdir = (~perms=?, p) =>
   switch (perms) {
@@ -102,6 +104,22 @@ let pesyConfigureTestProjectsDir =
 Printf.printf("Copying %s to %s", pesyConfigureTestProjectsDir, testDir);
 print_newline();
 copy_rec(pesyConfigureTestProjectsDir, testDir);
+
+/* Use resolutions so that e2e tests point to local clone */
+List.iter(
+  pkgJSONPath => {
+    let curContents = IO.read(pkgJSONPath);
+    IO.write(
+      pkgJSONPath,
+      Str.global_replace(
+        Str.regexp("<RESOLUTION_LINK>"),
+        "link:" ++ Sys.getenv("PESY_CLONE_PATH"),
+        curContents,
+      ),
+    );
+  },
+  fetch_files(x => contains(x, "package.json") != (-1), testDir),
+);
 
 let testProjects =
   Sys.readdir(testDir)
@@ -137,11 +155,11 @@ List.iter(
 
     Printf.printf("Running `esy pesy`");
     print_newline();
-    let exitStatus = runCommandWithEnv(esyCommand, [|pesyConfigureCommand|]);
+    let exitStatus = runCommandWithEnv(esyCommand, [|"#{pesy.root}/_build/default/bin/Pesy.exe"|]);
     if (exitStatus != 0) {
       Printf.fprintf(
         stderr,
-        "Test failed: Non zero exit when running esy pesy-configure",
+        "Test failed: Non zero exit when running esy pesy",
       );
       exit(-1);
     };
