@@ -59,6 +59,7 @@
     "ocaml": "4.7.x"
   },
   "devDependencies": {
+    "pesy-self": "esy/pesy#75d62cfc",
     "refmterr": "*",
     "@opam/merlin": "*"
   },
