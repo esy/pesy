@@ -33,12 +33,12 @@
   "dependencies": {
     "@opam/dune": "*",
     "@esy-ocaml/reason": "*",
-    "refmterr": "*",
     "ocaml": "4.7.x",
-    "pesy": "*",
     "@reason-native/rely": "*"
   },
   "devDependencies": {
+    "refmterr": "*",
+    "pesy": "*",
     "@opam/merlin": "*"
   },
   "resolutions": {
