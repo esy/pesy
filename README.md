@@ -1,11 +1,30 @@
+
+![screenshot](./images/screenshot.png "Demo")
+
 # pesy
 
 [![Build Status](https://dev.azure.com/pesy/pesy/_apis/build/status/esy.pesy?branchName=master)](https://dev.azure.com/pesy/pesy/_build/latest?definitionId=1&branchName=master)
 
-- Use `package.json` to automatically configure libraries and executables built
-  with Dune.
+Pesy is a CLI tool to assist project management using `package.json` to automatically configure libraries and executables built
+with Dune. Pesy is a great tool to
+1. Quickly bootstrap a new Reason project
+2. Configure dune using package.json itself. Checkout [Dune Configuration](#dune-configuration), as to why use pesy to build your project.
+ 
+Essentially, development with pesy looks like this
 
-![screenshot](./images/screenshot.png "Demo")
+```sh
+mkdir my-new-project
+cd my-new-project
+pesy # Bootstraps the project, installs the dependencies and builds the project
+```
+
+Once bootstrapped, you can use pesy to manage the builds
+```sh
+# edit code
+esy pesy
+esy build
+# Repeat
+```
 
 ### Installation
 
@@ -17,69 +36,160 @@ This installs a prebuilt binary on your system. For checksum verification - refe
 
 > Note: The new native rewrite of `pesy` has been published to `npm install -g pesy@next` and is undergoing alpha/beta testing.
 
-### Create New Project:
+### Creating a new project:
 
 `pesy` global command creates `esy` projects instantly inside of any directory.
 
 ```sh
 cd my-project
-pesy      # Hit enter to accept default name
+pesy
 ```
-
 
 This creates:
 
 - `package.json` with useful dependencies/compilers.
 - `.gitignore` and `README.md` with instructions for new contributors.
-- `.circleci` continuous integration with cache configured for ultra-fast pull
+- `.ci` continuous integration with cache configured for ultra-fast pull
     requests.
 - `library/`, `executable/` and `test/` directory with starter modules.
 
-The created project uses `pesy` in its build step. As always, run `esy pesy`
-any time you update the build config in the `package.json`.
+If you all you wanted from pesy is to bootstrap a new project, then you are good to go!
 
+### Dune configuration
+Along with bootstrapping a project, pesy can also manage your dune config.
 
-Once you've created a project, you normally only ever run `esy build` on the
-command line. If you update your `package.json` `buildDirs` field, you will
-need to run `esy pesy` which will update all the project build config based on
-your `package.json` file changes. Then, you just run `esy build` as usual. You
-only need to run `esy pesy` if you change your `package.json` file.
+Dune is a great build tool and we couldn't have asked for a better tool from the OCaml community. However, with a couple of changes in Dune's conventions (example public_name and name) and syntax (JSON instead of s-expressions), we believe beginners would have easier time adopting Reason/OCaml.
+
+Pesy tries to achieve this by accepting package build configuration mentioned in the package.json and creates the dune file (config files Dune reads to build your project) for you. For example,
+
+```json
+ "buildDirs" {
+    "lib": {
+      "require": [
+        "str",
+        "sexplib",
+        "yojson",
+        "my-project/utils"
+      ]
+    },
+    ...
+ }
+```
+
+This means, before calling dune, one must run `esy pesy` to create the dune files so that dune can build your project.
+
+Think of pesy as accepting package.json as input and producing dune files as output.
+
+```
+
+                  +----------------+
+                  |                |
+package.json ---> |      pesy      +  --->  dune files
+                  |                |
+                  +----------------+
+
+```
+
+Anytime you update the project config in the package.json, make sure you run `esy pesy`.
 
 (Hopefully, this could be automatically done in the future so you only ever run
 `esy build` as usual).
 
-### Build `pesy` Project:
+### Commiting the dune files 🐫
 
-```sh
-esy build
+While dune files can be thought of as generated artifacts,
+we strongly recommended that you always commit them.
+
+pesy is forced to generate these files in-source, and therefore must not 
+be run in the build environment since in-source compilation is known to be
+slow. It is meant to assist your workflow. `pesy` doesn't function as a standalone
+build tool.
+
+### NPM like features (experimental) 
+
+Every library, as we know, exposes a namespace/module under which it's APIs are
+available. In order to ease consumption, pesy tries to guess this namespace for you,
+so that you can avoid configuring it yourself. It does so by assigning the library
+the upper camelcase of the directory the library/sub-package resides in. If you are
+not satisfied, you can override this by adding `namespace` property exactly like how 
+you would with Dune.
+
+With the new NPM like conventions, pesy automatically handles the namespace for you so that we don't have to worry about the nuances of a package and a library during development. All that we need to know is, in a configuration like the one above, 
+
+**1. Libraries are identified with a path, much like Javascript requires (`var curryN = require('lodash/fp/curryN');`)**
+
+```json
+"buildDirs": {
+  "library": {
+    "require": [ "foo/foolib" ]
+  }
+}
 ```
 
-Your project's `esy.build` field is set to `pesy`, which will run `pesy` to
-verify that all your build config is up to date before invoking the Dune build.
-It will let you know if you need to run `esy pesy` to update your build config
-from new changes to `package.json`.
+You may look at [Creating and publishing libraries to NPM](#creating-and-publishing-libraries-and-tools-to-npm) for an example
 
-### Update `pesy` Project:
+**2. Namespaces are upper camel cased folder names**
 
-```sh
-esy pesy
+Pesy chooses the capitalised folder name of the sub-package as the namespace of the package. This is to reduce the cognitive overhead of library v/s package differences.
+
+**3. All sub-packages are considered to be libraries unless they have a `bin` property (much like NPM)**
+Any sub-package with `bin` property is considered to be an executable subpackage.
+
+```json
+"buildDirs": {
+   "executable": {
+      "require": [
+        "foo/library"
+      ],
+      "bin": {
+        "FooApp.exe": "FooApp.re"
+      }
+    }
+}
+```
+If not present, it is assumed that the subpackage is meant to be consumed as a library. This can be compared to NPM's behaviour.
+
+
+### Workaround for scoped packages on NPM
+
+Pesy is currently not meant to be run in the build environment. This means it cannot run Dune for you. While this is not an issue at all usually, when scoped packages are created using pesy, the package name must be transformed to work well with Dune and OPAM.
+
+Example
+
+```json
+{
+  "name": "@my-npm-scope/foobar"
+  ...
+  "esy": {
+    "build": "dune build -p #{self.name}"
+  }
+}
+```
+This above config will fail. This is because `#{self.name}` evaluates to `@my-npm-scope/foobar`. This is being tracked [here](https://github.com/esy/pesy/issues/31). The workaround is to transform is for this form: `<scope>--<package_name>`.
+
+This way `@my-npm-scope/foobar` becomes `my-npm-scope--foobar`. And use this double kebabified name in `esy.build`
+
+```json
+{
+  "name": "@my-npm-scope/foobar"
+  ...
+  "esy": {
+    "build": "dune build -p my-npm-scope--foobar"
+  }
+}
 ```
 
-If you change your `buildDirs` config in `package.json`, run this command to
-update build configuration.
+And run `esy pesy`
 
+[Here](https://github.com/esy/pesy/tree/master/e2e-tests/pesy-configure-test-projects/pesy-npm-scoped) is an example repo (that is run on the CI regularly)
 
-
-## Configuring:
+### Configuring:
 
 Configure your `package.json`'s `buildDirs` field for multiple libraries and
 executables.
 `buildDirs.DirectoryName` means that a library or executable will be located at
 `./DirectoryName`. The `buildDirs.DirectoryName.name` field determines the
-public name of the library or executable. a `name` ending in `.exe` is
-automatically configured as an executable, and a name of the form
-`packageName.anything` is automatically configured to be a library with the
-public name of `packageName.anything`.
+public name of the library or executable.
 
 
 ```json
@@ -141,7 +251,7 @@ add support for more config fields, PRs are welcomed.
 
 
 
-## Consuming New Package And Library Dependencies:
+### Consuming New Package And Library Dependencies:
 
 - Add dependencies to `dependencies` in `package.json`.
 - Add the name of that new dependencies *library*  to `package.json`'s
@@ -179,13 +289,13 @@ add support for more config fields, PRs are welcomed.
 
 
 
-## Tradeoffs:
+### Tradeoffs:
 `esy-pesy` is good for rapidly making new small executables/libraries. Once they
 grow, you'll want to "eject out" of `esy-pesy` and begin customizing using a more
 advanced build system.
 
 
-## Adding `pesy` to an existing project.
+### Adding `pesy` to an existing project.
 
 You probably don't need `pesy` if you have an existing project that is working
 well, but to add `pesy` to an existing project, follow these steps:
@@ -222,7 +332,211 @@ esy pesy  # Generate the project build config from json
 esy build
 ```
 
-## Example Project:
+### Creating and publishing libraries and tools to NPM
+
+#### Library in the source form
+
+Easiest way to get started with distributing you library is to publish the source to NPM. Let's take a look at an example.
+
+Consider a base package `foo` that you created and distributed on NPM. And let's assume, `bar` is the package that consumes `foo`.
+
+```sh
+$ mkdir foo
+$ cd foo
+$ pesy
+# edit code
+$ esy pesy # if build config has changes
+$ esy build
+$ npm publish
+```
+
+Publishing to npm is just a matter of running `npm publish`. Lets take closer look at the commands.
+
+```sh
+$ mkdir foo
+$ cd foo
+$ pesy
+```
+As you'd know by now, these commands, bootstrap, install dependencies and build the entire project.
+
+At this point, our project looks like this
+
+```
+│
+├── library 
+│
+├── executable
+│   
+├── test
+│   
+└── testExe (test runner)
+   
+```
+
+With the `buildDirs` section of the package.json looking like the following
+
+```json
+  "buildDirs": {
+    "test": {
+      "require": [
+        "foo/library",
+        "rely.lib"
+      ],
+      "flags": [
+        "-linkall",
+        "-g"
+      ]
+    },
+    "testExe": {
+      "require": [
+        "foo/test"
+      ],
+      "bin": {
+        "RunFooTests.exe": "RunFooTests.re"
+      }
+    },
+    "library": {},
+    "executable": {
+      "require": [
+        "foo/library"
+      ],
+      "bin": {
+        "FooApp.exe": "FooApp.re"
+      }
+    }
+  },
+```
+Given that pesy tries to unify packages and libraries, for a config mentioned above it has made `library` available under the namespace `Library`. So anytime `foo` is added as a dependency, a module `Library` becomes available in the codebase.
+
+Since `Library` is to generic to be useful, let's rename it to `FooLib` (i.e. make rename the package as foolib)
+
+```sh
+$ mv library foolib
+```
+
+And update the config
+
+```diff
+  "buildDirs": {
+    "test": {
+      "require": [
+        "foo/library",
+        "rely.lib"
+      ],
+      "flags": [
+        "-linkall",
+        "-g"
+      ]
+    },
+    "testExe": {
+      "require": [
+        "foo/test"
+      ],
+      "bin": {
+        "RunFooTests.exe": "RunFooTests.re"
+      }
+    },
+-    "library": {},
++    "foolib": {},
+    "executable": {
+      "require": [
+        "foo/library"
+      ],
+      "bin": {
+        "FooApp.exe": "FooApp.re"
+      }
+    }
+  },
+```
+
+Since config has changed, we run `esy pesy` and build the project
+
+```sh
+$ esy pesy
+$ esy build
+```
+
+Let's edit the Utils.re too
+
+```js
+let foo = () => print_endline("Hello from foo");
+```
+
+Build and publish!
+
+```sh
+$ esy build
+$ npm publish
+```
+
+#### Consuming `foo`
+
+Let quickly create a new project, `bar` and add `foo`.
+
+```sh
+$ mkdir bar
+$ cd bar
+$ pesy
+$ esy add foo
+```
+
+We can now require `foo` (sort of like we did in Javascript)
+
+```diff
+  "buildDirs": {
+    "test": {
+      "require": [
+        "bar/library",
+        "rely.lib"
+      ],
+      "flags": [
+        "-linkall",
+        "-g"
+      ]
+    },
+    "testExe": {
+      "require": [
+        "bar/test"
+      ],
+      "bin": {
+        "RunBarTests.exe": "RunBarTests.re"
+      }
+    },
+    "library": {
+      "require": [
++        "foo/foolib"
+      ]
+    },
+    "executable": {
+      "require": [
+        "bar/library"
+      ],
+      "bin": {
+        "BarApp.exe": "BarApp.re"
+      }
+    }
+  },
+```
+And then edit Utils.re
+
+```js
+let foo = () => {
+  Foolib.Util.foo();
+  print_endline("This is from bar");
+};
+```
+
+```sh
+$ esy pesy
+$ esy build
+$ esy x BarApp.exe
+Hello from foo!
+This is from bar
+```
+
+Publishing and consuming Reason native packages from NPM is easy. We just need to keep in mind that the namespace exposed from our library depends on the name of the folder!
+
+### Example Project:
 
 The following example project already has an example config. You can base your
 project off of this one.
@@ -238,14 +552,14 @@ esy build
 
 - Change the `name` of the package, and names of libraries in `buildDirs`
   accordingly.
-- Then rerun:
+- Then re-run:
 
 ```sh
 esy pesy
 esy build
 ```
 
-# Development
+### Development
 
 ```sh
 cd re/
@@ -254,10 +568,11 @@ esy build
 esy dune runtest # Unit tests
 ```
 
-## e2e tests
+### e2e tests
 `./_build/install/default/bin` would contain (after running `esy build`) `TestBootstrapper.exe` and `TestPesyConfigure.exe` 
+
 to test if simple workflows work as expected. They assume both `esy` and `pesy` are installed
-globally (as on user's machines). TODO: improve error messages
+globally (as on user's machines).
 
 `run.bat` and `run.sh` inside `scripts` can be used to globally install using npm pack. Then run
 the e2e scripts.
@@ -268,7 +583,7 @@ the e2e scripts.
 ./_build/install/default/bin/TestPesyConfigure.exe
 ```
 
-# Changes:
+### Changes:
 
 **version 0.4.0  (12/21/2018)**
 
