@@ -1,6 +1,6 @@
 {
   "name": "pesy",
-  "version": "0.5.0-alpha.3",
+  "version": "0.5.0-alpha.4",
   "bin": {
     "pesy": "pesy"
   },
@@ -15,6 +15,12 @@
     "pesy",
     "reason",
     "ocaml"
+  ],
+  "files": [
+    "package.json",
+    "pesy",
+    "share",
+    "pesy.bundle.js"
   ],
   "license": "MIT",
   "devDependencies": {

@@ -188,7 +188,7 @@ let id = Spinner.start("\x1b[2mRunning\x1b[0m esy install");
 exec("esy i", (e, stdout, stderr) => {
   Spinner.stop(id);
   if (Js.eqNullable(e, Js.Nullable.null)) {
-    let id = Spinner.start("\x1b[2mRunning\x1b[0m esy pesy");
+    let id = Spinner.start("\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0m building project dependencies");
     exec("esy pesy", (e, stdout, stderr) => {
       Spinner.stop(id);
       if (Js.eqNullable(e, Js.Nullable.null)) {
