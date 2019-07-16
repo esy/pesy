@@ -16,6 +16,12 @@
     "reason",
     "ocaml"
   ],
+  "files": [
+    "package.json",
+    "pesy",
+    "share",
+    "pesy.bundle.js"
+  ],
   "license": "MIT",
   "devDependencies": {
     "bs-node": "github:reasonml-community/bs-node",
