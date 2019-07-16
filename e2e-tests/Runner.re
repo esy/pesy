@@ -30,7 +30,7 @@ chdir(Path.(cwd / "npm-cli"));
 print_endline("Installing pesy globally..");
 run(makeCommand("npm"), [|"run", "rollup"|]);
 run(makeCommand("npm"), [|"pack"|]);
-run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-alpha.3.tgz"|]);
+run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-alpha.4.tgz"|]);
 chdir(cwd);
 
 let testBootstrapperExe =

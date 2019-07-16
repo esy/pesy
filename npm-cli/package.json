@@ -1,6 +1,6 @@
 {
   "name": "pesy",
-  "version": "0.5.0-alpha.3",
+  "version": "0.5.0-alpha.4",
   "bin": {
     "pesy": "pesy"
   },
