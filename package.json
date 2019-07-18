@@ -36,6 +36,10 @@
         "sexplib",
         "yojson",
         "pesy/utils"
+      ],
+      "rawBuildConfigFooter": [
+        "(rule (targets Lexer.ml) (deps Lexer.mll) (action (run %{bin:ocamllex} -q -o %{targets} %{deps})))",
+        "(rule (targets Parser.ml Parser.mli) (deps Parser.mly) (action (run %{bin:ocamlyacc} %{deps})))"
       ]
     },
     "utils": {

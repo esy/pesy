@@ -34,7 +34,7 @@ let create = (namespace, modes, cNames, virtualModules, implements, wrapped) => 
   implements,
   wrapped,
 };
-let toDuneStanza = (common, lib) => {
+let toDuneStanza = (common, lib, pesyModules) => {
   /* let {name: pkgName, require, path} = common */
   let {
     namespace,
@@ -56,7 +56,7 @@ let toDuneStanza = (common, lib) => {
     rawBuildConfig,
     rawBuildConfigFooter,
   ) =
-    Common.toDuneStanzas(common);
+    Common.toDuneStanzas(common, pesyModules);
   let path = Common.getPath(common);
   let name = Stanza.create("name", Stanza.createAtom(namespace));
 

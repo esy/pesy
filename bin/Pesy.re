@@ -122,6 +122,19 @@ let main = () => {
         );
       fprintf(stderr, "%s\n", message);
       exit(-1);
+    | ImportsParserFailure(e) =>
+      /* TODO: Be more specific about which imports */
+      let message =
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red> "Could not understand the imports\n" </Pastel>
+            <Pastel>
+              "There seems to be a syntax error in one of the imports"
+            </Pastel>
+          </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
     | ResolveRelativePathFailure(e) =>
       let message =
         Pastel.(
@@ -141,6 +154,7 @@ let main = () => {
   );
 };
 
+/** DEPRECATED: Pesy is not supposed to be run in build env https://github.com/jchavarri/rebez/issues/4 **/
 let pesy_build = () =>
   PesyConf.(
     ignore(

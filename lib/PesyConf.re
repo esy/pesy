@@ -2,6 +2,12 @@ open Printf;
 open Utils;
 open Utils.NoLwt;
 
+type pesyModule = {
+  alias: string,
+  library: string,
+  originalNamespace: string,
+};
+
 type pkgType =
   | ExecutablePackage(Executable.t)
   | LibraryPackage(Library.t)
@@ -9,6 +15,7 @@ type pkgType =
 
 type package = {
   common: Common.t,
+  pesyModules: list(pesyModule),
   pkgType,
 };
 
@@ -28,6 +35,7 @@ exception GenericException(string);
 exception ResolveRelativePathFailure(string);
 exception InvalidBinProperty(string);
 exception BuildValidationFailures(list(validationError));
+exception ImportsParserFailure(unit);
 
 /* */
 /*  Inline ppx is supported too. */
@@ -68,16 +76,16 @@ let resolveRelativePath = path => {
 /*   print_endline(resolveRelativePath("foo/lib")); */
 /*   %expect */
 /*   {| */
-/*      foo/lib */
-/*    |}; */
+     /*      foo/lib */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   print_endline(resolveRelativePath("foo/bar/..")); */
 /*   %expect */
 /*   {| */
-/*      foo */
-/*    |}; */
+     /*      foo */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
@@ -85,7 +93,7 @@ let resolveRelativePath = path => {
 /*   %expect */
 /*   {| */
 
-/*    |}; */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
@@ -98,16 +106,16 @@ let resolveRelativePath = path => {
 /*   print_endline(result); */
 /*   %expect */
 /*   {| */
-/*           ResolveRelativePathFailure("Failed resolving: foo/bar/../../.. Too many `../`") */
-/*      |}; */
+     /*           ResolveRelativePathFailure("Failed resolving: foo/bar/../../.. Too many `../`") */
+     /*      |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   print_endline(resolveRelativePath("foo/bar/../baz/")); */
 /*   %expect */
 /*   {| */
-/*      foo/baz */
-/*    |}; */
+     /*      foo/baz */
+     /*    |}; */
 /* }; */
 
 let moduleNameOf = fileName =>
@@ -117,16 +125,16 @@ let moduleNameOf = fileName =>
 /*   print_endline(moduleNameOf("Foo.re")); */
 /*   %expect */
 /*   {| */
-/*      Foo */
-/*    |}; */
+     /*      Foo */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   print_endline(moduleNameOf("Foo.ml")); */
 /*   %expect */
 /*   {| */
-/*      Foo */
-/*    |}; */
+     /*      Foo */
+     /*    |}; */
 /* }; */
 
 let isValidBinaryFileName = fileName =>
@@ -136,16 +144,16 @@ let isValidBinaryFileName = fileName =>
 /*   print_endline(string_of_bool(isValidBinaryFileName("Foo.re"))); */
 /*   %expect */
 /*   {| */
-/*      false */
-/*    |}; */
+     /*      false */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   print_endline(string_of_bool(isValidBinaryFileName("Foo.exe"))); */
 /*   %expect */
 /*   {| */
-/*      true */
-/*    |}; */
+     /*      true */
+     /*    |}; */
 /* }; */
 
 let isValidSourceFile = fileName =>
@@ -155,24 +163,24 @@ let isValidSourceFile = fileName =>
 /*   print_endline(string_of_bool(isValidSourceFile("Foo.re"))); */
 /*   %expect */
 /*   {| */
-/*      true */
-/*    |}; */
+     /*      true */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   print_endline(string_of_bool(isValidSourceFile("Foo.ml"))); */
 /*   %expect */
 /*   {| */
-/*      true */
-/*    |}; */
+     /*      true */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   print_endline(string_of_bool(isValidSourceFile("Foo.mlsss"))); */
 /*   %expect */
 /*   {| */
-/*      false */
-/*    |}; */
+     /*      false */
+     /*    |}; */
 /* }; */
 
 /* Turns "Foo.re as Foo.exe" => ("Foo.re", "Foo.exe") */
@@ -193,16 +201,16 @@ let isValidScopeName = n => {
 /*   print_endline(string_of_bool(isValidScopeName("blah"))); */
 /*   %expect */
 /*   {| */
-/*      false */
-/*    |}; */
+     /*      false */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   print_endline(string_of_bool(isValidScopeName("@myscope"))); */
 /*   %expect */
 /*   {| */
-/*      true */
-/*    |}; */
+     /*      true */
+     /*    |}; */
 /* }; */
 
 let stripAtTheRate = s => String.sub(s, 1, String.length(s) - 1);
@@ -225,8 +233,8 @@ let doubleKebabifyIfScoped = n => {
 /*   print_endline(doubleKebabifyIfScoped("foo-bar")); */
 /*   %expect */
 /*   {| */
-/*      foo-bar */
-/*    |}; */
+     /*      foo-bar */
+     /*    |}; */
 /* }; */
 
 type t = (string, list(package));
@@ -246,7 +254,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
   /* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
 
   (
-    rootName ++ ".opam",
+    rootName,
     List.map(
       pkg => {
         let (dir, conf) = pkg;
@@ -307,8 +315,9 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             |> List.map(
                  FieldTypes.toString
                  <|> (
-                   x =>
-                     x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x
+                   x => {
+                     x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x;
+                   }
                  )
                  <|> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x)
                  <|> resolveRelativePath
@@ -318,6 +327,37 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           | JSON.NullJSONValue(_) => []
           | e => raise(e)
           };
+
+        let imports =
+          try (
+            JSON.member(conf, "imports")
+            |> JSON.toValue
+            |> FieldTypes.toList
+            |> List.map(FieldTypes.toString <|> ImportsParser.parse)
+          ) {
+          | JSON.NullJSONValue(_) => []
+          | e => raise(ImportsParserFailure())
+          };
+        let pesyModules =
+          imports
+          |> List.map(import => {
+               let (importedNamespace, lib) = import;
+               let exportedNamespace =
+                 lib
+                 |> String.split_on_char('/')
+                 |> List.map(upperCamelCasify)
+                 |> List.fold_left((++), "");
+               {
+                 alias:
+                   sprintf(
+                     "module %s = %s;",
+                     importedNamespace,
+                     exportedNamespace,
+                   ),
+                 library: pathToOCamlLibName(lib),
+                 originalNamespace: importedNamespace,
+               };
+             });
 
         let flags =
           try (
@@ -415,6 +455,21 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           | _ => None
           };
 
+        let common =
+          Common.create(
+            name,
+            Path.(projectPath / dir),
+            require,
+            flags,
+            ocamlcFlags,
+            ocamloptFlags,
+            jsooFlags,
+            preprocess,
+            includeSubdirs,
+            rawBuildConfig,
+            rawBuildConfigFooter,
+          );
+
         if (isBinPropertyPresent(bin)) {
           /* Prioritising `bin` over `name` */
           let main =
@@ -456,20 +511,8 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             | e => raise(e)
             };
           {
-            common:
-              Common.create(
-                name,
-                Path.(projectPath / dir),
-                require,
-                flags,
-                ocamlcFlags,
-                ocamloptFlags,
-                jsooFlags,
-                preprocess,
-                includeSubdirs,
-                rawBuildConfig,
-                rawBuildConfigFooter,
-              ),
+            common,
+            pesyModules,
             pkgType: ExecutablePackage(Executable.create(main, modes)),
           };
         } else {
@@ -480,7 +523,10 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
               |> FieldTypes.toString
             ) {
             | JSON.NullJSONValue () =>
-              upperCamelCasify(Filename.basename(dir))
+              sprintf("%s/%s", rootName, dir)
+              |> String.split_on_char('/')
+              |> List.map(upperCamelCasify)
+              |> List.fold_left((++), "")
             | e => raise(e)
             };
           let libraryModes =
@@ -554,20 +600,8 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             | e => raise(e)
             };
           {
-            common:
-              Common.create(
-                name,
-                Path.(projectPath / dir),
-                require,
-                flags,
-                ocamlcFlags,
-                ocamloptFlags,
-                jsooFlags,
-                preprocess,
-                includeSubdirs,
-                rawBuildConfig,
-                rawBuildConfigFooter,
-              ),
+            pesyModules,
+            common,
             pkgType:
               LibraryPackage(
                 Library.create(
@@ -587,24 +621,65 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
   );
 };
 
-let toPackages = (_prjPath, pkgs) =>
+let toDunePackages = (_prjPath, rootName, pkgs) => {
   List.map(
-    pkg =>
+    pkg => {
+      let pesyModules =
+        List.length(pkg.pesyModules) == 0
+          ? None : Some(sprintf("%s.pesy-modules", rootName));
+      let pesyModules =
+        List.length(pkg.pesyModules) == 0 ? None : pesyModules;
       switch (pkg.pkgType) {
-      | LibraryPackage(l) => Library.toDuneStanza(pkg.common, l)
-      | ExecutablePackage(e) => Executable.toDuneStanza(pkg.common, e)
-      | TestPackage(e) => Test.toDuneStanza(pkg.common, e)
-      },
+      | LibraryPackage(l) => Library.toDuneStanza(pkg.common, l, pesyModules)
+      | ExecutablePackage(e) =>
+        Executable.toDuneStanza(pkg.common, e, pesyModules)
+      | TestPackage(e) => Test.toDuneStanza(pkg.common, e, pesyModules)
+      };
+    },
     pkgs,
   );
+};
 
 type fileOperation =
   | UPDATE(string)
   | CREATE(string);
+
 let gen = (projectPath, pkgPath) => {
   let json = JSON.fromFile(pkgPath);
-  let (rootNameOpamFile, pesyPackages) = toPesyConf(projectPath, json);
-  let dunePackages = toPackages(projectPath, pesyPackages);
+  let (rootName, pesyPackages) = toPesyConf(projectPath, json);
+  let rootNameOpamFile = rootName ++ ".opam";
+  let dunePackages = toDunePackages(projectPath, rootName, pesyPackages);
+
+  mkdirp("pesy-modules");
+  let pesyModulesReFile =
+    List.fold_left(
+      (acc1, pesyPackage) =>
+        acc1
+        ++ "\n"
+        ++ List.fold_left(
+             (acc2, pesyModule) => acc2 ++ "\n" ++ pesyModule.alias,
+             "",
+             pesyPackage.pesyModules,
+           ),
+      "",
+      pesyPackages,
+    );
+  write(Path.("pesy-modules" / "PesyModules.re"), pesyModulesReFile);
+
+  let duneLibrariesNeeded =
+    pesyPackages
+    |> List.map(x => x.pesyModules)
+    |> List.flatten
+    |> List.map(x => x.library)
+    |> List.fold_left((acc, x) => acc ++ " " ++ x, "");
+  let pesyModuleDuneFile =
+    sprintf(
+      "(library (public_name %s.pesy-modules) (name PesyModules) (libraries %s))",
+      rootName,
+      duneLibrariesNeeded,
+    );
+  write(Path.("pesy-modules" / "dune"), pesyModuleDuneFile);
+
   let operations = ref([]);
   List.iter(
     dpkg => {
@@ -684,7 +759,7 @@ let gen = (projectPath, pkgPath) => {
 let testToPackages = jsonStr => {
   let json = JSON.ofString(jsonStr);
   let (_, pesyPackages) = toPesyConf("", json);
-  let dunePackages = toPackages("", pesyPackages);
+  let dunePackages = toDunePackages("", "", pesyPackages);
   List.map(
     p => {
       let (_, d) = p;
@@ -698,398 +773,398 @@ let testToPackages = jsonStr => {
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*   { */
-/*     "name": "foo", */
-/*     "buildDirs": { */
-/*       "test": { */
-/*         "require": ["foo"], */
-/*         "bin": { "Bar.exe": "Bar.re" } */
-/*       } */
-/*     } */
-/*   } */
-/*        |}, */
+         /*   { */
+         /*     "name": "foo", */
+         /*     "buildDirs": { */
+         /*       "test": { */
+         /*         "require": ["foo"], */
+         /*         "bin": { "Bar.exe": "Bar.re" } */
+         /*       } */
+         /*     } */
+         /*   } */
+         /*        |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (executable (name Bar) (public_name Bar.exe) (libraries foo)) */
-/*    |}; */
+     /*      (executable (name Bar) (public_name Bar.exe) (libraries foo)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*   { */
-/*       "name": "foo", */
-/*       "buildDirs": { */
-/*       "testlib": { */
-/*         "require": ["foo"], */
-/*         "namespace": "Foo", */
-/*         "name": "bar.lib", */
-/*        "modes": ["best"] */
-/*       } */
-/*     } */
-/*   } */
-/*        |}, */
+         /*   { */
+         /*       "name": "foo", */
+         /*       "buildDirs": { */
+         /*       "testlib": { */
+         /*         "require": ["foo"], */
+         /*         "namespace": "Foo", */
+         /*         "name": "bar.lib", */
+         /*        "modes": ["best"] */
+         /*       } */
+         /*     } */
+         /*   } */
+         /*        |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (libraries foo) (modes best)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (libraries foo) (modes best)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*   { */
-/*       "name": "foo", */
-/*       "buildDirs": { */
-/*       "testlib": { */
-/*         "require": ["foo"], */
-/*         "namespace": "Foo", */
-/*         "name": "bar.lib", */
-/*         "cNames": ["stubs"] */
-/*       } */
-/*     } */
-/*   } */
-/*        |}, */
+         /*   { */
+         /*       "name": "foo", */
+         /*       "buildDirs": { */
+         /*       "testlib": { */
+         /*         "require": ["foo"], */
+         /*         "namespace": "Foo", */
+         /*         "name": "bar.lib", */
+         /*         "cNames": ["stubs"] */
+         /*       } */
+         /*     } */
+         /*   } */
+         /*        |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (libraries foo) (c_names stubs)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (libraries foo) (c_names stubs)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*   { */
-/*       "name": "foo", */
-/*       "buildDirs": { */
-/*       "testlib": { */
-/*         "namespace": "Foo", */
-/*         "name": "bar.lib", */
-/*         "virtualModules": ["foo"] */
-/*       } */
-/*     } */
-/*   } */
-/*        |}, */
+         /*   { */
+         /*       "name": "foo", */
+         /*       "buildDirs": { */
+         /*       "testlib": { */
+         /*         "namespace": "Foo", */
+         /*         "name": "bar.lib", */
+         /*         "virtualModules": ["foo"] */
+         /*       } */
+         /*     } */
+         /*   } */
+         /*        |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (virtual_modules foo)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (virtual_modules foo)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*   { */
-/*       "name": "foo", */
-/*       "buildDirs": { */
-/*       "testlib": { */
-/*         "namespace": "Foo", */
-/*         "name": "bar.lib", */
-/*         "implements": ["foo"] */
-/*       } */
-/*     } */
-/*   } */
-/*        |}, */
+         /*   { */
+         /*       "name": "foo", */
+         /*       "buildDirs": { */
+         /*       "testlib": { */
+         /*         "namespace": "Foo", */
+         /*         "name": "bar.lib", */
+         /*         "implements": ["foo"] */
+         /*       } */
+         /*     } */
+         /*   } */
+         /*        |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (implements foo)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (implements foo)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*   { */
-/*       "name": "foo", */
-/*       "buildDirs": { */
-/*       "testlib": { */
-/*         "namespace": "Foo", */
-/*         "name": "bar.lib", */
-/*         "wrapped": false */
-/*       } */
-/*     } */
-/*   } */
-/*        |}, */
+         /*   { */
+         /*       "name": "foo", */
+         /*       "buildDirs": { */
+         /*       "testlib": { */
+         /*         "namespace": "Foo", */
+         /*         "name": "bar.lib", */
+         /*         "wrapped": false */
+         /*       } */
+         /*     } */
+         /*   } */
+         /*        |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (wrapped false)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (wrapped false)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*   { */
-/*       "name": "foo", */
-/*       "buildDirs": { */
-/*       "testlib": { */
-/*         "bin": { "bar.exe": "Foo.re" }, */
-/*         "modes": ["best", "c"] */
-/*       } */
-/*     } */
-/*   } */
-/*        |}, */
+         /*   { */
+         /*       "name": "foo", */
+         /*       "buildDirs": { */
+         /*       "testlib": { */
+         /*         "bin": { "bar.exe": "Foo.re" }, */
+         /*         "modes": ["best", "c"] */
+         /*       } */
+         /*     } */
+         /*   } */
+         /*        |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (executable (name Foo) (public_name bar.exe) (modes (best c))) */
-/*    |}; */
+     /*      (executable (name Foo) (public_name bar.exe) (modes (best c))) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testlib": { */
-/*                  "require": ["foo"], */
-/*                  "namespace": "Foo", */
-/*                  "name": "bar.lib", */
-/*                  "flags": ["-w", "-33+9"] */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testlib": { */
+         /*                  "require": ["foo"], */
+         /*                  "namespace": "Foo", */
+         /*                  "name": "bar.lib", */
+         /*                  "flags": ["-w", "-33+9"] */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (libraries foo) (flags -w -33+9)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (libraries foo) (flags -w -33+9)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testlib": { */
-/*                  "namespace": "Foo", */
-/*                  "name": "bar.lib", */
-/*                  "ocamlcFlags": ["-annot", "-c"] */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testlib": { */
+         /*                  "namespace": "Foo", */
+         /*                  "name": "bar.lib", */
+         /*                  "ocamlcFlags": ["-annot", "-c"] */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (ocamlc_flags -annot -c)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (ocamlc_flags -annot -c)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testlib": { */
-/*                  "namespace": "Foo", */
-/*                  "name": "bar.lib", */
-/*                  "ocamloptFlags": ["-rectypes", "-nostdlib"] */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testlib": { */
+         /*                  "namespace": "Foo", */
+         /*                  "name": "bar.lib", */
+         /*                  "ocamloptFlags": ["-rectypes", "-nostdlib"] */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) */
-/*          (ocamlopt_flags -rectypes -nostdlib)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) */
+     /*          (ocamlopt_flags -rectypes -nostdlib)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testlib": { */
-/*                  "namespace": "Foo", */
-/*                  "name": "bar.lib", */
-/*                  "jsooFlags": ["-pretty", "-no-inline"] */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testlib": { */
+         /*                  "namespace": "Foo", */
+         /*                  "name": "bar.lib", */
+         /*                  "jsooFlags": ["-pretty", "-no-inline"] */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (js_of_ocaml -pretty -no-inline)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (js_of_ocaml -pretty -no-inline)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testlib": { */
-/*                  "namespace": "Foo", */
-/*                  "name": "bar.lib", */
-/*                  "preprocess": [ "pps", "lwt_ppx" ] */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testlib": { */
+         /*                  "namespace": "Foo", */
+         /*                  "name": "bar.lib", */
+         /*                  "preprocess": [ "pps", "lwt_ppx" ] */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (preprocess (pps lwt_ppx))) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (preprocess (pps lwt_ppx))) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testlib": { */
-/*                  "namespace": "Foo", */
-/*                  "name": "bar.lib", */
-/*                  "includeSubdirs": "unqualified" */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testlib": { */
+         /*                  "namespace": "Foo", */
+         /*                  "name": "bar.lib", */
+         /*                  "includeSubdirs": "unqualified" */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (include_subdirs unqualified)) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (include_subdirs unqualified)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testlib": { */
-/*                  "namespace": "Foo", */
-/*                  "name": "bar.lib", */
-/*                  "rawBuildConfig": [ */
-/*                    "(libraries lwt lwt.unix raw.lib)", */
-/*                    "(preprocess (pps lwt_ppx))" */
-/*                  ] */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testlib": { */
+         /*                  "namespace": "Foo", */
+         /*                  "name": "bar.lib", */
+         /*                  "rawBuildConfig": [ */
+         /*                    "(libraries lwt lwt.unix raw.lib)", */
+         /*                    "(preprocess (pps lwt_ppx))" */
+         /*                  ] */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib) (libraries lwt lwt.unix raw.lib) */
-/*          (preprocess (pps lwt_ppx))) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib) (libraries lwt lwt.unix raw.lib) */
+     /*          (preprocess (pps lwt_ppx))) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testlib": { */
-/*                  "namespace": "Foo", */
-/*                  "name": "bar.lib", */
-/*                  "rawBuildConfigFooter": [ */
-/*                    "(install (section share_root) (files (asset.txt as asset.txt)))" */
-/*                  ] */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testlib": { */
+         /*                  "namespace": "Foo", */
+         /*                  "name": "bar.lib", */
+         /*                  "rawBuildConfigFooter": [ */
+         /*                    "(install (section share_root) (files (asset.txt as asset.txt)))" */
+         /*                  ] */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (library (name Foo) (public_name bar.lib)) (install (section share_root) (files (asset.txt as asset.txt))) */
-/*    |}; */
+     /*      (library (name Foo) (public_name bar.lib)) (install (section share_root) (files (asset.txt as asset.txt))) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testexe": { */
-/*                  "bin": { "Foo.exe": "Foo.re" }, */
-/*                  "rawBuildConfigFooter": [ */
-/*                    "(install (section share_root) (files (asset.txt as asset.txt)))" */
-/*                  ] */
-/*                } */
-/*              } */
-/*            } */
-/*                 |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testexe": { */
+         /*                  "bin": { "Foo.exe": "Foo.re" }, */
+         /*                  "rawBuildConfigFooter": [ */
+         /*                    "(install (section share_root) (files (asset.txt as asset.txt)))" */
+         /*                  ] */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*                 |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (executable (name Foo) (public_name Foo.exe)) (install (section share_root) (files (asset.txt as asset.txt))) */
-/*    |}; */
+     /*      (executable (name Foo) (public_name Foo.exe)) (install (section share_root) (files (asset.txt as asset.txt))) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
 /*   let duneFiles = */
 /*     testToPackages( */
 /*       {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testexe": { */
-/*                  "bin": { "Foo.exe": "Foo.re" } */
-/*                } */
-/*              } */
-/*            } */
-/*        |}, */
+         /*            { */
+         /*              "name": "foo", */
+         /*              "buildDirs": { */
+         /*                "testexe": { */
+         /*                  "bin": { "Foo.exe": "Foo.re" } */
+         /*                } */
+         /*              } */
+         /*            } */
+         /*        |}, */
 /*     ); */
 /*   List.iter(print_endline, List.map(DuneFile.toString, duneFiles)); */
 /*   %expect */
 /*   {| */
-/*      (executable (name Foo) (public_name Foo.exe)) */
-/*    |}; */
+     /*      (executable (name Foo) (public_name Foo.exe)) */
+     /*    |}; */
 /* }; */
 
 /* let%expect_test _ = { */
@@ -1099,15 +1174,15 @@ let testToPackages = jsonStr => {
 /*         ignore( */
 /*           testToPackages( */
 /*             {| */
-/*            { */
-/*              "name": "foo", */
-/*              "buildDirs": { */
-/*                "testexe": { */
-/*                  "bin": [] */
-/*                } */
-/*              } */
-/*            } */
-/*        |}, */
+               /*            { */
+               /*              "name": "foo", */
+               /*              "buildDirs": { */
+               /*                "testexe": { */
+               /*                  "bin": [] */
+               /*                } */
+               /*              } */
+               /*            } */
+               /*        |}, */
 /*           ), */
 /*         ); */
 /*         raise(ShouldHaveRaised()); */
@@ -1118,8 +1193,8 @@ let testToPackages = jsonStr => {
 /*   List.iter(print_endline, duneFileErrors); */
 /*   %expect */
 /*   {| */
-/*      InvalidBinProperty for testexe */
-/*    |}; */
+     /*      InvalidBinProperty for testexe */
+     /*    |}; */
 /* }; */
 
 let log = operations => {
@@ -1147,10 +1222,12 @@ let log = operations => {
   print_newline();
 };
 
+/** DEPRECATED: Pesy is not supposed to be run in build env https://github.com/jchavarri/rebez/issues/4 **/
 let validateDuneFiles = (projectPath, pkgPath) => {
   let json = JSON.fromFile(pkgPath);
-  let (rootNameOpamFile, pesyPackages) = toPesyConf(projectPath, json);
-  let dunePackages = toPackages(projectPath, pesyPackages);
+  let (rootName, pesyPackages) = toPesyConf(projectPath, json);
+  let rootNameOpamFile = rootName ++ ".opam";
+  let dunePackages = toDunePackages(projectPath, rootName, pesyPackages);
   let staleDuneFiles =
     dunePackages
     |> List.map(dpkg => {

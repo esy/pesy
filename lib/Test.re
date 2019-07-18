@@ -80,7 +80,7 @@ type t = {
   modes: option(Mode.t),
 };
 let create = (main, modes) => {main, modes};
-let toDuneStanza = (common: Common.t, e) => {
+let toDuneStanza = (common: Common.t, e, pesyModules) => {
   /* let {name: pkgName, require, path} = common; */
   let {main, modes: modesP} = e;
   let (
@@ -95,7 +95,7 @@ let toDuneStanza = (common: Common.t, e) => {
     rawBuildConfig,
     rawBuildConfigFooter,
   ) =
-    Common.toDuneStanzas(common);
+    Common.toDuneStanzas(common, pesyModules);
   let path = Common.getPath(common);
   /* Pesy's main is Dune's name */
   let name = Stanza.create("name", Stanza.createAtom(main));

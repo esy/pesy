@@ -1,3 +1,5 @@
+open Utils;
+
 exception InvalidSubDirs(string);
 type include_subdirs =
   | No
@@ -54,7 +56,7 @@ let create =
     rawBuildConfigFooter,
   };
 };
-let toDuneStanzas = c => {
+let toDuneStanzas = (c, pesyModules) => {
   let {
     name,
     require,
@@ -68,27 +70,67 @@ let toDuneStanzas = c => {
     rawBuildConfigFooter,
     _,
   } = c;
+
   (
     /* public_name: */ Stanza.create("public_name", Stanza.createAtom(name)),
     /* libraries: */
     switch (require) {
-    | [] => None
+    | [] =>
+      switch (pesyModules) {
+      | Some(x) =>
+        Some(
+          Stanza.createExpression([
+            Stanza.createAtom("libraries"),
+            Stanza.createAtom(x),
+          ]),
+        )
+      | None => None
+      }
     | libs =>
       Some(
         Stanza.createExpression([
           Stanza.createAtom("libraries"),
-          ...List.map(r => Stanza.createAtom(r), libs),
+          ...List.map(
+               r => Stanza.createAtom(r),
+               libs
+               @ (
+                 switch (pesyModules) {
+                 | Some(x) => [x]
+                 | None => []
+                 }
+               ),
+             ),
         ]),
       )
     },
     /* flags: */
     switch (flags) {
-    | None => None
+    | None =>
+      switch (pesyModules) {
+      | Some(x) =>
+        Some(
+          Stanza.createExpression([
+            Stanza.createAtom("flags"),
+            Stanza.createAtom("-open"),
+            Stanza.createAtom("PesyModules"),
+          ]),
+        )
+      | None => None
+      }
     | Some(l) =>
       Some(
         Stanza.createExpression([
           Stanza.createAtom("flags"),
-          ...List.map(f => Stanza.createAtom(f), l),
+          ...List.map(
+               f => Stanza.createAtom(f),
+               l
+               @ (
+                 switch (pesyModules) {
+                 | Some(_) => ["-open", "PesyModules"]
+                 | None => []
+                 }
+               ),
+             ),
         ]),
       )
     },
