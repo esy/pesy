@@ -12,6 +12,7 @@ exception GenericException(string);
 exception ResolveRelativePathFailure(string);
 exception InvalidBinProperty(string);
 exception BuildValidationFailures(list(validationError));
+exception ImportsParserFailure(unit);
 
 let gen: (string, string) => list(fileOperation);
 let log: list(fileOperation) => unit;

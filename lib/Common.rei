@@ -1,7 +1,7 @@
 type include_subdirs;
 type t;
 let toDuneStanzas:
-  t =>
+  (t, option(string)) =>
   (
     Stanza.t,
     option(Stanza.t),
