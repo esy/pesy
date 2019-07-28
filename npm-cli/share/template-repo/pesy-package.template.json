@@ -11,7 +11,7 @@
   "buildDirs": {
     "test": {
       "require": ["<PUBLIC_LIB_NAME>", "rely.lib"],
-      "flags": ["-linkall", "-g"]
+      "flags": ["-linkall", "-g", "-w", "-9"]
     },
     "testExe": {
       "require": ["<TEST_LIB_NAME>"],
