@@ -4,6 +4,7 @@ yarn-error.log
 node_modules/
 _build
 _release
+_esy
 <PACKAGE_NAME>.install
 .DS_Store
 *.install
