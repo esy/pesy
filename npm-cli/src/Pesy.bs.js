@@ -35,6 +35,10 @@ function substituteTemplateValues(s) {
   return s.replace((/<PACKAGE_NAME_FULL>/g), packageNameKebab).replace((/<VERSION>/g), version).replace((/<PUBLIC_LIB_NAME>/g), packageLibName).replace((/<TEST_LIB_NAME>/g), packageTestName).replace((/<PACKAGE_NAME>/g), packageNameKebab).replace((/<PACKAGE_NAME_UPPER_CAMEL>/g), packageNameUpperCamelCase);
 }
 
+function substituteFileNames(s) {
+  return s.replace((/__PACKAGE_NAME_FULL__/g), packageNameKebab).replace((/__PACKAGE_NAME__/g), packageNameKebab).replace((/__PACKAGE_NAME_UPPER_CAMEL__/g), packageNameUpperCamelCase);
+}
+
 var template = Belt_Option.getWithDefault(Belt_Option.map(Belt_Array.get(Belt_Array.keep(Process.argv, (function (param) {
                     return param.includes("--template");
                   })), 0), (function (param) {
@@ -55,7 +59,7 @@ DownloadGitRepo(template, projectPath, (function (error) {
                 }));
           Belt_Array.forEach(files, (function (file) {
                   Utils$PesyBootstrapper.write(file, substituteTemplateValues(Utils$PesyBootstrapper.readFile(file)));
-                  Fs.renameSync(file, substituteTemplateValues(file));
+                  Fs.renameSync(file, substituteFileNames(file));
                   return /* () */0;
                 }));
           Spinner$PesyBootstrapper.stop(setup_files_spinner);
@@ -128,6 +132,7 @@ exports.version = version;
 exports.packageLibName = packageLibName;
 exports.packageTestName = packageTestName;
 exports.substituteTemplateValues = substituteTemplateValues;
+exports.substituteFileNames = substituteFileNames;
 exports.template = template;
 exports.download_spinner = download_spinner;
 /* projectPath Not a pure module */

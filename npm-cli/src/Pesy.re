@@ -24,6 +24,18 @@ let substituteTemplateValues = s =>
        packageNameUpperCamelCase,
      );
 
+let substituteFileNames = s =>
+  s
+  |> Js.String.replaceByRe(
+       [%bs.re "/__PACKAGE_NAME_FULL__/g"],
+       packageNameKebab,
+     )
+  |> Js.String.replaceByRe([%bs.re "/__PACKAGE_NAME__/g"], packageNameKebab)
+  |> Js.String.replaceByRe(
+       [%bs.re "/__PACKAGE_NAME_UPPER_CAMEL__/g"],
+       packageNameUpperCamelCase,
+     );
+
 // TODO: Move the template to the esy or esy-ocaml org
 let template =
   argv
@@ -53,7 +65,7 @@ download_git(
         file => {
           let () = readFile(file)->substituteTemplateValues |> write(file);
 
-          renameSync(file, substituteTemplateValues(file));
+          renameSync(file, substituteFileNames(file));
         },
       );
       Spinner.stop(setup_files_spinner);
