@@ -10,6 +10,7 @@ var Caml_obj = require("bs-platform/lib/js/caml_obj.js");
 var Filename = require("bs-platform/lib/js/filename.js");
 var WalkSync = require("walk-sync");
 var Belt_Array = require("bs-platform/lib/js/belt_Array.js");
+var Belt_Option = require("bs-platform/lib/js/belt_Option.js");
 var Caml_option = require("bs-platform/lib/js/caml_option.js");
 var Child_process = require("child_process");
 var DownloadGitRepo = require("download-git-repo");
@@ -35,11 +36,21 @@ function substituteTemplateValues(s) {
   return s.replace((/<PACKAGE_NAME_FULL>/g), packageNameKebab).replace((/<VERSION>/g), version).replace((/<PUBLIC_LIB_NAME>/g), packageLibName).replace((/<TEST_LIB_NAME>/g), packageTestName).replace((/<PACKAGE_NAME>/g), packageNameKebab).replace((/<PACKAGE_NAME_UPPER_CAMEL>/g), packageNameUpperCamelCase);
 }
 
-DownloadGitRepo("github:ulrikstrid/hello-reason-pesy", projectPath, (function (error) {
+var template = Belt_Option.getWithDefault(Belt_Option.map(Belt_Array.get(Belt_Array.keep(Process.argv, (function (param) {
+                    return param.includes("--template");
+                  })), 0), (function (param) {
+            return param.replace("--template=", "");
+          })), "github:ulrikstrid/hello-reason-pesy");
+
+var download_spinner = Spinner$PesyBootstrapper.start("\x1b[2mDownloading template\x1b[0m " + template);
+
+DownloadGitRepo(template, projectPath, (function (error) {
+        Spinner$PesyBootstrapper.stop(download_spinner);
         if (error !== undefined) {
           console.log(Caml_option.valFromOption(error));
           return /* () */0;
         } else {
+          var setup_files_spinner = Spinner$PesyBootstrapper.start("\x1b[2mSetting up template\x1b[0m " + template);
           var files = Belt_Array.keep(WalkSync(projectPath), (function (file_or_dir) {
                   return Fs.statSync(file_or_dir).isFile();
                 }));
@@ -69,6 +80,7 @@ DownloadGitRepo("github:ulrikstrid/hello-reason-pesy", projectPath, (function (e
           if (!Utils$PesyBootstrapper.exists(opamFile)) {
             Utils$PesyBootstrapper.write(opamFile, "");
           }
+          Spinner$PesyBootstrapper.stop(setup_files_spinner);
           var id = Spinner$PesyBootstrapper.start("\x1b[2mRunning\x1b[0m esy install");
           Child_process.exec("esy i", (function (e, stdout, stderr) {
                   Spinner$PesyBootstrapper.stop(id);
@@ -138,4 +150,6 @@ exports.version = version;
 exports.packageLibName = packageLibName;
 exports.packageTestName = packageTestName;
 exports.substituteTemplateValues = substituteTemplateValues;
+exports.template = template;
+exports.download_spinner = download_spinner;
 /* projectPath Not a pure module */

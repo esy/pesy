@@ -8,6 +8,7 @@ type stats;
 [@bs.send] external isFile: stats => bool = "";
 
 [@bs.val] [@bs.module "process"] external cwd: unit => string = "cwd";
+[@bs.val] [@bs.module "process"] external argv: array(string) = "argv";
 [@bs.val] external scriptPath: string = "__dirname";
 [@bs.val] [@bs.module "child_process"]
 external exec: (string, (Js.Nullable.t(_), string, string) => unit) => unit =
