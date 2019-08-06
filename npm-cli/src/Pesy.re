@@ -56,23 +56,6 @@ download_git(
           renameSync(file, substituteTemplateValues(file));
         },
       );
-
-      let libKebab = packageNameKebabSansScope;
-      let duneProjectFile = Path.(projectPath / "dune-project");
-      if (!exists(duneProjectFile)) {
-        write(
-          duneProjectFile,
-          spf({|(lang dune 1.2)
-  (name %s)
-  |}, libKebab),
-        );
-      };
-
-      let opamFileName = libKebab ++ ".opam";
-      let opamFile = Path.(projectPath / opamFileName);
-      if (!exists(opamFile)) {
-        write(opamFile, "");
-      };
       Spinner.stop(setup_files_spinner);
 
       let id = Spinner.start("\x1b[2mRunning\x1b[0m esy install");

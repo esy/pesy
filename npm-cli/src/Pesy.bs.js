@@ -14,7 +14,6 @@ var Belt_Option = require("bs-platform/lib/js/belt_Option.js");
 var Caml_option = require("bs-platform/lib/js/caml_option.js");
 var Child_process = require("child_process");
 var DownloadGitRepo = require("download-git-repo");
-var Path$PesyBootstrapper = require("./Path.bs.js");
 var Utils$PesyBootstrapper = require("./Utils.bs.js");
 var Spinner$PesyBootstrapper = require("./Spinner.bs.js");
 
@@ -59,27 +58,6 @@ DownloadGitRepo(template, projectPath, (function (error) {
                   Fs.renameSync(file, substituteTemplateValues(file));
                   return /* () */0;
                 }));
-          var duneProjectFile = Path$PesyBootstrapper.$slash(projectPath, "dune-project");
-          if (!Utils$PesyBootstrapper.exists(duneProjectFile)) {
-            Utils$PesyBootstrapper.write(duneProjectFile, Curry._1(Utils$PesyBootstrapper.spf(/* Format */[
-                          /* String_literal */Block.__(11, [
-                              "(lang dune 1.2)\n  (name ",
-                              /* String */Block.__(2, [
-                                  /* No_padding */0,
-                                  /* String_literal */Block.__(11, [
-                                      ")\n  ",
-                                      /* End_of_format */0
-                                    ])
-                                ])
-                            ]),
-                          "(lang dune 1.2)\n  (name %s)\n  "
-                        ]), packageNameKebabSansScope));
-          }
-          var opamFileName = packageNameKebabSansScope + ".opam";
-          var opamFile = Path$PesyBootstrapper.$slash(projectPath, opamFileName);
-          if (!Utils$PesyBootstrapper.exists(opamFile)) {
-            Utils$PesyBootstrapper.write(opamFile, "");
-          }
           Spinner$PesyBootstrapper.stop(setup_files_spinner);
           var id = Spinner$PesyBootstrapper.start("\x1b[2mRunning\x1b[0m esy install");
           Child_process.exec("esy i", (function (e, stdout, stderr) {
