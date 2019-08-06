@@ -30,5 +30,9 @@
     "rollup-plugin-commonjs": "^10.0.0",
     "rollup-plugin-node-resolve": "^5.0.4",
     "tablecloth-bucklescript": "0.0.6"
+  },
+  "dependencies": {
+    "download-git-repo": "^2.0.0",
+    "walk-sync": "^2.0.2"
   }
 }

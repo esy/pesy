@@ -9,10 +9,10 @@ export default {
     format: "cjs"
   },
   plugins: [
-    nodeResolve(),
+    nodeResolve({ preferBuiltins: true }),
     commonjs({
       ignore: ["child_process"]
     })
   ],
-  external: ["child_process", "fs", "process"]
+  external: ["child_process", "fs", "process", "walk-sync", "download-git-repo"]
 };
