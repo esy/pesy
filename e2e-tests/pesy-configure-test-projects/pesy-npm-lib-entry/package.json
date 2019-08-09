@@ -12,20 +12,20 @@
   },
   "buildDirs": {
     "test": {
-      "require": [
-        "../util"
+      "imports": [
+        "Util = require('../util')"
       ],
       "bin": "TestPesyNpm.re"
     },
     "util": {
-      "require": [
-        "./foo/bar"
+      "imports": [
+        "Bar = require('./foo/bar')"
       ]
     },
     "util/foo/bar": {},
     "executable": {
-      "require": [
-        "../util"
+      "imports": [
+        "Util = require('../util')"
       ],
       "bin": {
         "pesy-npm-app.exe": "PesyNpmApp.re"

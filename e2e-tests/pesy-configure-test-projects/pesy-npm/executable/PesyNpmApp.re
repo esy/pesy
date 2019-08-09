@@ -1,2 +1,2 @@
 Library.Util.foo();
-Bar.bar();
+Bar.Bar.bar();

@@ -1,2 +1,1 @@
-Util.foo();
-Bar.bar();
+Util.Util.foo();

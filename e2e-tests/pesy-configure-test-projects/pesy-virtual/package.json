@@ -12,8 +12,8 @@
   },
   "buildDirs": {
     "lib": {
-      "require": [
-        "pesy-virtual/foo"
+      "imports": [
+        "Foo = require('pesy-virtual/foo')"
       ]
     },
     "foo": {
@@ -32,18 +32,18 @@
       ]
     },
     "executable-bar": {
-      "require": [
-        "pesy-virtual/lib",
-        "pesy-virtual/bar"
+      "imports": [
+        "Lib = require('pesy-virtual/lib')",
+        "Bar = require('pesy-virtual/bar')"
       ],
       "bin": {
         "PesyVirtualAppBar.exe": "PesyVirtualApp.re"
       }
     },
     "executable-baz": {
-      "require": [
-        "pesy-virtual/lib",
-        "pesy-virtual/baz"
+      "imports": [
+        "Lib = require('pesy-virtual/lib')",
+        "Baz = require('pesy-virtual/baz')"
       ],
       "bin": {
         "PesyVirtualAppBaz.exe": "PesyVirtualApp.re"
