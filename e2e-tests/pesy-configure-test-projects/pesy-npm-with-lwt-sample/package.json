@@ -12,17 +12,17 @@
   },
   "buildDirs": {
     "test": {
-      "require": [
-        "test-project/library"
+      "imports": [
+        "Library = require('test-project/library')"
       ],
       "bin": "TestTestProject.re"
     },
     "library": {},
     "executable": {
-      "require": [
-        "test-project/library",
-        "lwt",
-        "lwt/unix"
+      "imports": [
+        "Library = require('test-project/library')",
+        "Lwt = require('lwt')",
+        "Lwt_unix = require('lwt/unix')"
       ],
       "bin": {
         "TestProjectApp.exe": "TestProjectApp.re"
