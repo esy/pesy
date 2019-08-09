@@ -348,7 +348,9 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let pesy_module_namespace =
-          [rootName, dir, "PesyModules"]
+          [rootName]
+          @ String.split_on_char('/', dir)
+          @ ["PesyModules"]
           |> List.map(upperCamelCasify)
           |> List.fold_left((++), "");
 
@@ -378,12 +380,6 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                    |> String.split_on_char('/')
                    |> List.map(upperCamelCasify)
                    |> List.fold_left((++), "");
-                 print_endline(
-                   ">>>>><<<<<<<<<<<<<<<<<"
-                   ++ libraryAsPath
-                   ++ ">>>>>>>>>>>"
-                   ++ pathToOCamlLibName(libraryAsPath),
-                 );
                  {
                    alias:
                      sprintf(
@@ -708,11 +704,11 @@ let gen = (projectPath, pkgPath) => {
           "",
           pesyModules.modules,
         );
+
       write(
         Path.(pesyModulesDir / sprintf("%s.re", main)),
         pesyModulesReFile,
       );
-      printf("Wrote %s \n", Path.(pesyModulesDir / sprintf("%s.re", main)));
       module SS = Set.Make(String);
       let duneLibrariesNeeded =
         pesyPkg.pesyModules.modules
