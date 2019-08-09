@@ -10,6 +10,6 @@ rule read = parse
 | "require"  { REQUIRE }
 | ['\'']      { SQUOTE }
 | ['A' - 'Z' ] [ 'a' - 'z' '_'] * as lxm { MODULE_NAME(lxm)  }
-| ['a'-'z' '.' '/' '-' '0'-'9'] + as lxm { MODULE_PATH(lxm)  }
+| ['@'] ? ['a'-'z' '.' '/' '-' '0'-'9'] + as lxm { MODULE_PATH(lxm)  }
 | ['\n']     {EOL}
 | eof      {EOF}
