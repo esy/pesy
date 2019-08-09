@@ -5,4 +5,5 @@ module Mode: {
   let toList: t => list(string);
 };
 let create: (string, option(Mode.t)) => t;
-let toDuneStanza: (Common.t, t, option(string)) => (string, list(Stanza.t));
+let toDuneStanza:
+  (Common.t, t, option(PesyModule.t)) => (string, list(Stanza.t));
