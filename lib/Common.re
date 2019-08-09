@@ -81,7 +81,7 @@ let toDuneStanzas = (c, pesyModules) => {
         Some(
           Stanza.createExpression([
             Stanza.createAtom("libraries"),
-            Stanza.createAtom(x),
+            Stanza.createAtom(PesyModule.getDunePublicName(x)),
           ]),
         )
       | None => None
@@ -95,7 +95,7 @@ let toDuneStanzas = (c, pesyModules) => {
                libs
                @ (
                  switch (pesyModules) {
-                 | Some(x) => [x]
+                 | Some(x) => [PesyModule.getDunePublicName(x)]
                  | None => []
                  }
                ),
@@ -112,7 +112,7 @@ let toDuneStanzas = (c, pesyModules) => {
           Stanza.createExpression([
             Stanza.createAtom("flags"),
             Stanza.createAtom("-open"),
-            Stanza.createAtom("PesyModules"),
+            Stanza.createAtom(PesyModule.getNamespace(x)),
           ]),
         )
       | None => None
@@ -126,7 +126,7 @@ let toDuneStanzas = (c, pesyModules) => {
                l
                @ (
                  switch (pesyModules) {
-                 | Some(_) => ["-open", "PesyModules"]
+                 | Some(x) => ["-open", PesyModule.getNamespace(x)]
                  | None => []
                  }
                ),

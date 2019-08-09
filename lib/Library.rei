@@ -15,4 +15,5 @@ let create:
     option(bool)
   ) =>
   t;
-let toDuneStanza: (Common.t, t, option(string)) => (string, list(Stanza.t));
+let toDuneStanza:
+  (Common.t, t, option(PesyModule.t)) => (string, list(Stanza.t));
