@@ -43,7 +43,7 @@ var template = Belt_Option.getWithDefault(Belt_Option.map(Belt_Array.get(Belt_Ar
                     return param.includes("--template");
                   })), 0), (function (param) {
             return param.replace("--template=", "");
-          })), "github:ulrikstrid/hello-reason-pesy");
+          })), "github:esy/pesy-reason-template");
 
 var download_spinner = Spinner$PesyBootstrapper.start("\x1b[2mDownloading template\x1b[0m " + template);
 

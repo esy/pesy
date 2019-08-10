@@ -42,7 +42,7 @@ let template =
   ->Belt.Array.keep(Js.String.includes("--template"))
   ->Belt.Array.get(0)
   ->Belt.Option.map(Js.String.replace("--template=", ""))
-  ->Belt.Option.getWithDefault("github:ulrikstrid/hello-reason-pesy");
+  ->Belt.Option.getWithDefault("github:esy/pesy-reason-template");
 
 let download_spinner =
   Spinner.start("\x1b[2mDownloading template\x1b[0m " ++ template);
