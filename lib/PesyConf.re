@@ -359,7 +359,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           localName:
             sprintf(
               "%s.pesy-modules",
-              pathToOCamlLibName(Path.(rootName / dir)),
+              pathToOCamlLibName(rootName ++ "/" ++ dir),
             ),
           modules:
             imports
