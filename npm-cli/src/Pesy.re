@@ -23,6 +23,13 @@ let substituteTemplateValues = s =>
        [%bs.re "/<PACKAGE_NAME_UPPER_CAMEL>/g"],
        packageNameUpperCamelCase,
      );
+let stripTemplateExtension = s => {
+  s
+  |> Js.String.replace(
+       "-template",
+       "",
+     )
+}
 
 let substituteFileNames = s =>
   s
@@ -65,7 +72,7 @@ download_git(
         file => {
           let () = readFile(file)->substituteTemplateValues |> write(file);
 
-          renameSync(file, substituteFileNames(file));
+          renameSync(file, file |> substituteFileNames |> stripTemplateExtension);
         },
       );
       Spinner.stop(setup_files_spinner);
