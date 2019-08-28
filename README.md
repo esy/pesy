@@ -559,7 +559,7 @@ esy build
 
 ### Templates (experimental)
 
-It is possible to create templates to be used by pesy. This is a experimental feature with potential breaking changes without notice.
+It is possible to create templates to be used by pesy. This is a experimental feature with potential breaking changes without notice (we need the flexibility at this point in time).
 
 It works by downloading a git repo and then replacing special strings in filenames and files inside the repo. The special strings are currently these:
 
