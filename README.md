@@ -1,4 +1,3 @@
-
 ![screenshot](./images/screenshot.png "Demo")
 
 # pesy
@@ -7,9 +6,10 @@
 
 Pesy is a CLI tool to assist project management using `package.json` to automatically configure libraries and executables built
 with Dune. Pesy is a great tool to
+
 1. Quickly bootstrap a new Reason project
 2. Configure dune using package.json itself. Checkout [Dune Configuration](#dune-configuration), as to why use pesy to build your project.
- 
+
 Essentially, development with pesy looks like this
 
 ```sh
@@ -19,6 +19,7 @@ pesy # Bootstraps the project, installs the dependencies and builds the project
 ```
 
 Once bootstrapped, you can use pesy to manage the builds
+
 ```sh
 # edit code
 esy pesy
@@ -50,12 +51,13 @@ This creates:
 - `package.json` with useful dependencies/compilers.
 - `.gitignore` and `README.md` with instructions for new contributors.
 - `.ci` continuous integration with cache configured for ultra-fast pull
-    requests.
+  requests.
 - `library/`, `executable/` and `test/` directory with starter modules.
 
 If you all you wanted from pesy is to bootstrap a new project, then you are good to go!
 
 ### Dune configuration
+
 Along with bootstrapping a project, pesy can also manage your dune config.
 
 Dune is a great build tool and we couldn't have asked for a better tool from the OCaml community. However, with a couple of changes in Dune's conventions (example public_name and name) and syntax (JSON instead of s-expressions), we believe beginners would have easier time adopting Reason/OCaml.
@@ -100,21 +102,21 @@ Anytime you update the project config in the package.json, make sure you run `es
 While dune files can be thought of as generated artifacts,
 we strongly recommended that you always commit them.
 
-pesy is forced to generate these files in-source, and therefore must not 
+pesy is forced to generate these files in-source, and therefore must not
 be run in the build environment since in-source compilation is known to be
 slow. It is meant to assist your workflow. `pesy` doesn't function as a standalone
 build tool.
 
-### NPM like features (experimental) 
+### NPM like features (experimental)
 
 Every library, as we know, exposes a namespace/module under which it's APIs are
 available. In order to ease consumption, pesy tries to guess this namespace for you,
 so that you can avoid configuring it yourself. It does so by assigning the library
 the upper camelcase of the directory the library/sub-package resides in. If you are
-not satisfied, you can override this by adding `namespace` property exactly like how 
+not satisfied, you can override this by adding `namespace` property exactly like how
 you would with Dune.
 
-With the new NPM like conventions, pesy automatically handles the namespace for you so that we don't have to worry about the nuances of a package and a library during development. All that we need to know is, in a configuration like the one above, 
+With the new NPM like conventions, pesy automatically handles the namespace for you so that we don't have to worry about the nuances of a package and a library during development. All that we need to know is, in a configuration like the one above,
 
 **1. Libraries are identified with a path, much like Javascript requires (`var curryN = require('lodash/fp/curryN');`)**
 
@@ -147,8 +149,8 @@ Any sub-package with `bin` property is considered to be an executable subpackage
     }
 }
 ```
-If not present, it is assumed that the subpackage is meant to be consumed as a library. This can be compared to NPM's behaviour.
 
+If not present, it is assumed that the subpackage is meant to be consumed as a library. This can be compared to NPM's behaviour.
 
 ### Workaround for scoped packages on NPM
 
@@ -165,6 +167,7 @@ Example
   }
 }
 ```
+
 This above config will fail. This is because `#{self.name}` evaluates to `@my-npm-scope/foobar`. This is being tracked [here](https://github.com/esy/pesy/issues/31). The workaround is to transform is for this form: `<scope>--<package_name>`.
 
 This way `@my-npm-scope/foobar` becomes `my-npm-scope--foobar`. And use this double kebabified name in `esy.build`
@@ -191,7 +194,6 @@ executables.
 `./DirectoryName`. The `buildDirs.DirectoryName.name` field determines the
 public name of the library or executable.
 
-
 ```json
 "buildDirs": {
   "MyLibrary": {
@@ -209,91 +211,86 @@ public name of the library or executable.
 ```
 
 ### Supported Config
+
 Not all config is supported. This is just a proof of concept. If you'd like to
 add support for more config fields, PRs are welcomed.
 
 **Binaries**
 
-| Field  | Type            | Description                                                                                                                                                                                                                                                                                                                                             |
-|--------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|`name`  | `string`        | The name of the binary **that must end with `.exe`**.                                                                                                                                                                                                                                                                                                   |
-|`main`  | `string`        | The name of the module that serves as the main entrypoint of the binary.                                                                                                                                                                                                                                                                                |
-|`modes` | `list(string)`  | [Advanced linking modes](https://jbuilder.readthedocs.io/en/latest/dune-files.html?highlight=modules_without_implementation#linking-modes). Each string should be of the form `"(<compilation-mode> <binary-kind>)"` where `<compilation-mode>` is one `byte`, `native` or `best` and `<binary-kind>` is one of `c`, `exe`, `object`, `shared_object`.  |
+| Field   | Type           | Description                                                                                                                                                                                                                                                                                                                                            |
+| ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`  | `string`       | The name of the binary **that must end with `.exe`**.                                                                                                                                                                                                                                                                                                  |
+| `main`  | `string`       | The name of the module that serves as the main entrypoint of the binary.                                                                                                                                                                                                                                                                               |
+| `modes` | `list(string)` | [Advanced linking modes](https://jbuilder.readthedocs.io/en/latest/dune-files.html?highlight=modules_without_implementation#linking-modes). Each string should be of the form `"(<compilation-mode> <binary-kind>)"` where `<compilation-mode>` is one `byte`, `native` or `best` and `<binary-kind>` is one of `c`, `exe`, `object`, `shared_object`. |
 
 **Libraries**
 
-| Field           | Type                              | Description                                                                                                                                                                                                                                                                                                                   |
-|-----------------|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|`name`           | `string`                          | The name of the library                                                                                                                                                                                                                                                                                                       |
-|`namespace`      | `string`                          | The root module name of the library                                                                                                                                                                                                                                                                                           |
-|`modes`          | `list("byte"\|"native"\|"best")`  | Mode which should be built by default. Useful for disabling native compilation for some libraries.                                                                                                                                                                                                                            |
-|`cNames`         | `list(string)`                    | List of strings to use as C stubs (filenames without the `.c` extension).                                                                                                                                                                                                                                                     |
-|`virtualModules` | `list(string)`                    | List of modules within the library that will have interfaces but no implementation, causing this library to be considered "virtual". Another library can then claim to "implement" this library by including `"implements": "yourLibName"`. See [Virtual Libraries](https://jbuilder.readthedocs.io/en/latest/variants.html)  |
-|`implements`     | `list(string)`                    | List of virtual library names that this library implements.                                                                                                                                                                                                                                                                   |
-|`wrapped`        | `true\|false`                      | Default `true`, and it's a good idea to keep it that way. Setting to `false` will put all your library modules in the global namespace.
-
+| Field            | Type                             | Description                                                                                                                                                                                                                                                                                                                  |
+| ---------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`           | `string`                         | The name of the library                                                                                                                                                                                                                                                                                                      |
+| `namespace`      | `string`                         | The root module name of the library                                                                                                                                                                                                                                                                                          |
+| `modes`          | `list("byte"\|"native"\|"best")` | Mode which should be built by default. Useful for disabling native compilation for some libraries.                                                                                                                                                                                                                           |
+| `cNames`         | `list(string)`                   | List of strings to use as C stubs (filenames without the `.c` extension).                                                                                                                                                                                                                                                    |
+| `virtualModules` | `list(string)`                   | List of modules within the library that will have interfaces but no implementation, causing this library to be considered "virtual". Another library can then claim to "implement" this library by including `"implements": "yourLibName"`. See [Virtual Libraries](https://jbuilder.readthedocs.io/en/latest/variants.html) |
+| `implements`     | `list(string)`                   | List of virtual library names that this library implements.                                                                                                                                                                                                                                                                  |
+| `wrapped`        | `true\|false`                    | Default `true`, and it's a good idea to keep it that way. Setting to `false` will put all your library modules in the global namespace.                                                                                                                                                                                      |
 
 **Both Libraries And Binaries**
 
-| Field                 | Type                  | Description                                                                                                                                                                                                                                                              |
-|-----------------------|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|`require`              | `list(string)`        | Public library names you want to be able to use.                                                                                                                                                                                                                         |
-|`flags`                | `list(string)`        | List of strings to pass to both native and bytecode compilers.                                                                                                                                                                                                           |
-|`ocamlcFlags`          | `list(string)`        | List of flags to pass to `ocamlc`                                                                                                                                                                                                                                        |
-|`ocamloptFlags`        | `list(string)`        | List of flags to pass to `ocamlopt`                                                                                                                                                                                                                                      |
-|`jsooFlags`            | `list(string)`        | List of flags passed to `jsoo`                                                                                                                                                                                                                                           |
-|`preprocess`           | `list(string)`        | List of preprocess options to enable. Primarily used to enable PPX                                                                                                                                                                                                       |
-|`ignoredSubdirs`       | `list(string)`        | Subdirectory names to ignore (This feature is soon to be deprecated).                                                                                                                                                                        |
-|`includeSubdirs`       | `"no"\|"unqualified"` | Default is `"no"`, and changing to `"unqualified"` will compile modules at deeper directories than the place where the `dune` file is generated. See [Dune docs](https://jbuilder.readthedocs.io/en/latest/dune-files.html?highlight=include_subdirs#include-subdirs)    |
-|`rawBuildConfig`       | `list(string)`        | Raw build config to be injected into the build config for _this_ target.                                                                                                                                                                                                 |
-|`rawBuildConfigFooter` | `list(string)`        | Raw build config to be injected into the footer of the build config.                                                                                                                                                                                                     |
-
-
-
+| Field                  | Type                  | Description                                                                                                                                                                                                                                                           |
+| ---------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `require`              | `list(string)`        | Public library names you want to be able to use.                                                                                                                                                                                                                      |
+| `flags`                | `list(string)`        | List of strings to pass to both native and bytecode compilers.                                                                                                                                                                                                        |
+| `ocamlcFlags`          | `list(string)`        | List of flags to pass to `ocamlc`                                                                                                                                                                                                                                     |
+| `ocamloptFlags`        | `list(string)`        | List of flags to pass to `ocamlopt`                                                                                                                                                                                                                                   |
+| `jsooFlags`            | `list(string)`        | List of flags passed to `jsoo`                                                                                                                                                                                                                                        |
+| `preprocess`           | `list(string)`        | List of preprocess options to enable. Primarily used to enable PPX                                                                                                                                                                                                    |
+| `ignoredSubdirs`       | `list(string)`        | Subdirectory names to ignore (This feature is soon to be deprecated).                                                                                                                                                                                                 |
+| `includeSubdirs`       | `"no"\|"unqualified"` | Default is `"no"`, and changing to `"unqualified"` will compile modules at deeper directories than the place where the `dune` file is generated. See [Dune docs](https://jbuilder.readthedocs.io/en/latest/dune-files.html?highlight=include_subdirs#include-subdirs) |
+| `rawBuildConfig`       | `list(string)`        | Raw build config to be injected into the build config for _this_ target.                                                                                                                                                                                              |
+| `rawBuildConfigFooter` | `list(string)`        | Raw build config to be injected into the footer of the build config.                                                                                                                                                                                                  |
 
 ### Consuming New Package And Library Dependencies:
 
 - Add dependencies to `dependencies` in `package.json`.
-- Add the name of that new dependencies *library*  to `package.json`'s
-    `buildDirs` section that you want to use the library within. For example, if
-    your project builds a library in the `exampleLib/` directory, and you want it
-    to depend on a library named `bos.top` from an opam package named `bos`,
-    change the `package.json` to look like this:
+- Add the name of that new dependencies _library_ to `package.json`'s
+  `buildDirs` section that you want to use the library within. For example, if
+  your project builds a library in the `exampleLib/` directory, and you want it
+  to depend on a library named `bos.top` from an opam package named `bos`,
+  change the `package.json` to look like this:
 
-    ```json
-    {
-      "name": "my-package",
-      "dependencies": {
-        "@opam/bos": "*"
-      },
-      "buildDirs": {
-        "exampleLib": {
-          "namespace": "Examples",
-          "name": "my-package.example-lib",
-          "require": [ "bos.top" ]
-        }
+  ```json
+  {
+    "name": "my-package",
+    "dependencies": {
+      "@opam/bos": "*"
+    },
+    "buildDirs": {
+      "exampleLib": {
+        "namespace": "Examples",
+        "name": "my-package.example-lib",
+        "require": ["bos.top"]
       }
     }
-    ```
+  }
+  ```
 
 - Then run:
-    ```sh
-    esy install  # Fetch dependency sources
-    esy pesy     # Configure the build based on package.json
-    esy build    # Do the build
-    ```
+  ```sh
+  esy install  # Fetch dependency sources
+  esy pesy     # Configure the build based on package.json
+  esy build    # Do the build
+  ```
 
 > Note: After adding/building a new dependency you can use `esy ls-libs` to see
 > which named libraries become available to you by adding the package
 > dependency.
 
-
-
 ### Tradeoffs:
+
 `esy-pesy` is good for rapidly making new small executables/libraries. Once they
 grow, you'll want to "eject out" of `esy-pesy` and begin customizing using a more
 advanced build system.
-
 
 ### Adding `pesy` to an existing project.
 
@@ -312,13 +309,11 @@ well, but to add `pesy` to an existing project, follow these steps:
     "exampleLib": {
       "namespace": "Examples",
       "name": "my-package.example-lib",
-      "require": [ "bos.top" ]
+      "require": ["bos.top"]
     },
     "bin": {
       "name": "my-package.exe",
-      "require": [
-        "my-package.lib"
-      ]
+      "require": ["my-package.lib"]
     }
   }
 }
@@ -357,20 +352,21 @@ $ mkdir foo
 $ cd foo
 $ pesy
 ```
+
 As you'd know by now, these commands, bootstrap, install dependencies and build the entire project.
 
 At this point, our project looks like this
 
 ```
 │
-├── library 
+├── library
 │
 ├── executable
-│   
+│
 ├── test
-│   
+│
 └── testExe (test runner)
-   
+
 ```
 
 With the `buildDirs` section of the package.json looking like the following
@@ -406,6 +402,7 @@ With the `buildDirs` section of the package.json looking like the following
     }
   },
 ```
+
 Given that pesy tries to unify packages and libraries, for a config mentioned above it has made `library` available under the namespace `Library`. So anytime `foo` is added as a dependency, a module `Library` becomes available in the codebase.
 
 Since `Library` is to generic to be useful, let's rename it to `FooLib` (i.e. make rename the package as foolib)
@@ -517,6 +514,7 @@ We can now require `foo` (sort of like we did in Javascript)
     }
   },
 ```
+
 And then edit Utils.re
 
 ```js
@@ -559,6 +557,25 @@ esy pesy
 esy build
 ```
 
+### Templates (experimental)
+
+It is possible to create templates to be used by pesy. This is a experimental feature with potential breaking changes without notice.
+
+It works by downloading a git repo and then replacing special strings in filenames and files inside the repo. The special strings are currently these:
+
+| In filename                      | In contents                | Replaced with              |
+| -------------------------------- | -------------------------- | -------------------------- |
+| \_\_PACKAGE_NAME\_\_             | <PACKAGE_NAME>             | package_name_kebab         |
+| \_\_PACKAGE_NAME_FULL\_\_        | <PACKAGE_NAME_FULL>        | package_name_kebab         |
+| \_\_PACKAGE_NAME_UPPER_CAMEL\_\_ | <PACKAGE_NAME_UPPER_CAMEL> | PackageNameUpperCamelCase  |
+| N/A                              | \<VERSION>                 | version                    |
+| N/A                              | <PUBLIC_LIB_NAME>          | package_name_kebab/library |
+| N/A                              | <TEST_LIB_NAME>            | package_name_kebab/test    |
+
+The default template can be found here: https://github.com/esy/pesy-reason-template.
+
+To use a custom template run `pesy --template=github:your-name/your-pesy-template`
+
 ### Development
 
 ```sh
@@ -569,7 +586,8 @@ esy dune runtest # Unit tests
 ```
 
 ### e2e tests
-`./_build/install/default/bin` would contain (after running `esy build`) `TestBootstrapper.exe` and `TestPesyConfigure.exe` 
+
+`./_build/install/default/bin` would contain (after running `esy build`) `TestBootstrapper.exe` and `TestPesyConfigure.exe`
 
 to test if simple workflows work as expected. They assume both `esy` and `pesy` are installed
 globally (as on user's machines).
@@ -585,7 +603,7 @@ the e2e scripts.
 
 ### Changes:
 
-**version 0.4.0  (12/21/2018)**
+**version 0.4.0 (12/21/2018)**
 
 - Allow `buildDirs` to contain deeper directories such as `"path/to/my-lib": {...}"`.
 - Added support for `wrapped` property on libraries.
@@ -593,7 +611,7 @@ the e2e scripts.
   virtual libraries. (This will only be supported if you mark your project as
   Dune 1.7 - not yet released).
 - Stopped using `ignore_subdirs` in new projects, instead using
-  `(dirs (:standard \ _esy))` which only works in  Dune `1.6.0+`, so made new
+  `(dirs (:standard \ _esy))` which only works in Dune `1.6.0+`, so made new
   projects have a lower bound of Dune `1.6.0`.
 - Support new properties `rawBuildConfig` which will be inserted at the bottom
   of the _target_ being configured (library/executable).
@@ -610,25 +628,24 @@ the e2e scripts.
 As we create the build artifacts to publish to NPM, we also generate the SHA1 hash
 of the `.tgz` file created by `npm pack`, in a manner similar to how npm does.
 This way, you can verify that the package published to NPM is infact the same
-set of binaries that were built on CI. 
+set of binaries that were built on CI.
 
 You can verify this by following this simple steps.
 
 1. Head over to CI logs as per the release version
 
-    a. [Pre-beta](https://dev.azure.com/pesy/pesy/_build/results?buildId=103)
+   a. [Pre-beta](https://dev.azure.com/pesy/pesy/_build/results?buildId=103)
 
-
-2. Navigate to the `Release Job` section
+2) Navigate to the `Release Job` section
 
 ![release-job](./images/release-job.png "Release job section")
 
-3. Look for 'Calculating sha1' 
+3. Look for 'Calculating sha1'
 
 ![calculating-sha1](./images/calculating-sha1.png "Calculating sha1 option in the logs")
 
 4. Verify its the same as the one in `npm info pesy`. Of course, ensure that the version
-you see in `npm info pesy` is the same the one in the logs.
+   you see in `npm info pesy` is the same the one in the logs.
 
 ![sha1-logs](./images/sha1-logs.png "SHA1 hash in the logs")
 
