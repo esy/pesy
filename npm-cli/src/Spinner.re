@@ -11,7 +11,7 @@ let start = msg => {
   Js.Nullable.return(
     Js.Global.setInterval(
       () => {
-        Printf.printf("%s %s                                \r", msg, frames[i^ mod n_frames]);
+        Printf.printf("%s %s                                                                                    \r", msg, frames[i^ mod n_frames]);
         i := i^ + 1;
       },
       interval,
