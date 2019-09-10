@@ -17,6 +17,7 @@ type t = {
   includeSubdirs: option(include_subdirs),
   rawBuildConfig: option(list(string)),
   rawBuildConfigFooter: option(list(string)),
+  pesyModules: PesyModule.t,
 };
 let create =
     (
@@ -31,6 +32,7 @@ let create =
       includeSubdirs,
       rawBuildConfig,
       rawBuildConfigFooter,
+      pesyModules,
     ) => {
   let includeSubDirsSafe =
     switch (includeSubdirs) {
@@ -54,9 +56,10 @@ let create =
     includeSubdirs: includeSubDirsSafe,
     rawBuildConfig,
     rawBuildConfigFooter,
+    pesyModules,
   };
 };
-let toDuneStanzas = (c, pesyModules) => {
+let toDuneStanzas = c => {
   let {
     name,
     require,
@@ -68,6 +71,7 @@ let toDuneStanzas = (c, pesyModules) => {
     includeSubdirs,
     rawBuildConfig,
     rawBuildConfigFooter,
+    pesyModules,
     _,
   } = c;
 
@@ -204,7 +208,11 @@ let toDuneStanzas = (c, pesyModules) => {
     | None => None
     | Some(l) => Some(l |> List.map(Stanza.ofString))
     },
+    /* pesy modules */
+    PesyModule.generateLibraryStanza(pesyModules),
+    PesyModule.generateAliasModuleStanza(pesyModules),
   );
 };
 
 let getPath = c => c.path;
+let getPesyModules = c => c.pesyModules;

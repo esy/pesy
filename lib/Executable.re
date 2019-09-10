@@ -80,7 +80,7 @@ type t = {
   modes: option(Mode.t),
 };
 let create = (main, modes) => {main, modes};
-let toDuneStanza = (common: Common.t, e, pesyModules) => {
+let toDuneStanza = (common: Common.t, e) => {
   /* let {name: pkgName, require, path} = common; */
   let {main, modes: modesP} = e;
   let (
@@ -94,11 +94,29 @@ let toDuneStanza = (common: Common.t, e, pesyModules) => {
     includeSubdirs,
     rawBuildConfig,
     rawBuildConfigFooter,
+    pesyModulesLibrary,
+    pesyModulesAliasModuleGen,
   ) =
-    Common.toDuneStanzas(common, pesyModules);
+    Common.toDuneStanzas(common);
   let path = Common.getPath(common);
   /* Pesy's main is Dune's name */
   let name = Stanza.create("name", Stanza.createAtom(main));
+  let modules =
+    Stanza.createExpression([
+      Stanza.createAtom("modules"),
+      Stanza.createExpression(
+        [Stanza.createAtom(":standard")]
+        @ (
+          switch (Common.getPesyModules(common)) {
+          | Some(x) => [
+              Stanza.createAtom("\\"),
+              Stanza.createAtom(PesyModule.getNamespace(x)),
+            ]
+          | None => []
+          }
+        ),
+      ),
+    ]);
   /* let public_name = */
   /*   Stanza.create("public_name", Stanza.createAtom(pkgName)); */
 
@@ -128,7 +146,7 @@ let toDuneStanza = (common: Common.t, e, pesyModules) => {
       )
     };
 
-  let mandatoryExpressions = [name, public_name];
+  let mandatoryExpressions = [name, modules, public_name];
   let optionalExpressions = [
     libraries,
     modesD,
@@ -152,6 +170,21 @@ let toDuneStanza = (common: Common.t, e, pesyModules) => {
     | None => []
     };
 
+  let optionalRootStanzas =
+    rawBuildConfigFooter
+    @ (
+      switch (pesyModulesLibrary) {
+      | Some(s) => [s]
+      | None => []
+      }
+    )
+    @ (
+      switch (pesyModulesAliasModuleGen) {
+      | Some(s) => [s]
+      | None => []
+      }
+    );
+
   let executable =
     Stanza.createExpression([
       Stanza.createAtom("executable"),
@@ -160,5 +193,5 @@ let toDuneStanza = (common: Common.t, e, pesyModules) => {
          @ rawBuildConfig,
     ]);
 
-  (path, [executable, ...rawBuildConfigFooter]);
+  (path, [executable, ...optionalRootStanzas]);
 };

@@ -1,7 +1,7 @@
 type include_subdirs;
 type t;
 let toDuneStanzas:
-  (t, option(PesyModule.t)) =>
+  t =>
   (
     Stanza.t,
     option(Stanza.t),
@@ -13,8 +13,11 @@ let toDuneStanzas:
     option(Stanza.t),
     option(list(Stanza.t)),
     option(list(Stanza.t)),
+    option(Stanza.t),
+    option(Stanza.t),
   );
 let getPath: t => string;
+let getPesyModules: t => PesyModule.t;
 let create:
   (
     /* name */ string,
@@ -27,6 +30,7 @@ let create:
     /* preprocess */ option(list(string)),
     /* include subdirs */ option(string),
     /* raw config */ option(list(string)),
-    /* raw config footer */ option(list(string))
+    /* raw config footer */ option(list(string)),
+    /* pesy modules */ PesyModule.t
   ) =>
   t;
