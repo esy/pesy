@@ -28,13 +28,13 @@ function start(msg) {
                                   /* String */Block.__(2, [
                                       /* No_padding */0,
                                       /* String_literal */Block.__(11, [
-                                          "                                \r",
+                                          "                                                                                    \r",
                                           /* End_of_format */0
                                         ])
                                     ])
                                 ])
                             ]),
-                          "%s %s                                \r"
+                          "%s %s                                                                                    \r"
                         ]), msg, Caml_array.caml_array_get(frames, Caml_int32.mod_(i[0], n_frames)));
                 i[0] = i[0] + 1 | 0;
                 return /* () */0;
