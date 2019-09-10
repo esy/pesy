@@ -34,7 +34,7 @@ let create = (namespace, modes, cNames, virtualModules, implements, wrapped) => 
   implements,
   wrapped,
 };
-let toDuneStanza = (common, lib, pesyModules) => {
+let toDuneStanza = (common, lib) => {
   /* let {name: pkgName, require, path} = common */
   let {
     namespace,
@@ -55,10 +55,28 @@ let toDuneStanza = (common, lib, pesyModules) => {
     includeSubdirs,
     rawBuildConfig,
     rawBuildConfigFooter,
+    pesyModulesLibrary,
+    pesyModulesAliasModuleGen,
   ) =
-    Common.toDuneStanzas(common, pesyModules);
+    Common.toDuneStanzas(common);
   let path = Common.getPath(common);
   let name = Stanza.create("name", Stanza.createAtom(namespace));
+  let modules =
+    Stanza.createExpression([
+      Stanza.createAtom("modules"),
+      Stanza.createExpression(
+        [Stanza.createAtom(":standard")]
+        @ (
+          switch (Common.getPesyModules(common)) {
+          | Some(x) => [
+              Stanza.createAtom("\\"),
+              Stanza.createAtom(PesyModule.getNamespace(x)),
+            ]
+          | None => []
+          }
+        ),
+      ),
+    ]);
 
   let modesD =
     switch (modesP) {
@@ -120,7 +138,7 @@ let toDuneStanza = (common, lib, pesyModules) => {
       )
     };
 
-  let mandatoryExpressions = [name, public_name];
+  let mandatoryExpressions = [name, public_name, modules];
   let optionalExpressions = [
     libraries,
     modesD,
@@ -148,6 +166,21 @@ let toDuneStanza = (common, lib, pesyModules) => {
     | None => []
     };
 
+  let optionalRootStanzas =
+    rawBuildConfigFooter
+    @ (
+      switch (pesyModulesLibrary) {
+      | Some(s) => [s]
+      | None => []
+      }
+    )
+    @ (
+      switch (pesyModulesAliasModuleGen) {
+      | Some(s) => [s]
+      | None => []
+      }
+    );
+
   let library =
     Stanza.createExpression([
       Stanza.createAtom("library"),
@@ -156,5 +189,5 @@ let toDuneStanza = (common, lib, pesyModules) => {
          @ rawBuildConfig,
     ]);
 
-  (path, [library, ...rawBuildConfigFooter]);
+  (path, [library, ...optionalRootStanzas]);
 };

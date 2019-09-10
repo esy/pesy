@@ -2,18 +2,11 @@ open Printf;
 open Utils;
 open Utils.NoLwt;
 
-type pesyModule = {
-  alias: string,
-  library: string,
-  originalNamespace: string,
-};
-
-/* TODO: rename */
-type pesyModules = {
-  localName: string,
-  pesy_module_namespace: string,
-  modules: list(pesyModule),
-};
+/*****
+    localName ~~> dunePublicName
+    pesy_modules_namespace ~~> namespace
+    modules ~~> aliases
+ ***/
 
 type pkgType =
   | ExecutablePackage(Executable.t)
@@ -23,7 +16,6 @@ type pkgType =
 type package = {
   pkg_path: string,
   common: Common.t,
-  pesyModules,
   pkgType,
 };
 
@@ -347,52 +339,53 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           | e => raise(ImportsParserFailure())
           };
 
-        let pesy_module_namespace =
+        let pesyModuleNamespace =
           [rootName]
           @ String.split_on_char('/', dir)
           @ ["PesyModules"]
           |> List.map(upperCamelCasify)
           |> List.fold_left((++), "");
 
-        let pesyModules = {
-          pesy_module_namespace,
-          localName:
-            sprintf(
-              "%s.pesy-modules",
-              pathToOCamlLibName(rootName ++ "/" ++ dir),
-            ),
-          modules:
-            imports
-            |> List.map(import => {
-                 let (importedNamespace, lib) = import;
-                 let libraryAsPath =
-                   lib
-                   |> (
-                     x => {
-                       x.[0] == '.'
-                         ? sprintf("%s/%s/%s", rootName, dir, x) : x;
-                     }
-                   )
-                   |> resolveRelativePath
-                   |> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x);
-                 let exportedNamespace =
-                   libraryAsPath
-                   |> String.split_on_char('/')
-                   |> List.map(upperCamelCasify)
-                   |> List.fold_left((++), "");
-                 {
-                   alias:
-                     sprintf(
-                       "module %s = %s;",
-                       importedNamespace,
-                       exportedNamespace,
-                     ),
-                   library: pathToOCamlLibName(libraryAsPath),
-                   originalNamespace: importedNamespace,
-                 };
-               }),
-        };
+        let pesyModules =
+          PesyModule.create(
+            ~namespace=pesyModuleNamespace,
+            ~dunePublicName=
+              sprintf(
+                "%s.pesy-modules",
+                pathToOCamlLibName(rootName ++ "/" ++ dir),
+              ),
+            ~aliases=
+              imports
+              |> List.map(import => {
+                   let (importedNamespace, lib) = import;
+                   let libraryAsPath =
+                     lib
+                     |> (
+                       x => {
+                         x.[0] == '.'
+                           ? sprintf("%s/%s/%s", rootName, dir, x) : x;
+                       }
+                     )
+                     |> resolveRelativePath
+                     |> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x);
+                   let exportedNamespace =
+                     libraryAsPath
+                     |> String.split_on_char('/')
+                     |> List.map(upperCamelCasify)
+                     |> List.fold_left((++), "");
 
+                   PesyModule.Alias.create(
+                     ~alias=
+                       sprintf(
+                         "module %s = %s;",
+                         importedNamespace,
+                         exportedNamespace,
+                       ),
+                     ~library=pathToOCamlLibName(libraryAsPath),
+                     ~originalNamespace=importedNamespace,
+                   );
+                 }),
+          );
         let flags =
           try (
             Some(
@@ -503,6 +496,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             includeSubdirs,
             rawBuildConfig,
             rawBuildConfigFooter,
+            pesyModules,
           );
 
         if (isBinPropertyPresent(bin)) {
@@ -548,7 +542,6 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           {
             pkg_path,
             common,
-            pesyModules,
             pkgType: ExecutablePackage(Executable.create(main, modes)),
           };
         } else {
@@ -637,7 +630,6 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             };
           {
             pkg_path,
-            pesyModules,
             common,
             pkgType:
               LibraryPackage(
@@ -660,23 +652,12 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
 
 let toDunePackages = (_prjPath, rootName, pkgs) => {
   List.map(
-    pkg => {
-      let pesyModules: option(PesyModule.t) =
-        List.length(pkg.pesyModules.modules) == 0
-          ? None
-          : Some(
-              PesyModule.create(
-                pkg.pesyModules.pesy_module_namespace,
-                pkg.pesyModules.localName,
-              ),
-            );
+    pkg =>
       switch (pkg.pkgType) {
-      | LibraryPackage(l) => Library.toDuneStanza(pkg.common, l, pesyModules)
-      | ExecutablePackage(e) =>
-        Executable.toDuneStanza(pkg.common, e, pesyModules)
-      | TestPackage(e) => Test.toDuneStanza(pkg.common, e, pesyModules)
-      };
-    },
+      | LibraryPackage(l) => Library.toDuneStanza(pkg.common, l)
+      | ExecutablePackage(e) => Executable.toDuneStanza(pkg.common, e)
+      | TestPackage(e) => Test.toDuneStanza(pkg.common, e)
+      },
     pkgs,
   );
 };
@@ -691,42 +672,42 @@ let gen = (projectPath, pkgPath) => {
   let rootNameOpamFile = rootName ++ ".opam";
   let dunePackages = toDunePackages(projectPath, rootName, pesyPackages);
 
-  /* creating pesy modules */
-  List.iter(
-    pesyPkg => {
-      let {pkg_path, pesyModules} = pesyPkg;
-      let pesyModulesDir = Path.(pkg_path / "pesy-modules");
-      let main = pesyModules.pesy_module_namespace;
-      mkdirp(pesyModulesDir);
-      let pesyModulesReFile =
-        List.fold_left(
-          (acc2, pesyModule) => acc2 ++ "\n" ++ pesyModule.alias,
-          "",
-          pesyModules.modules,
-        );
+  /* /\* creating pesy modules *\/ */
+  /* List.iter( */
+  /*   pesyPkg => { */
+  /*     let {pkg_path, pesyModules} = pesyPkg; */
+  /*     let pesyModulesDir = Path.(pkg_path / "pesy-modules"); */
+  /*     let main = pesyModules.pesy_module_namespace; */
+  /*     mkdirp(pesyModulesDir); */
+  /*     let pesyModulesReFile = */
+  /*       List.fold_left( */
+  /*         (acc2, pesyModule) => acc2 ++ " " ++ pesyModule.alias, */
+  /*         "", */
+  /*         pesyModules.modules, */
+  /*       ); */
 
-      write(
-        Path.(pesyModulesDir / sprintf("%s.re", main)),
-        pesyModulesReFile,
-      );
-      module SS = Set.Make(String);
-      let duneLibrariesNeeded =
-        pesyPkg.pesyModules.modules
-        |> List.map(x => x.library)
-        |> SS.of_list
-        |> SS.elements
-        |> List.fold_left((acc, x) => acc ++ " " ++ x, "");
-      let pesyModuleDuneFile =
-        sprintf(
-          "(library (public_name %s) (name %s) (libraries %s))",
-          pesyModules.localName,
-          main,
-          duneLibrariesNeeded,
-        );
-      write(Path.(pesyModulesDir / "dune"), pesyModuleDuneFile);
-    },
-    pesyPackages,
-  );
+  /*     write( */
+  /*       Path.(pesyModulesDir / sprintf("%s.re", main)), */
+  /*       pesyModulesReFile, */
+  /*     ); */
+  /*     module SS = Set.Make(String); */
+  /*     let duneLibrariesNeeded = */
+  /*       pesyPkg.pesyModules.modules */
+  /*       |> List.map(x => x.library) */
+  /*       |> SS.of_list */
+  /*       |> SS.elements */
+  /*       |> List.fold_left((acc, x) => acc ++ " " ++ x, ""); */
+  /*     let pesyModuleDuneFile = */
+  /*       sprintf( */
+  /*         "(library (public_name %s) (name %s) (libraries %s))", */
+  /*         pesyModules.localName, */
+  /*         main, */
+  /*         duneLibrariesNeeded, */
+  /*       ); */
+  /*     write(Path.(pesyModulesDir / "dune"), pesyModuleDuneFile); */
+  /*   }, */
+  /*   pesyPackages, */
+  /* ); */
 
   let operations = ref([]);
   List.iter(
