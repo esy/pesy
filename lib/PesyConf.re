@@ -695,43 +695,6 @@ let gen = (projectPath, pkgPath) => {
   let rootNameOpamFile = rootName ++ ".opam";
   let dunePackages = toDunePackages(projectPath, rootName, pesyPackages);
 
-  /* /\* creating pesy modules *\/ */
-  /* List.iter( */
-  /*   pesyPkg => { */
-  /*     let {pkg_path, pesyModules} = pesyPkg; */
-  /*     let pesyModulesDir = Path.(pkg_path / "pesy-modules"); */
-  /*     let main = pesyModules.pesy_module_namespace; */
-  /*     mkdirp(pesyModulesDir); */
-  /*     let pesyModulesReFile = */
-  /*       List.fold_left( */
-  /*         (acc2, pesyModule) => acc2 ++ " " ++ pesyModule.alias, */
-  /*         "", */
-  /*         pesyModules.modules, */
-  /*       ); */
-
-  /*     write( */
-  /*       Path.(pesyModulesDir / sprintf("%s.re", main)), */
-  /*       pesyModulesReFile, */
-  /*     ); */
-  /*     module SS = Set.Make(String); */
-  /*     let duneLibrariesNeeded = */
-  /*       pesyPkg.pesyModules.modules */
-  /*       |> List.map(x => x.library) */
-  /*       |> SS.of_list */
-  /*       |> SS.elements */
-  /*       |> List.fold_left((acc, x) => acc ++ " " ++ x, ""); */
-  /*     let pesyModuleDuneFile = */
-  /*       sprintf( */
-  /*         "(library (public_name %s) (name %s) (libraries %s))", */
-  /*         pesyModules.localName, */
-  /*         main, */
-  /*         duneLibrariesNeeded, */
-  /*       ); */
-  /*     write(Path.(pesyModulesDir / "dune"), pesyModuleDuneFile); */
-  /*   }, */
-  /*   pesyPackages, */
-  /* ); */
-
   let operations = ref([]);
   List.iter(
     dpkg => {
