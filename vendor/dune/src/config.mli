@@ -3,11 +3,14 @@
 open! Import
 
 (** Local installation directory *)
-val local_install_dir : context:string -> Path.t
+val local_install_dir : context:string -> Path.Build.t
 
-val local_install_bin_dir : context:string -> Path.t
-val local_install_man_dir : context:string -> Path.t
-val local_install_lib_dir : context:string -> package:Package.Name.t -> Path.t
+val local_install_bin_dir : context:string -> Path.Build.t
+val local_install_man_dir : context:string -> Path.Build.t
+val local_install_lib_dir
+  :  context:string
+  -> package:Package.Name.t
+  -> Path.Build.t
 
 val dev_null : Path.t
 
@@ -18,15 +21,21 @@ val dune_keep_fname : string
 (** Are we running inside an emacs shell? *)
 val inside_emacs : bool
 
-(** Are we running insinde Dune? *)
+(** Are we running inside Dune? *)
 val inside_dune : bool
+
+(** Are we running in CI?. This checks the CI environment variable which is
+    supported by travis, gitlab.*)
+val inside_ci : bool
+
+val show_full_command_on_error : unit -> bool
 
 val default_build_profile : string
 
 (** Dune configuration *)
 
 module Display : sig
-  type t = Config0.Display.t =
+  type t = Stdune.Console.Display.t =
     | Progress (** Single interactive status line *)
     | Short    (** One line per command           *)
     | Verbose  (** Display all commands fully     *)

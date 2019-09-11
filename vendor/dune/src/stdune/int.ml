@@ -7,13 +7,12 @@ module T = struct
       Eq
     else
       Gt
-  let to_sexp = Sexp.Encoder.int
+  let to_dyn x = Dyn.Int x
 end
 
 include T
 
-module Set = Set.Make(T)
-module Map = Map.Make(T)
+include Comparable.Make(T)
 
 let equal (a : t) b = a = b
 
@@ -27,6 +26,6 @@ let of_string_exn s =
 
 let to_string i = string_of_int i
 
-module Infix = Comparable.Operators(T)
+module Infix = Comparator.Operators(T)
 
 let of_string s = Option.try_with (fun () -> int_of_string s)

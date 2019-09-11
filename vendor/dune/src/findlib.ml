@@ -14,13 +14,13 @@ module Rule = struct
     ; value           : string
     }
 
-  let pp fmt { preds_required; preds_forbidden; value } =
-    Fmt.record fmt
-      [ "preds_required", Fmt.const Ps.pp preds_required
-      ; "preds_forbidden", Fmt.const Ps.pp preds_forbidden
-      ; "value", Fmt.const (fun fmt -> Format.fprintf fmt "%S") value
+  let to_dyn { preds_required; preds_forbidden; value } =
+    let open Dyn.Encoder in
+    record
+      [ "preds_required", Ps.to_dyn preds_required
+      ; "preds_forbidden", Ps.to_dyn preds_forbidden
+      ; "value", string value
       ]
-
 
   let formal_predicates_count t =
     Ps.cardinal t.preds_required + Ps.cardinal t.preds_forbidden
@@ -56,10 +56,11 @@ module Rules = struct
     ; add_rules : Rule.t list
     }
 
-  let pp fmt { set_rules; add_rules } =
-    Fmt.record fmt
-      [ "set_rules", (fun fmt () -> Fmt.ocaml_list Rule.pp fmt set_rules)
-      ; "add_rules", (fun fmt () -> Fmt.ocaml_list Rule.pp fmt add_rules)
+  let to_dyn { set_rules; add_rules } =
+    let open Dyn.Encoder in
+    record
+      [ "set_rules", list Rule.to_dyn set_rules
+      ; "add_rules", list Rule.to_dyn add_rules
       ]
 
   let interpret t ~preds =
@@ -109,21 +110,21 @@ module Config = struct
     ; preds : Ps.t
     }
 
-  let pp fmt { vars; preds } =
-    Fmt.record fmt
-      [ "vars"
-      , Fmt.const (Fmt.ocaml_list (Fmt.tuple Format.pp_print_string Rules.pp))
-          (String.Map.to_list vars)
-      ; "preds"
-      , Fmt.const Ps.pp preds
+  let to_dyn { vars; preds } =
+    let open Dyn.Encoder in
+    record
+      [ "vars", String.Map.to_dyn Rules.to_dyn vars
+      ; "preds" , Ps.to_dyn preds
       ]
 
   let load path ~toolchain ~context =
     let path = Path.extend_basename path ~suffix:".d" in
     let conf_file = Path.relative path (toolchain ^ ".conf") in
     if not (Path.exists conf_file) then
-      die "@{<error>Error@}: ocamlfind toolchain %s isn't defined in %a \
-           (context: %s)" toolchain Path.pp path context;
+      User_error.raise
+        [ Pp.textf "ocamlfind toolchain %s isn't defined in %s (context: %s)"
+            toolchain (Path.to_string_maybe_quoted path) context
+        ];
     let vars = (Meta.load ~name:None conf_file).vars in
     { vars = String.Map.map vars ~f:Rules.of_meta_rules
     ; preds = Ps.make [toolchain]
@@ -149,7 +150,12 @@ module Unavailable_reason = struct
       sprintf "in %s is hidden (unsatisfied 'exist_if')"
         (Path.to_string_maybe_quoted (Dune_package.Lib.dir pkg))
 
-  let pp ppf t = Format.pp_print_string ppf (to_string t)
+  let to_dyn =
+    let open Dyn.Encoder in
+    function
+    | Not_found -> constr "Not_found" []
+    | Hidden lib ->
+      constr "Hidden" [Path.to_dyn (Dune_package.Lib.dir lib)]
 end
 
 type t =
@@ -231,13 +237,19 @@ module Package = struct
       ~ppx_runtime_deps:(List.map ~f:add_loc (ppx_runtime_deps t))
       ~virtual_:false
       ~implements:None
-      ~variant:None
+      ~known_implementations:Variant.Map.empty
       ~default_implementation:None
       ~modules:None
       ~main_module_name:None (* XXX remove *)
       ~version:(version t)
       ~modes
       ~obj_dir
+      ~special_builtin_support:(
+        (* findlib has been around for much longer than dune, so it is
+           acceptable to have a special case in dune for findlib. *)
+        match Lib_name.to_string t.name with
+        | "findlib.dynload" -> Some Findlib_dynload
+        | _ -> None)
 
   let parse db ~meta_file ~name ~parent_dir ~vars =
     let pkg_dir = Vars.get vars "directory" Ps.empty in
@@ -369,7 +381,7 @@ end = struct
       let dir, res =
         parse_package db ~meta_file ~name:full_name ~parent_dir:dir ~vars
       in
-      Hashtbl.add db.packages full_name res;
+      Hashtbl.set db.packages full_name res;
       List.iter meta.subs ~f:(fun (meta : Meta.Simplified.t) ->
         let full_name =
           match meta.name with
@@ -414,12 +426,12 @@ let find_and_acknowledge_package t ~fq_name =
   in
   match loop t.paths with
   | None ->
-    Hashtbl.add t.packages root_name (Error Not_found)
+    Hashtbl.set t.packages root_name (Error Not_found)
   | Some (Findlib findlib_package) ->
     Meta_source.parse_and_acknowledge findlib_package t
   | Some (Dune pkg) ->
     List.iter pkg.libs ~f:(fun lib ->
-      Hashtbl.add t.packages (Dune_package.Lib.name lib) (Ok lib))
+      Hashtbl.set t.packages (Dune_package.Lib.name lib) (Ok lib))
 
 let find t name =
   match Hashtbl.find t.packages name with
@@ -430,7 +442,7 @@ let find t name =
     | Some x -> x
     | None ->
       let res = Error Unavailable_reason.Not_found in
-      Hashtbl.add t.packages name res;
+      Hashtbl.set t.packages name res;
       res
 
 let available t name = Result.is_ok (find t name)
@@ -438,11 +450,17 @@ let available t name = Result.is_ok (find t name)
 let root_packages t =
   let pkgs =
     List.concat_map t.paths ~f:(fun dir ->
-      if not (Path.exists dir) then
-        []
-      else
-        Path.readdir_unsorted dir
-        |> List.filter_map ~f:(fun name ->
+      match Path.readdir_unsorted dir with
+      | Error ENOENT -> []
+      | Error unix_error ->
+        User_error.raise
+          [ Pp.textf "Unable to read directory %s for findlib package"
+              (Path.to_string_maybe_quoted dir)
+          ; Pp.textf "Reason: %s"
+              (Unix.error_message unix_error)
+          ]
+      | Ok listing ->
+        List.filter_map listing ~f:(fun name ->
           if Path.exists (Path.relative dir (name ^ "/META")) then
             Some (Lib_name.of_string_exn ~loc:None name)
           else

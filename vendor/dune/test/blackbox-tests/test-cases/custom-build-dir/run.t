@@ -8,12 +8,14 @@
 
   $ dune build foo --build-dir .
   Error: Invalid build directory: .
-  The build directory must be an absolute path or a sub-directory of the root of the workspace.
+  The build directory must be an absolute path or a sub-directory of the root
+  of the workspace.
   [1]
 
   $ dune build foo --build-dir src/foo
   Error: Invalid build directory: src/foo
-  The build directory must be an absolute path or a sub-directory of the root of the workspace.
+  The build directory must be an absolute path or a sub-directory of the root
+  of the workspace.
   [1]
 
   $ mkdir project
@@ -22,7 +24,7 @@
 Maybe this case should be supported?
 
   $ cd project && dune build foo --build-dir ../build
-  Path outside the workspace: ../build from .
+  Error: path outside the workspace: ../build from .
   [1]
 
 Test with build directory being an absolute path

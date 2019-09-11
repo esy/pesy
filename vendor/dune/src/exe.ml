@@ -43,6 +43,12 @@ module Linkage = struct
     | None   -> custom
     | Some _ -> native
 
+  let js =
+    { mode = Byte
+    ; ext = ".bc.js"
+    ; flags = []
+    }
+
   let make ~mode ~ext ?(flags=[]) () =
     { mode
     ; ext
@@ -70,17 +76,24 @@ module Linkage = struct
     let ext =
       match wanted_mode, m.kind with
       | Byte   , C             -> ".bc.c"
-      | Native , C             -> Errors.fail m.loc "C file generation only supports bytecode!"
+      | Native , C             -> User_error.raise ~loc:m.loc
+                                    [ Pp.text "C file generation only \
+                                               supports bytecode!" ]
       | Byte   , Exe           -> ".bc"
       | Native , Exe           -> ".exe"
-      | Byte   , Object        -> ".bc"  ^ ctx.ext_obj
-      | Native , Object        -> ".exe" ^ ctx.ext_obj
-      | Byte   , Shared_object -> ".bc"  ^ ctx.ext_dll
-      | Native , Shared_object ->          ctx.ext_dll
+      | Byte   , Object        -> ".bc"  ^ ctx.lib_config.ext_obj
+      | Native , Object        -> ".exe" ^ ctx.lib_config.ext_obj
+      | Byte   , Shared_object -> ".bc"  ^ ctx.lib_config.ext_dll
+      | Native , Shared_object ->          ctx.lib_config.ext_dll
+      | Byte   , Js            -> ".bc.js"
+      | Native , Js            -> User_error.raise ~loc:m.loc
+                                    [ Pp.text "Javascript generation only \
+                                               supports bytecode!" ]
     in
     let flags =
       match m.kind with
       | C -> c_flags
+      | Js -> []
       | Exe ->
         begin
           match wanted_mode, real_mode with
@@ -112,112 +125,119 @@ module Linkage = struct
 end
 
 let exe_path_from_name cctx ~name ~(linkage : Linkage.t) =
-  Path.relative (CC.dir cctx) (name ^ linkage.ext)
+  Path.Build.relative (CC.dir cctx) (name ^ linkage.ext)
 
 let link_exe
       ~loc
       ~name
       ~(linkage:Linkage.t)
-      ~top_sorted_modules
-      ~arg_spec_for_requires
+      ~cm_files
+      ~link_time_code_gen
+      ~promote
       ?(link_flags=Build.arr (fun _ -> []))
-      ?(js_of_ocaml=Dune_file.Js_of_ocaml.default)
       cctx
   =
   let sctx     = CC.super_context cctx in
   let ctx      = SC.context       sctx in
   let dir      = CC.dir           cctx in
   let requires = CC.requires_link cctx in
-  let expander = CC.expander      cctx in
   let mode = linkage.mode in
   let exe = exe_path_from_name cctx ~name ~linkage in
   let compiler = Option.value_exn (Context.compiler ctx mode) in
-  let kind = Mode.cm_kind mode in
-  let artifacts ~ext modules =
-    List.map modules ~f:(Module.obj_file ~kind ~ext)
-  in
-  let modules_and_cm_files =
-    Build.memoize "cm files"
-      (top_sorted_modules >>^ fun modules ->
-       (modules,
-        artifacts modules ~ext:(Cm_kind.ext kind)))
-  in
-  let register_native_objs_deps build =
-    match mode with
-    | Byte -> build
-    | Native ->
-      build >>>
-      Build.dyn_paths (Build.arr (fun (modules, _) ->
-        artifacts modules ~ext:ctx.ext_obj))
-  in
-  let arg_spec_for_requires =
-    Lazy.force (Mode.Dict.get arg_spec_for_requires mode)
-  in
-  (* The rule *)
+  let top_sorted_cms = Cm_files.top_sorted_cms cm_files ~mode:linkage.mode in
   SC.add_rule sctx ~loc ~dir
-    (Build.fanout3
-       (register_native_objs_deps modules_and_cm_files >>^ snd)
-       (Ocaml_flags.get (CC.flags cctx) mode)
-       link_flags
+    ~mode:(match promote with
+      | None -> Standard
+      | Some p -> Promote p)
+    (let ocaml_flags = Ocaml_flags.get (CC.flags cctx) mode in
+     let prefix =
+       let dune_version =
+         let scope = CC.scope cctx in
+         let project = Scope.project scope in
+         Dune_project.dune_version project
+       in
+       Build.ignore (
+         if dune_version >= (2, 0) then
+           Cm_files.unsorted_objects_and_cms cm_files ~mode
+           |> Build.paths
+         else
+           Cm_files.top_sorted_objects_and_cms cm_files ~mode
+           |> Build.dyn_paths
+       )
+     in
+     prefix
      >>>
-     Build.of_result_map requires ~f:(fun libs ->
-       Build.paths (Lib.L.archive_files libs ~mode))
-     >>>
-     Build.run ~dir:ctx.build_dir
-       (Ok compiler)
-       [ Dyn (fun (_, flags,_) -> As flags)
-       ; A "-o"; Target exe
-       ; As linkage.flags
-       ; Dyn (fun (_, _, link_flags) -> As link_flags)
-       ; Arg_spec.of_result_map arg_spec_for_requires ~f:Fn.id
-       ; Dyn (fun (cm_files, _, _) -> Deps cm_files)
-       ]);
-  if linkage.ext = ".bc" then
-    let rules =
-      Js_of_ocaml_rules.build_exe cctx ~js_of_ocaml ~src:exe
-    in
-    let cm_and_flags =
-      Build.fanout
-        (modules_and_cm_files >>^ snd)
-        (Expander.expand_and_eval_set expander
-           js_of_ocaml.flags
-           ~standard:(Build.return (Js_of_ocaml_rules.standard sctx)))
-    in
-    SC.add_rules ~dir sctx (List.map rules ~f:(fun r -> cm_and_flags >>> r))
+     Build.S.seq (Build.of_result_map requires ~f:(fun libs ->
+       Build.paths (Lib.L.archive_files libs ~mode)))
+       (Command.run ~dir:(Path.build ctx.build_dir)
+          (Ok compiler)
+          [ Command.Args.dyn ocaml_flags
+          ; A "-o"; Target exe
+          ; As linkage.flags
+          ; Command.Args.dyn link_flags
+          ; Command.of_result_map link_time_code_gen
+              ~f:(fun { Link_time_code_gen.to_link; force_linkall } ->
+                S [ As (if force_linkall then ["-linkall"] else [])
+                  ; Lib.Lib_and_module.L.link_flags to_link ~mode
+                  ])
+          ; Dyn (Build.S.map top_sorted_cms ~f:(fun x -> Command.Args.Deps x))
+          ]))
+
+let link_js ~name ~cm_files ~promote cctx =
+  let sctx     = CC.super_context cctx in
+  let expander = CC.expander cctx in
+  let js_of_ocaml =
+    CC.js_of_ocaml cctx
+    |> Option.value ~default:Dune_file.Js_of_ocaml.default
+  in
+  let src = exe_path_from_name cctx ~name ~linkage:Linkage.byte in
+  let flags =
+    (Expander.expand_and_eval_set expander
+       js_of_ocaml.flags
+       ~standard:(Build.return (Js_of_ocaml_rules.standard sctx))) in
+  let top_sorted_cms = Cm_files.top_sorted_cms cm_files ~mode:Mode.Byte in
+  Js_of_ocaml_rules.build_exe cctx ~js_of_ocaml ~src
+    ~cm:top_sorted_cms ~flags:(Command.Args.dyn flags)
+    ~promote
 
 let build_and_link_many
       ~programs
       ~linkages
+      ~promote
       ?link_flags
-      ?(js_of_ocaml=Dune_file.Js_of_ocaml.default)
       cctx
   =
-  let dep_graphs = Ocamldep.rules cctx in
+  let modules = Compilation_context.modules cctx in
+  let dep_graphs = Dep_rules.rules cctx ~modules in
+  Module_compilation.build_all cctx ~dep_graphs;
 
-  (* CR-someday jdimino: this should probably say [~dynlink:false] *)
-  Module_compilation.build_modules cctx ~js_of_ocaml ~dep_graphs;
-
+  let link_time_code_gen = Link_time_code_gen.handle_special_libs cctx in
   List.iter programs ~f:(fun { Program.name; main_module_name ; loc } ->
-    let top_sorted_modules =
-      let main = Option.value_exn
-                   (Module.Name.Map.find (CC.modules cctx) main_module_name) in
-      Dep_graph.top_closed_implementations dep_graphs.impl
-        [main]
-    in
-    let arg_spec_for_requires =
-      Mode.Dict.of_func (fun ~mode ->
-        lazy (Result.map (CC.requires_link cctx)
-                ~f:(Link_time_code_gen.libraries_link ~loc ~name ~mode cctx)))
+    let cm_files =
+      let sctx    = CC.super_context cctx in
+      let ctx     = SC.context sctx in
+      let obj_dir = CC.obj_dir cctx in
+      let top_sorted_modules =
+        let main = Option.value_exn (Modules.find modules main_module_name) in
+        Dep_graph.top_closed_implementations dep_graphs.impl
+          [main]
+      in
+      Cm_files.make ~obj_dir ~modules ~top_sorted_modules
+        ~ext_obj:ctx.lib_config.ext_obj
     in
     List.iter linkages ~f:(fun linkage ->
-      link_exe cctx
-        ~loc
-        ~name
-        ~linkage
-        ~top_sorted_modules
-        ~js_of_ocaml
-        ~arg_spec_for_requires
-        ?link_flags))
+      if linkage = Linkage.js then
+        link_js ~name ~cm_files ~promote cctx
+      else
+        link_exe cctx
+          ~loc
+          ~name
+          ~linkage
+          ~cm_files
+          ~link_time_code_gen
+          ~promote
+          ?link_flags
+    ))
 
 let build_and_link ~program =
   build_and_link_many ~programs:[program]

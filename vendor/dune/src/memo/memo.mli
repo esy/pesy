@@ -1,6 +1,9 @@
 open !Stdune
 
-type ('input, 'output, 'fdecl) t
+type ('input, 'output, 'f) t
+
+val on_already_reported :
+  (Exn_with_backtrace.t -> Nothing.t) -> unit
 
 module Sync : sig
   type nonrec ('i, 'o) t = ('i, 'o, 'i -> 'o) t
@@ -13,17 +16,17 @@ end
 (** A stack frame within a computation. *)
 module Stack_frame : sig
 
-  type ('input, 'output, 'fdecl) memo = ('input, 'output, 'fdecl) t
+  type ('input, 'output, 'f) memo = ('input, 'output, 'f) t
 
   type t
 
-  val pp : Format.formatter -> t -> unit
+  val to_dyn : t -> Dyn.t
 
   val equal : t -> t -> bool
   val compare : t -> t -> Ordering.t
 
   val name : t -> string
-  val input : t -> Sexp.t
+  val input : t -> Dyn.t
 
   (** Checks if the stack frame is a frame of the given memoized function
       and if so, returns [Some i] where [i] is the argument of the function. *)
@@ -54,12 +57,12 @@ end
 
 module type Output_simple = sig
   type t
-  val to_sexp : t -> Sexp.t
+  val to_dyn : t -> Dyn.t
 end
 
 module type Output_allow_cutoff = sig
   type t
-  val to_sexp : t -> Sexp.t
+  val to_dyn : t -> Dyn.t
   val equal : t -> t -> bool
 end
 
@@ -80,7 +83,6 @@ end
 
 module type Input = sig
   type t
-  val to_sexp : t -> Sexp.t
   include Table.Key with type t := t
 end
 
@@ -90,24 +92,23 @@ module Visibility : sig
     | Public of 'i Dune_lang.Decoder.t
 end
 
-(** [create name ~doc ~input ~visibility ~output f_type f] creates a memoized version
-    of [f]. The result of [f] for a given input is cached, so that
-    the second time [exec t x] is called, the previous result is
-    re-used if possible.
-    [exec t x] tracks what calls to other memoized function [f x]
-    performs. When the result of such dependent call changes, [exec t x] will
-    automatically recompute [f x].
+(** [create name ~doc ~input ~visibility ~output f_type f] creates a memoized
+    version of [f]. The result of [f] for a given input is cached, so that the
+    second time [exec t x] is called, the previous result is re-used if
+    possible.
+
+    [exec t x] tracks what calls to other memoized function [f x] performs. When
+    the result of such dependent call changes, [exec t x] will automatically
+    recompute [f x].
+
     Running the computation may raise [Memo.Cycle_error.E] if a cycle is
     detected.
 
-    Both simple functions (synchronous) and functions returning fibers (asynchronous ones)
-    can be memoized, and the flavor is selected by [f_type].
+    Both simple functions (synchronous) and functions returning fibers
+    (asynchronous ones) can be memoized, and the flavor is selected by [f_type].
 
-    The function implementation can be [None]. If it is not given, then it must be
-    set later with [set_impl].
-
-    [visibility] determines whether the function is user-facing or internal and if it's
-    user-facing then how to parse the values written by the user.
+    [visibility] determines whether the function is user-facing or internal and
+    if it's user-facing then how to parse the values written by the user.
 *)
 val create
   :  string
@@ -116,12 +117,16 @@ val create
   -> visibility:'i Visibility.t
   -> output:('o Output.t)
   -> ('i, 'o, 'f) Function_type.t
-  -> 'f option
+  -> 'f
   -> ('i, 'o, 'f) t
 
-(** Set the implementation of a memoized function whose implementation was omitted
-    when calling [create]. *)
-val set_impl : (_, _, 'f) t -> 'f -> unit
+val create_hidden
+  :  string
+  -> doc:string
+  -> input:(module Input with type t = 'i)
+  -> ('i, 'o, 'f) Function_type.t
+  -> 'f
+  -> ('i, 'o, 'f) t
 
 (** Check whether we already have a value for the given call *)
 val peek : ('i, 'o, _) t -> 'i -> 'o option
@@ -137,19 +142,19 @@ val exec : (_, _, 'f) t -> 'f
 
     Returns [None] if the dependencies were not computed yet.
 *)
-val get_deps : ('i, _, _) t -> 'i -> (string * Sexp.t) list option
+val get_deps : ('i, _, _) t -> 'i -> (string * Dyn.t) list option
 
 (** Print the memoized call stack during execution. This is useful for
     debugging purposes. *)
 val dump_stack : unit -> unit
 
-val pp_stack : Format.formatter -> unit -> unit
+val pp_stack : unit -> _ Pp.t
 
 (** Get the memoized call stack during the execution of a memoized function. *)
 val get_call_stack : unit -> Stack_frame.t list
 
 (** Call a memoized function by name *)
-val call : string -> Dune_lang.Ast.t -> Sexp.t Fiber.t
+val call : string -> Dune_lang.Ast.t -> Dyn.t Fiber.t
 
 module Function_info : sig
   type t =
@@ -165,7 +170,10 @@ val registered_functions : unit -> Function_info.t list
 val function_info : string -> Function_info.t
 
 module Lazy : sig
-  type 'a t
+  type +'a t
+
+  val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+  val bind : 'a t -> f:('a -> 'b t) -> 'b t
 
   val create : (unit -> 'a) -> 'a t
   val of_val : 'a -> 'a t

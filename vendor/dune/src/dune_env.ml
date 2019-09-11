@@ -14,11 +14,31 @@ module Stanza = struct
     in
     C.Kind.Dict.make ~c ~cxx
 
+  module Inline_tests = struct
+    type t =
+      | Enabled
+      | Disabled
+      | Ignored
+
+    let decode =
+      enum
+        [ "enabled", Enabled
+        ; "disabled", Disabled
+        ; "ignored", Ignored ]
+
+    let to_string = function
+      | Enabled -> "enabled"
+      | Disabled -> "disabled"
+      | Ignored -> "ignored"
+
+  end
+
   type config =
     { flags          : Ocaml_flags.Spec.t
     ; c_flags        : Ordered_set_lang.Unexpanded.t C.Kind.Dict.t
     ; env_vars       : Env.t
     ; binaries       : File_binding.Unexpanded.t list
+    ; inline_tests   : Inline_tests.t option
     }
 
   type pattern =
@@ -30,6 +50,12 @@ module Stanza = struct
     ; rules : (pattern * config) list
     }
 
+  let inline_tests_field =
+    field_o
+    "inline_tests"
+      (Syntax.since Stanza.syntax (1, 11) >>>
+      Inline_tests.decode)
+
   let env_vars_field =
     field
     "env-vars"
@@ -39,7 +65,8 @@ module Stanza = struct
        match Env.Map.of_list pairs with
        | Ok vars -> Env.extend Env.empty ~vars
        | Error (k, _, _) ->
-         Errors.fail loc "Variable %s is specified several times" k)
+         User_error.raise ~loc
+           [ Pp.textf "Variable %s is specified several times" k ])
 
   let config =
     let+ flags = Ocaml_flags.Spec.decode
@@ -48,11 +75,13 @@ module Stanza = struct
     and+ binaries = field ~default:[] "binaries"
                       (Syntax.since Stanza.syntax (1, 6)
                        >>> File_binding.Unexpanded.L.decode)
+    and+ inline_tests = inline_tests_field
     in
     { flags
     ; c_flags
     ; env_vars
     ; binaries
+    ; inline_tests
     }
 
   let rule =

@@ -2,17 +2,15 @@
 
 open Stdune
 
-(** Generate ocamldep rules for all the modules in the context. *)
-val rules : Compilation_context.t -> Dep_graph.Ml_kind.t
-
-(** Compute the dependencies of an auxiliary module. *)
-val rules_for_auxiliary_module
-  :  Compilation_context.t
+val deps_of
+  :  cctx:Compilation_context.t
+  -> ml_kind:Ml_kind.t
   -> Module.t
-  -> Dep_graph.Ml_kind.t
+  -> (unit, Module.t list) Build.t
 
-(** Get the dep graph for an already defined library *)
-val graph_of_remote_lib
-  :  obj_dir:Path.t
-  -> modules:Module.t Module.Name.Map.t
-  -> Dep_graph.Ml_kind.t
+val read_deps_of
+  :  obj_dir:Path.Build.t Obj_dir.t
+  -> modules:Modules.t
+  -> ml_kind:Ml_kind.t
+  -> Module.t
+  -> (unit, Module.t list) Build.t

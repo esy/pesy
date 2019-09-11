@@ -2,11 +2,10 @@
 
 open Stdune
 
-val libraries_link
-  :  name:string
-  -> loc:Loc.t
-  -> mode:Mode.t
-  -> Compilation_context.t
-  -> Lib.L.t
-  -> _ Arg_spec.t
-(** Insert link time generated code for findlib_dynload in the list *)
+type t =
+  { to_link : Lib.Lib_and_module.t list
+  ; force_linkall : bool
+  }
+
+(** Generate link time code for special libraries such as [findlib.dynload] *)
+val handle_special_libs : Compilation_context.t -> t Or_exn.t

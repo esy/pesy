@@ -8,24 +8,23 @@ module Var = struct
     | First_dep
     | Deps
     | Targets
+    | Target
     | Named_local
     | Cc
     | Cxx
 
-  let to_sexp =
-    let open Sexp.Encoder in
+  let to_dyn =
+    let open Dyn.Encoder in
     function
-    | Values values -> constr "Values" [list Value.to_sexp values]
+    | Values values -> constr "Values" [list Value.to_dyn values]
     | Project_root -> string "Project_root"
     | First_dep -> string "First_dep"
     | Deps -> string "Deps"
     | Targets -> string "Targets"
+    | Target -> string "Target"
     | Named_local -> string "Named_local"
     | Cc -> string "cc"
     | Cxx -> string "cxx"
-
-  let pp_debug fmt t =
-    Sexp.pp fmt (to_sexp t)
 end
 
 module Macro = struct
@@ -44,8 +43,8 @@ module Macro = struct
     | Ocaml_config
     | Env
 
-  let to_sexp =
-    let open Sexp.Encoder in
+  let to_dyn =
+    let open Dyn.Encoder in
     function
     | Exe -> string "Exe"
     | Dep -> string "Dep"
@@ -60,9 +59,6 @@ module Macro = struct
     | Path_no_dep -> string "Path_no_dep"
     | Ocaml_config -> string "Ocaml_config"
     | Env -> string "Env"
-
-  let pp_debug fmt t =
-    Sexp.pp fmt (to_sexp t)
 end
 
 module Expansion = struct
@@ -70,49 +66,43 @@ module Expansion = struct
     | Var   of Var.t
     | Macro of Macro.t * string
 
-  let to_sexp e =
-    let open Sexp.Encoder in
+  let to_dyn e =
+    let open Dyn.Encoder in
     match e with
-    | Var v -> pair string Var.to_sexp ("Var", v)
-    | Macro (m, s) -> triple string Macro.to_sexp string ("Macro", m, s)
+    | Var v -> pair string Var.to_dyn ("Var", v)
+    | Macro (m, s) -> triple string Macro.to_dyn string ("Macro", m, s)
 end
 
 type 'a t =
   | No_info    of 'a
   | Since      of 'a * Syntax.Version.t
-  | Deleted_in of 'a * Syntax.Version.t * string option
+  | Deleted_in of 'a * Syntax.Version.t * User_message.Style.t Pp.t list
   | Renamed_in of Syntax.Version.t * string
 
 let values v                       = No_info (Var.Values v)
 let renamed_in ~new_name ~version  = Renamed_in (version, new_name)
-let deleted_in ~version ?repl kind = Deleted_in (kind, version, repl)
+let deleted_in ~version ?(repl=[]) kind = Deleted_in (kind, version, repl)
 let since ~version v               = Since (v, version)
 
 type 'a pform = 'a t
 
-let pp_debug_pform pp fmt = function
-  | No_info x ->
-    Format.fprintf fmt "No_info (%a)"
-      pp x
+let to_dyn f =
+  let open Dyn.Encoder in
+  function
+  | No_info x -> constr "No_info" [f x]
   | Since (x, v) ->
-    Format.fprintf fmt "Since (%a, %a)"
-      pp x
-      Syntax.Version.pp v
-  | Deleted_in (x, v, so) ->
-    Format.fprintf fmt "Deleted_in (%a, %a, %a)"
-      pp x
-      Syntax.Version.pp v
-      (Fmt.optional Fmt.text) so
+    constr "Since" [f x; Syntax.Version.to_dyn v]
+  | Deleted_in (x, v, repl) ->
+    constr "Deleted_in"
+      [f x; Syntax.Version.to_dyn v;
+       List (List.map repl ~f:(fun pp ->
+         Dyn.String (Format.asprintf "%a" Pp.render_ignore_tags pp)))
+      ]
   | Renamed_in (v, s) ->
-    Format.fprintf fmt "Renamed_in (%a, %s)"
-      Syntax.Version.pp v
-      s
+    constr "Renamed_in" [Syntax.Version.to_dyn v; string s]
 
 module Map = struct
   type 'a map = 'a t String.Map.t
-
-  let pp_map pp =
-    String.Map.pp (pp_debug_pform pp)
 
   type t =
     { vars   : Var.t   map
@@ -122,14 +112,17 @@ module Map = struct
   let static_vars =
     String.Map.of_list_exn
       [ "targets", since ~version:(1, 0) Var.Targets
+      ; "target", since ~version:(1,11) Var.Target
       ; "deps", since ~version:(1, 0) Var.Deps
       ; "project_root", since ~version:(1, 0) Var.Project_root
 
       ; "<", deleted_in Var.First_dep ~version:(1, 0)
-               ~repl:"Use a named dependency instead:\
-                      \n\
-                      \n  (deps (:x <dep>) ...)\
-                      \n   ... %{x} ..."
+               ~repl:
+                 [Pp.text
+                    "Use a named dependency instead:\
+                     \n\
+                     \n  (deps (:x <dep>) ...)\
+                     \n   ... %{x} ..."]
       ; "@", renamed_in ~version:(1, 0) ~new_name:"targets"
       ; "^", renamed_in ~version:(1, 0) ~new_name:"deps"
       ; "SCOPE_ROOT", renamed_in ~version:(1, 0) ~new_name:"project_root"
@@ -199,15 +192,26 @@ module Map = struct
       ; "ocaml_version"  , string context.version_string
       ; "ocaml_where"    , string (Path.to_string context.stdlib_dir)
       ; "null"           , string (Path.to_string Config.dev_null)
-      ; "ext_obj"        , string context.ext_obj
+      ; "ext_obj"        , string context.lib_config.ext_obj
       ; "ext_asm"        , string context.ext_asm
-      ; "ext_lib"        , string context.ext_lib
-      ; "ext_dll"        , string context.ext_dll
+      ; "ext_lib"        , string context.lib_config.ext_lib
+      ; "ext_dll"        , string context.lib_config.ext_dll
       ; "ext_exe"        , string context.ext_exe
       ; "profile"        , string context.profile
-      ; "workspace_root" , values [Value.Dir context.build_dir]
+      ; "workspace_root" , values [Value.Dir (Path.build context.build_dir)]
       ; "context_name"   , string (Context.name context)
       ; "ROOT"           , renamed_in ~version:(1, 0) ~new_name:"workspace_root"
+      ; "os_type"        , since ~version:(1, 10)
+                             (Var.Values [String context.os_type])
+      ; "architecture"   , since ~version:(1, 10)
+                             (Var.Values [String context.architecture])
+      ; "system"         , since ~version:(1, 10)
+                             (Var.Values [String context.system])
+      ; "model"          , since ~version:(1, 10)
+                             (Var.Values [String context.model])
+      ; "ignoring_promoted_rules",
+        since ~version:(1, 10)
+          (Var.Values [String (string_of_bool !Clflags.ignore_promoted_rules)])
       ]
     in
     { vars =
@@ -258,7 +262,7 @@ module Map = struct
         Some v
       else
         Syntax.Error.deleted_in (String_with_vars.Var.loc pform)
-          Stanza.syntax in_version ~what:(describe pform) ?repl
+          Stanza.syntax in_version ~what:(describe pform) ~repl
 
   let expand t pform syntax_version =
     match String_with_vars.Var.payload pform with
@@ -290,7 +294,7 @@ module Map = struct
         Bindings.fold bindings ~init:String.Map.empty ~f:(fun x acc ->
           match x with
           | Unnamed _ -> acc
-          | Named (s, _) -> String.Map.add acc s (No_info Var.Named_local))
+          | Named (s, _) -> String.Map.set acc s (No_info Var.Named_local))
     ; macros = String.Map.empty
     }
 
@@ -313,9 +317,10 @@ module Map = struct
     , String.Map.to_list macros
     )
 
-  let pp_debug fmt { vars; macros } =
-    Fmt.record fmt
-      [ "vars", Fmt.const (pp_map Var.pp_debug) vars
-      ; "macros", Fmt.const (pp_map Macro.pp_debug) macros
+  let to_dyn { vars; macros } =
+    let open Dyn.Encoder in
+    record
+      [ "vars", String.Map.to_dyn (to_dyn Var.to_dyn) vars
+      ; "macros", String.Map.to_dyn (to_dyn Macro.to_dyn) macros
       ]
 end

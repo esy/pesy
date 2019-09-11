@@ -12,7 +12,7 @@ let executables_rules ~sctx ~dir ~dir_kind ~expander
   Check_rules.add_obj_dir sctx ~obj_dir;
   let modules =
     Dir_contents.modules_of_executables dir_contents
-      ~first_exe:(snd (List.hd exes.names))
+      ~first_exe:(snd (List.hd exes.names)) ~obj_dir
   in
 
   let preprocessor_deps =
@@ -29,30 +29,47 @@ let executables_rules ~sctx ~dir ~dir_kind ~expander
       ~dir_kind
   in
   let modules =
-    Module.Name.Map.map modules ~f:(fun m ->
-      Preprocessing.pp_module_as pp (Module.name m) m)
+    Modules.map_user_written modules ~f:(fun m ->
+      let name = Module.name m in
+      Preprocessing.pp_module_as pp name m)
   in
 
   let programs =
     List.map exes.names ~f:(fun (loc, name) ->
       let mod_name = Module.Name.of_string name in
-      match Module.Name.Map.find modules mod_name with
+      match Modules.find modules mod_name with
       | Some m ->
-        if not (Module.has_impl m) then
-          Errors.fail loc "Module %a has no implementation."
-            Module.Name.pp mod_name
+        if not (Module.has m ~ml_kind:Impl) then
+          User_error.raise ~loc
+            [ Pp.textf "Module %S has no implementation."
+                (Module.Name.to_string mod_name)
+            ]
         else
           { Exe.Program.name; main_module_name = mod_name ; loc }
-      | None -> Errors.fail loc "Module %a doesn't exist."
-                  Module.Name.pp mod_name)
+      | None ->
+        User_error.raise ~loc
+          [ Pp.textf "Module %S doesn't exist."
+              (Module.Name.to_string mod_name)
+          ])
   in
+
+  let explicit_js_mode = Dune_project.explicit_js_mode (Scope.project scope) in
 
   let linkages =
     let module L = Dune_file.Executables.Link_mode in
     let ctx = SC.context sctx in
     let l =
       let has_native = Option.is_some ctx.ocamlopt in
-      List.filter_map (L.Set.to_list exes.modes) ~f:(fun (mode : L.t) ->
+      let modes =
+        let f = function {L.kind = Js; _} -> true | _ -> false in
+        if L.Set.exists exes.modes ~f then
+          L.Set.add exes.modes L.byte_exe
+        else if not explicit_js_mode && L.Set.mem exes.modes L.byte_exe then
+          L.Set.add exes.modes L.js
+        else
+          exes.modes
+      in
+      List.filter_map (L.Set.to_list modes) ~f:(fun (mode : L.t) ->
         match has_native, mode.mode with
         | false, Native ->
           None
@@ -70,11 +87,9 @@ let executables_rules ~sctx ~dir ~dir_kind ~expander
   in
 
   let flags = SC.ocaml_flags sctx ~dir exes.buildable in
-  let link_deps =
-    SC.Deps.interpret sctx ~expander exes.link_deps
-  in
+  let link_deps = SC.Deps.interpret sctx ~expander exes.link_deps in
   let link_flags =
-    link_deps >>^ ignore >>>
+    link_deps |> Build.ignore >>>
     Expander.expand_and_eval_set expander exes.link_flags
       ~standard:(Build.return [])
   in
@@ -82,6 +97,22 @@ let executables_rules ~sctx ~dir ~dir_kind ~expander
   let cctx =
     let requires_compile = Lib.Compile.direct_requires compile_info in
     let requires_link = Lib.Compile.requires_link compile_info in
+    let js_of_ocaml =
+      let js_of_ocaml = exes.buildable.js_of_ocaml in
+      if explicit_js_mode then
+        Option.some_if (List.mem ~set:linkages Exe.Linkage.js) js_of_ocaml
+      else
+        Some js_of_ocaml
+    in
+    let dynlink = true
+      (* See https://github.com/ocaml/dune/issues/2527 *)
+      (*
+      Dune_file.Executables.Link_mode.Set.exists exes.modes ~f:(fun mode ->
+        match mode.kind with
+        | Shared_object -> true
+        | _ -> false)
+      *)
+    in
     Compilation_context.create ()
       ~super_context:sctx
       ~expander
@@ -93,7 +124,10 @@ let executables_rules ~sctx ~dir ~dir_kind ~expander
       ~requires_link
       ~requires_compile
       ~preprocessing:pp
+      ~js_of_ocaml
       ~opaque:(SC.opaque sctx)
+      ~dynlink
+      ~package:exes.package
   in
 
   let requires_compile = Compilation_context.requires_compile cctx in
@@ -102,15 +136,15 @@ let executables_rules ~sctx ~dir ~dir_kind ~expander
     ~programs
     ~linkages
     ~link_flags
-    ~js_of_ocaml:exes.buildable.js_of_ocaml;
+    ~promote:exes.promote;
 
   (cctx,
    Merlin.make ()
      ~requires:requires_compile
-     ~flags:(Ocaml_flags.common flags)
+     ~flags
+     ~modules
      ~preprocess:(Dune_file.Buildable.single_preprocess exes.buildable)
-     (* only public_dir? *)
-     ~objs_dirs:(Path.Set.singleton (Obj_dir.public_cmi_dir obj_dir)))
+     ~obj_dir)
 
 let rules ~sctx ~dir ~dir_contents ~scope ~expander ~dir_kind
       (exes : Dune_file.Executables.t) =
@@ -123,8 +157,9 @@ let rules ~sctx ~dir ~dir_contents ~scope ~expander ~dir_kind
       ~allow_overlaps:exes.buildable.allow_overlapping_dependencies
       ~variants:exes.variants
   in
+  let f () =
+    executables_rules exes ~sctx ~dir
+      ~dir_contents ~scope ~expander ~compile_info ~dir_kind
+  in
   SC.Libs.gen_select_rules sctx compile_info ~dir;
-  SC.Libs.with_lib_deps sctx compile_info ~dir
-    ~f:(fun () ->
-      executables_rules exes ~sctx ~dir
-        ~dir_contents ~scope ~expander ~compile_info ~dir_kind)
+  SC.Libs.with_lib_deps sctx compile_info ~dir ~f

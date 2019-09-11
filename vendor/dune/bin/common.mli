@@ -4,7 +4,7 @@ type t =
   ; debug_backtraces      : bool
   ; profile               : string option
   ; workspace_file        : Arg.Path.t option
-  ; root                  : string
+  ; root                  : Workspace_root.t
   ; target_prefix         : string
   ; only_packages         : Dune.Package.Name.Set.t option
   ; capture_outputs       : bool
@@ -23,6 +23,8 @@ type t =
   (* For build & runtest only *)
   ; watch : bool
   ; stats_trace_file : string option
+  ; always_show_command_line : bool
+  ; promote_install_files : bool
   }
 
 val prefix_target : t -> string -> string
@@ -52,6 +54,10 @@ val footer : [> `Blocks of [> `P of string | `S of string ] list ]
 val term : t Cmdliner.Term.t
 
 val context_arg : doc:string -> string Cmdliner.Term.t
+
+(** A [--build-info] command line argument that print build
+    informations (included in [term]) *)
+val build_info : unit Cmdliner.Term.t
 
 val default_build_dir : string
 

@@ -17,12 +17,9 @@ val create
   :  super_context         : Super_context.t
   -> scope                 : Scope.t
   -> expander              : Expander.t
-  -> obj_dir               : Obj_dir.t
-  -> ?vimpl                : Vimpl.t
-  -> ?dir_kind             : Dune_lang.Syntax.t
-  -> modules               : Module.t Module.Name.Map.t
-  -> ?alias_module         : Module.t
-  -> ?lib_interface_module : Module.t
+  -> obj_dir               : Path.Build.t Obj_dir.t
+  -> ?dir_kind             : Dune_lang.File_syntax.t
+  -> modules               : Modules.t
   -> flags                 : Ocaml_flags.t
   -> requires_compile      : Lib.t list Or_exn.t
   -> requires_link         : Lib.t list Or_exn.t Lazy.t
@@ -30,6 +27,11 @@ val create
   -> ?no_keep_locs         : bool
   -> opaque                : bool
   -> ?stdlib               : Dune_file.Library.Stdlib.t
+  -> js_of_ocaml           : Dune_file.Js_of_ocaml.t option
+  -> dynlink               : bool
+  -> ?sandbox              : bool
+  -> package               : Package.t option
+  -> ?vimpl                : Vimpl.t
   -> unit
   -> t
 
@@ -40,22 +42,22 @@ val super_context        : t -> Super_context.t
 val expander             : t -> Expander.t
 val context              : t -> Context.t
 val scope                : t -> Scope.t
-val dir                  : t -> Path.t
-val dir_kind             : t -> Dune_lang.Syntax.t
-val obj_dir              : t -> Obj_dir.t
-val modules              : t -> Module.t Module.Name.Map.t
-val alias_module         : t -> Module.t option
-val lib_interface_module : t -> Module.t option
+val dir                  : t -> Path.Build.t
+val dir_kind             : t -> Dune_lang.File_syntax.t
+val obj_dir              : t -> Path.Build.t Obj_dir.t
+val modules              : t -> Modules.t
 val flags                : t -> Ocaml_flags.t
 val requires_link        : t -> Lib.t list Or_exn.t
 val requires_compile     : t -> Lib.t list Or_exn.t
-val includes             : t -> (string list, Arg_spec.dynamic) Arg_spec.t Cm_kind.Dict.t
+val includes             : t -> Command.Args.dynamic Command.Args.t Cm_kind.Dict.t
 val preprocessing        : t -> Preprocessing.t
 val no_keep_locs         : t -> bool
 val opaque               : t -> bool
 val stdlib               : t -> Dune_file.Library.Stdlib.t option
-
-(** Information for implementation of virtual libraries. *)
+val js_of_ocaml          : t -> Dune_file.Js_of_ocaml.t option
+val dynlink              : t -> bool
+val sandbox              : t -> bool option
+val package              : t -> Package.t option
 val vimpl                : t -> Vimpl.t option
 
-val for_wrapped_compat : t -> Module.t Module.Name.Map.t -> t
+val for_wrapped_compat : t -> t

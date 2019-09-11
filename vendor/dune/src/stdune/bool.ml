@@ -5,7 +5,7 @@ let compare x y =
   | true, false -> Gt
   | false, true -> Lt
 
-include Comparable.Operators(struct
+include Comparator.Operators(struct
     type nonrec t = bool
     let compare = compare
   end)
@@ -13,3 +13,5 @@ include Comparable.Operators(struct
 let to_string = string_of_bool
 
 let of_string s = Option.try_with (fun () -> bool_of_string s)
+
+let to_dyn t = Dyn.Bool t

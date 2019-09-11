@@ -3,74 +3,83 @@ open Import
 
 module T : sig
   type t = private
-    { dir : Path.t
+    { dir : Path.Build.t
     ; name : string
     }
-  val make : string -> dir:Path.t -> t
+  val make : string -> dir:Path.Build.t -> t
   val of_user_written_path : loc:Loc.t -> Path.t -> t
 end = struct
   type t =
-    { dir : Path.t
+    { dir : Path.Build.t
     ; name : string
     }
 
   let make name ~dir =
-    if not (Path.is_in_build_dir dir) || String.contains name '/' then
-      Exn.code_error "Alias0.make: Invalid alias"
-        [ "name", Sexp.Encoder.string name
-        ; "dir", Path.to_sexp dir
+    if String.contains name '/' then
+      Code_error.raise "Alias0.make: Invalid alias"
+        [ "name", Dyn.Encoder.string name
+        ; "dir", Path.Build.to_dyn dir
         ];
     { dir; name }
 
   let of_user_written_path ~loc path =
-    if not (Path.is_in_build_dir path) then
-      Errors.fail loc "Invalid alias!\n\
-                       Tried to reference path outside build dir: %S"
-        (Path.to_string_maybe_quoted path);
-    { dir = Path.parent_exn path
-    ; name = Path.basename path
-    }
+    match Path.as_in_build_dir path with
+    | Some path ->
+      { dir = Path.Build.parent_exn path
+      ; name = Path.Build.basename path
+      }
+    | None ->
+      User_error.raise ~loc
+        [ Pp.text "Invalid alias!"
+        ; Pp.textf "Tried to reference path outside build dir: %S"
+            (Path.to_string_maybe_quoted path)
+        ];
 end
 include T
 
 let compare x y =
   match String.compare x.name y.name with
   | Lt | Gt as x -> x
-  | Eq -> Path.compare x.dir y.dir
+  | Eq -> Path.Build.compare x.dir y.dir
 
 let equal x y = compare x y = Eq
 
 let hash { dir ; name } =
-  Hashtbl.hash (Path.hash dir, String.hash name)
+  Hashtbl.hash (Path.Build.hash dir, String.hash name)
 
-let pp fmt t = Path.pp fmt (Path.relative t.dir t.name)
+let pp fmt t = Path.Build.pp fmt (Path.Build.relative t.dir t.name)
 
 let to_dyn { dir ; name } =
   let open Dyn in
   Record
-    [ "dir", Path.to_dyn dir
+    [ "dir", Path.Build.to_dyn dir
     ; "name", String name
     ]
-
-let to_sexp t = Dyn.to_sexp (to_dyn t)
 
 let suffix = "-" ^ String.make 32 '0'
 
 let name t = t.name
 let dir  t = t.dir
 
-let fully_qualified_name t = Path.relative t.dir t.name
+let fully_qualified_name t = Path.Build.relative t.dir t.name
+
+(* Where we store stamp files for aliases *)
+let alias_dir = Path.Build.(relative root ".aliases")
 
 let stamp_file t =
-  Path.relative (Path.insert_after_build_dir_exn t.dir ".aliases")
+  let local = Path.Build.local t.dir in
+  Path.Build.relative
+    (Path.Build.append_local alias_dir local)
     (t.name ^ suffix)
 
 let find_dir_specified_on_command_line ~dir ~file_tree =
   match File_tree.find_dir file_tree dir with
   | None ->
-    die "From the command line:\n\
-         @{<error>Error@}: Don't know about directory %s!"
-      (Path.to_string_maybe_quoted dir)
+    User_error.raise
+      [ Pp.textf "Don't know about directory %s specified on the \
+                  command line!"
+          (Path.Source.to_string_maybe_quoted dir)
+      ]
   | Some dir -> dir
 
 let standard_aliases = Hashtbl.create 7
@@ -78,7 +87,7 @@ let standard_aliases = Hashtbl.create 7
 let is_standard name = Hashtbl.mem standard_aliases name
 
 let make_standard name =
-  Hashtbl.add standard_aliases name ();
+  Hashtbl.add_exn standard_aliases name ();
   make name
 
 let default     = make_standard "default"
@@ -94,6 +103,6 @@ let fmt         = make_standard "fmt"
 let encode { dir ; name } =
   let open Dune_lang.Encoder in
   record
-    [ "dir", Path_dune_lang.encode dir
+    [ "dir", Dpath.encode (Path.build dir)
     ; "name", string name
     ]

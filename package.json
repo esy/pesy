@@ -27,7 +27,8 @@
       "require": [
         "pesy/lib",
         "pesy/utils",
-        "cmdliner"
+        "cmdliner",
+        "findlib"
       ]
     },
     "lib": {
@@ -35,6 +36,7 @@
         "str",
         "sexplib",
         "yojson",
+        "findlib",
         "pesy/utils"
       ],
       "rawBuildConfigFooter": [
@@ -57,6 +59,7 @@
     "@esy-ocaml/reason": "*",
     "@opam/cmdliner": "*",
     "@opam/dune": "*",
+    "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
     "@reason-native/pastel": "*",

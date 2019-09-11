@@ -4,15 +4,15 @@ open Dune_file
 
 let mlds_by_package_def =
   let module Output = struct
-    type t = Path.t list Package.Name.Map.t
+    type t = Path.Build.t list Package.Name.Map.t
 
-    let to_sexp _ = Sexp.Encoder.string "opaque"
+    let to_dyn _ = Dyn.Opaque
   end
   in
   Memo.With_implicit_output.create "mlds by package"
-    ~implicit_output:Build_system.rule_collection_implicit_output
+    ~implicit_output:Rules.implicit_output
     ~doc:"mlds by package"
-    ~input:(module Super_context)
+    ~input:(module Super_context.As_memo_key)
     ~output:(module Output)
     ~visibility:Hidden
     Sync
@@ -22,7 +22,7 @@ let mlds_by_package_def =
        |> List.concat_map ~f:(fun (w : _ Dir_with_dune.t) ->
          List.filter_map w.data ~f:(function
            | Documentation d ->
-             let dc = Dir_contents.get_without_rules sctx ~dir:w.ctx_dir in
+             let dc = Dir_contents.get sctx ~dir:w.ctx_dir in
              let mlds = Dir_contents.mlds dc d in
              Some (d.package.name, mlds)
            | _ ->

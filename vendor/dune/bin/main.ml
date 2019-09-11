@@ -9,7 +9,7 @@ let run_build_command ~log ~common ~targets =
   in
   if common.watch then begin
     let once () =
-      Utils.Cached_digest.invalidate_cached_timestamps ();
+      Cached_digest.invalidate_cached_timestamps ();
       once ()
     in
     Scheduler.poll ~log ~common ~once ~finally:Hooks.End_of_build.run ()
@@ -114,11 +114,11 @@ let promote =
        | _ ->
          let files =
            List.map files
-             ~f:(fun fn -> Path.of_string (Common.prefix_target common fn))
+             ~f:(fun fn -> Path.Source.of_string (Common.prefix_target common fn))
          in
          let on_missing fn =
            Format.eprintf "@{<warning>Warning@}: Nothing to promote for %a.@."
-             Path.pp fn
+             Path.Source.pp fn
          in
          These (files, on_missing))
   in
@@ -153,7 +153,10 @@ let default =
     `Help (`Pager, None)
   in
   (term,
-   Term.info "dune" ~doc ~version:"%%VERSION%%"
+   Term.info "dune" ~doc
+     ~version:(match Build_info.V1.version () with
+       | None -> "n/a"
+       | Some v -> Build_info.V1.Version.to_string v)
      ~man:
        [ `S "DESCRIPTION"
        ; `P {|Dune is a build system designed for OCaml projects only. It

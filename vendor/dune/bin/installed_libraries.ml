@@ -17,18 +17,7 @@ let term =
   let env = Import.Main.setup_env ~capture_outputs:common.capture_outputs in
   Scheduler.go ~log:(Log.create common) ~common (fun () ->
     let open Fiber.O in
-    let* ctxs =
-      Context.create ~env
-        { merlin_context = Some "default"
-        ; contexts = [Default { loc = Loc.of_pos __POS__
-                              ; targets   = [Native]
-                              ; profile   = Config.default_build_profile
-                              ; env       = None
-                              ; toolchain = None
-                              }]
-        ; env = None
-        }
-    in
+    let* ctxs = Context.create ~env (Workspace.default ()) in
     let ctx = List.hd ctxs in
     let findlib = ctx.findlib in
     if na then begin
@@ -37,8 +26,8 @@ let term =
         String.longest_map pkgs ~f:(fun (n, _) -> Lib_name.to_string n) in
       let ppf = Format.std_formatter in
       List.iter pkgs ~f:(fun (n, r) ->
-        Format.fprintf ppf "%-*s -> %a@\n" longest (Lib_name.to_string n)
-          Findlib.Unavailable_reason.pp r);
+        Format.fprintf ppf "%-*s -> %s@\n" longest (Lib_name.to_string n)
+          (Findlib.Unavailable_reason.to_string r));
       Format.pp_print_flush ppf ();
       Fiber.return ()
     end else begin
@@ -48,7 +37,9 @@ let term =
           Lib_name.to_string (Dune_package.Lib.name n)) in
       List.iter pkgs ~f:(fun (pkg : _ Dune_package.Lib.t) ->
         let ver =
-          Option.value (Dune_package.Lib.version pkg) ~default:"n/a"
+          match Dune_package.Lib.version pkg with
+          | Some v -> v
+          | _ -> "n/a"
         in
         Printf.printf "%-*s (version: %s)\n" max_len
           (Lib_name.to_string (Dune_package.Lib.name pkg)) ver);

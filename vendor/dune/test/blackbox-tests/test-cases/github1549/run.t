@@ -4,7 +4,7 @@ Reproduction case for #1549: too many parentheses in installed .dune files
   Entering directory 'backend'
 
   $ cat backend/_build/install/default/lib/dune_inline_tests/dune-package
-  (lang dune 1.9)
+  (lang dune 1.11)
   (name dune_inline_tests)
   (library
    (name dune_inline_tests)
@@ -15,13 +15,15 @@ Reproduction case for #1549: too many parentheses in installed .dune files
    (main_module_name Simple_tests)
    (modes byte native)
    (modules
-    (alias_module
-     (name Simple_tests)
-     (obj_name simple_tests)
-     (visibility public)
-     (impl))
-    (main_module_name Simple_tests)
-    (wrapped true))
+    (wrapped
+     (main_module_name Simple_tests)
+     (alias_module
+      (name Simple_tests)
+      (obj_name simple_tests)
+      (visibility public)
+      (kind alias)
+      (impl))
+     (wrapped true)))
    (inline_tests.backend
     (flags :standard)
     (generate_runner

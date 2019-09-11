@@ -84,10 +84,10 @@ end
 module Library_compilation_context = struct
   type t =
     { super_context  : Super_context.t
-    ; dir            : Path.t
+    ; dir            : Path.Build.t
     ; stanza         : Dune_file.Library.t
     ; scope          : Scope.t
-    ; source_modules : Module.t Module.Name.Map.t
+    ; source_modules : Module.t list
     ; compile_info   : Lib.Compile.t
     }
 end

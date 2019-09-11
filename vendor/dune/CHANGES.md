@@ -1,3 +1,228 @@
+1.11.3 (23/08/2019)
+-------------------
+
+- Fix a ppx hash collision in watch mode (#2546, fixes #2520, @diml)
+
+1.11.2 (20/08/2019)
+-------------------
+
+- Remove the optimisation of passing `-nodynlink` for executalbes when
+  not necessary. It seems to be breaking things (see #2527, @diml)
+
+- Fix invalid library names in `dune-package` files. Only public names should
+  exist in such files. (#2558, fix #2425, @rgrinberg)
+
+1.11.1 (09/08/2019)
+-------------------
+
+- Fix config file dependencies of ocamlformat (#2471, fixes #2646,
+  @nojb)
+
+- Cleanup stale directories when using `(source_tree ...)` in the
+  presence of directories with only sub-directories and no files
+  (#2514, fixes #2499, @diml)
+
+1.11.0 (23/07/2019)
+-------------------
+
+- Don't select all local implementations in `dune utop`. Instead, let the
+  default implementation selection do its job. (#2327, fixes #2323, @TheLortex,
+  review by @rgrinberg)
+
+- Check that selected implementations (either by variants or default
+  implementations) are indeed implementations. (#2328, @TheLortex, review by
+  @rgrinberg)
+
+- Don't reserve the `Ppx` toplevel module name for ppx rewriters (#2242, @diml)
+
+- Redesign of the library variant feature according to the #2134 proposal. The
+  set of variants is now computed when the virtual library is installed.
+  Introducing a new `external_variant` stanza. (#2169, fixes #2134, @TheLortex,
+  review by @diml)
+
+- Add proper line directives when copying `.cc` and `.cxx` sources (#2275,
+  @rgrinberg)
+
+- Fix error message for missing C++ sources. The `.cc` extension was always
+  ignored before. (#2275, @rgrinberg)
+
+- Add `$ dune init project` subcommand to create project boilerplate according
+  to a common template. (#2185, fixes #159, @shonfeder)
+
+- Allow to run inline tests in javascript with nodejs (#2266, @hhugo)
+
+- Build `ppx.exe` as compiling host binary. (#2286, fixes #2252, @toots, review
+  by @rgrinberg and @diml)
+
+- Add a `cinaps` extension and stanza for better integration with the
+  [cinaps tool](https://github.com/janestreet/cinaps) tool (#2269,
+  @diml)
+
+- Allow to embed build info in executables such as version and list
+  and version of statically linked libraries (#2224, @diml)
+
+- Set version in `META` and `dune-package` files to the one read from
+  the vcs when no other version is available (#2224, @diml)
+
+- Add a variable `%{target}` to be used in situations where the context
+  requires at most one word, so `%{targets}` can be confusing; stdout
+  redirections and "-o" arguments of various tools are the main use
+  case; also, introduce a separate field `target` that must be used
+  instead of `targets` in those situations.  (#2341, @aalekseyev)
+
+- Fix dependency graph of wrapped_compat modules. Previously, the dependency on
+  the user written entry module was omitted. (#2305, @rgrinberg)
+
+- Allow to promote executables built with an `executable` stanza
+  (#2379, @diml)
+
+- When instantiating an implementation with a variant, make sure it matches
+  virtual library's list of known implementations. (#2361, fixes #2322,
+  @TheLortex, review by @rgrinberg)
+
+- Add a variable `%{ignoring_promoted_rules}` that is `true` when
+  `--ingore-promoted-rules` is passed on the command line and false
+  otherwise (#2382, @diml)
+
+- Fix a bug in `future_syntax` where the characters `@` and `&` were
+  not distinguished in the names of binding operators (`let@` was the
+  same as `let&`) (#2376, @aalekseyev, @diml)
+
+- Workspaces with non unique project names are now supported. (#2377, fix #2325,
+  @rgrinberg)
+
+- Improve opam generation to include the `dune` dependncies with the minimum
+  constraint set based on the dune language version specified in the
+  `dune-project` file. (2383, @avsm)
+
+- The order of fields in the generated opam file now follows order preferred in
+  opam-lib. (@avsm, #2380)
+
+- Fix coloring of error messages from the compiler (@diml, #2384)
+
+- Add warning `66` to default set of warnings starting for dune projects with
+  language verison >= `1.11` (@rgrinberg, @diml, fixes #2299)
+
+- Add (dialect ...) stanza
+  (@nojb, #2404)
+
+- Add a `--context` argument to `dune install/uninstall` (@diml, #2412)
+
+- Do not warn about merlin files pre 1.9. This warning can only be disabled in
+  1.9 (#2421, fixes #2399, @emillon)
+
+- Add a new `inline_tests` field in the env stanza to control inline_tests
+  framework with a variable (#2313, @mlasson, original idea by @diml, review
+  by @rgrinberg).
+
+- New binary kind `js` for executables in order to explicitly enable Javascript
+  targets, and a switch `(explicit_js_mode)` to require this mode in order to
+  declare JS targets corresponding to executables. (#1941, @nojb)
+
+1.10.0 (04/06/2019)
+-------------------
+
+- Restricted the set of variables available for expansion in the destination
+  filename of `install` stanza to simplify implementation and avoid dependency
+  cycles. (#2073, @aalekseyev, @diml)
+
+- [menhir] call menhir from context root build_dir (#2067, @ejgallego,
+  review by @diml, @rgrinberg)
+
+- [coq] Add `coq.pp` stanza to help with pre-processing of grammar
+  files (#2054, @ejgallego, review by @rgrinberg)
+
+- Add a new more generic form for the *promote* mode: `(promote
+  (until-clean) (into <dir>))` (#2068, @diml)
+
+- Allow to promote only a subset of the targets via `(promote (only
+  <pred>))`. For instance: `(promote (only *.mli))` (#2068, @diml)
+
+- Improve the behavior when a strict subset of the targets of a rule is already
+  in the source tree for projects using the dune language < 1.10 (#2068, fixes
+  #2061, @diml)
+
+- With lang dune >= 1.10, rules in standard mode are no longer allowed to
+  produce targets that are present in the source tree. This has been a warning
+  for long enough (#2068, @diml)
+
+- Allow %{...} variables in pps flags (#2076, @mlasson review by @diml and
+  @aalekseyev).
+
+- Add a 'cookies' option to ppx_rewriter/deriver flags in library stanzas. This
+  allow to specify cookie requests from variables expanded at each invocation of
+  the preprocessor. (#2106, @mlasson @diml)
+
+- Add more opam metadata and use it to generate `.opam` files. In particular, a
+  `package` field has been added to specify package specific information.
+  (#2017, #2091, @avsm, @jonludlam, @rgrinberg)
+
+- Clean up the special support for `findlib.dynload`. Before, Dune would simply
+  match on the library name. Now, we only match on the findlib package name when
+  the library doesn't come from Dune. Someone writing a library called
+  `findlib.dynload` with Dune would have to add `(special_builtin_support
+  findlib_dynload)` to trigger the special behavior. (#2115, @diml)
+
+- Install the `future_syntax` preprocessor as `ocaml-syntax-shims.exe` (#2125,
+  @rgrinberg)
+
+- Hide full command on errors and warnings in development and show them in CI.
+  (detected using the `CI` environment variable). Commands for which the
+  invocation might be omitted must output an error prefixed with `File `. Add an
+  `--always-show-command-line` option to disable this behavior and always show
+  the full command. (#2120, fixes #1733, @rgrinberg)
+
+- In `dune-workspace` files, add the ability to choose the host context and to
+  create duplicates of the default context with different settings. (#2098,
+  @TheLortex, review by @diml, @rgrinberg and @aalekseyev)
+
+- Add support for hg in `dune subst` (#2135, @diml)
+
+- Don't build documentation for implementations of virtual libraries (#2141,
+  fixes #2138, @jonludlam)
+
+- Fix generation of the `-pp` flag in .merlin (#2142, @rgrinberg)
+
+- Make `dune subst` add a `(version ...)` field to the `dune-project`
+  file (#2148, @diml)
+
+- Add the `%{os_type}` variable, which is a short-hand for
+  `%{ocaml-config:os_type}` (#1764, @diml)
+
+- Allow `enabled_if` fields in `library` stanzas, restricted to the
+  `%{os_type}`, `%{model}`, `%{architecture}`, `%{system}` variables (#1764,
+  #2164 @diml, @rgrinberg)
+
+- Fix `chdir` on external and source paths. Dune will also fail gracefully if
+  the external or source path does not exist (#2165, fixes #2158, @rgrinberg)
+
+- Support the `.cc` extension fro C++ sources (#2195, fixes #83, @rgrinberg)
+
+- Run `ocamlformat` relative to the context root. This improves the locations of
+  errors. (#2196, fixes #1370, @rgrinberg)
+
+- Fix detection of `README`, `LICENSE`, `CHANGE`, and `HISTORY` files. These
+  would be undetected whenever the project was nested in another workspace.
+  (#2194, @rgrinberg)
+
+- Fix generation of `.merlin` whenever there's more than one stanza with the
+  same ppx preprocessing specification (#2209 ,fixes #2206, @rgrinberg)
+
+- Fix generation of `.merlin` in the presence of the `copy_files` stanza and
+  preprocessing specifications of other stanazs. (#2211, fixes #2206,
+  @rgrinberg)
+
+- Run `refmt` from the context's root directory. This improves error messages in
+  case of syntax errors. (#2223, @rgrinberg)
+
+- In .merlin files, don't pass `-dump-ast` to the `future_syntax` preprocessor.
+  Merlin doesn't seem to like it when binary AST is generated by a `-pp`
+  preprocessor. (#2236, @aalekseyev)
+
+- `dune install` will verify that all files mentioned in all .install files
+  exist before trying to install anything. This prevents partial installation of
+  packages (#2230, @rgrinberg)
+
 1.9.3 (06/05/2019)
 ------------------
 
@@ -29,6 +254,16 @@
 
 - Fix crash when calculating library dependency closure (#2090, fixes #2085,
   @rgrinberg)
+
+- Clean up the special support for `findlib.dynload`. Before, Dune
+  would simply match on the library name. Now, we only match on the
+  findlib package name when the library doesn't come from
+  Dune. Someone writing a library called `findlib.dynload` with Dune
+  would have to add `(special_builton_support findlib_dynload)` to
+  trigger the special behavior. (#2115, @diml)
+
+- Include permissions in the digest of targets and dependencies (#2121, fix
+  #1426, @rgrinberg, @xclerc)
 
 1.9.1 (11/04/2019)
 ------------------

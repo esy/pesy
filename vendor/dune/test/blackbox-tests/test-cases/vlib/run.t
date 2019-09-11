@@ -5,7 +5,8 @@ virtual libraries may not implement their virtual modules
   File "dune", line 3, characters 18-21:
   3 |  (virtual_modules foo bar))
                         ^^^
-  Error: The following modules have an implementation, they cannot be listed as virtual:
+  Error: The following modules have an implementation, they cannot be listed as
+  virtual:
   - Foo
   [1]
 
@@ -22,7 +23,8 @@ virtual libraries may not implement their virtual modules
   File "dune", line 3, characters 33-34:
   3 |  (modules_without_implementation m)
                                        ^
-  Error: The following modules have an implementation, they cannot be listed as modules_without_implementation:
+  Error: The following modules have an implementation, they cannot be listed as
+  modules_without_implementation:
   - M
   -------------------------
   impl: true. modules_without_implementation: false. virtual_modules: true. private_modules: true
@@ -69,7 +71,8 @@ virtual libraries may not implement their virtual modules
   File "dune", line 4, characters 18-19:
   4 |  (virtual_modules m))
                         ^
-  Error: These modules appear in the virtual_libraries and modules_without_implementation fields:
+  Error: These modules appear in the virtual_libraries and
+  modules_without_implementation fields:
   - M
   This is not possible.
   -------------------------
@@ -77,14 +80,16 @@ virtual libraries may not implement their virtual modules
   File "dune", line 3, characters 33-34:
   3 |  (modules_without_implementation m))
                                        ^
-  Error: The following modules have an implementation, they cannot be listed as modules_without_implementation:
+  Error: The following modules have an implementation, they cannot be listed as
+  modules_without_implementation:
   - M
   -------------------------
   impl: true. modules_without_implementation: false. virtual_modules: true. private_modules: false
   File "dune", line 3, characters 18-19:
   3 |  (virtual_modules m))
                         ^
-  Error: The following modules have an implementation, they cannot be listed as virtual:
+  Error: The following modules have an implementation, they cannot be listed as
+  virtual:
   - M
   -------------------------
   impl: true. modules_without_implementation: false. virtual_modules: false. private_modules: false
@@ -93,7 +98,8 @@ virtual libraries may not implement their virtual modules
   File "dune", line 4, characters 18-19:
   4 |  (virtual_modules m))
                         ^
-  Error: These modules appear in the virtual_libraries and modules_without_implementation fields:
+  Error: These modules appear in the virtual_libraries and
+  modules_without_implementation fields:
   - M
   This is not possible.
   -------------------------
@@ -120,13 +126,15 @@ Implementations cannot introduce new modules to the library's interface
   1 | (library
   2 |  (name foo_impl)
   3 |  (implements foo))
-  Error: The following modules aren't part of the virtual library's interface:
+  Error: Implementations of wrapped libraries cannot introduce new public
+  modules.
+  The following modules:
   - Baz
-  They must be marked as private using the (private_modules ..) field
+  must all be marked as private using the (private_modules ..) field.
   [1]
 
 They can only introduce private modules:
-  $ dune build --root impl-private-modules
+  $ dune build --root impl-private-modules --debug-dependency-path
   Entering directory 'impl-private-modules'
           test alias default
   Private module Baz
@@ -147,18 +155,21 @@ Virtual library where a wrapped module is virtual
 Executable that tries to build against a virtual library without an implementation
   $ dune build --root missing-implementation
   Entering directory 'missing-implementation'
-  Error: No implementation found for virtual library "vlib" (_build/default/vlib).
+  Error: No implementation found for virtual library "vlib" in
+  _build/default/vlib.
   -> required by executable foo in dune:2
   [1]
 
 Executable that tries to use two implementations for the same virtual lib
   $ dune build --root double-implementation
   Entering directory 'double-implementation'
-  Error: Conflicting implementations for virtual library "vlib":
+  Error: Conflicting implementations for virtual library "vlib" in
+  _build/default/vlib:
   - "impl1" in _build/default/impl1
-     -> required by library "bar" in _build/default
+    -> required by library "bar" in _build/default
   - "impl2" in _build/default/impl2
-  This cannot work.-> required by executable foo in dune:2
+  This cannot work.
+  -> required by executable foo in dune:2
   [1]
 
 Install files for implemenations and virtual libs have all the artifacts:
@@ -235,9 +246,11 @@ There should be an error message that clarifies this.
   1 | (library
   2 |  (name impl)
   3 |  (implements vlib))
-  Error: The following modules aren't part of the virtual library's interface:
+  Error: Implementations of wrapped libraries cannot introduce new public
+  modules.
+  The following modules:
   - Vlib
-  They must be marked as private using the (private_modules ..) field
+  must all be marked as private using the (private_modules ..) field.
   [1]
 
 Test that implementing vlibs that aren't present is impossible
@@ -267,7 +280,8 @@ an appropriate error message.
   File "dune", line 7, characters 13-30:
   7 |  (implements dune.configurator))
                    ^^^^^^^^^^^^^^^^^
-  Error: Library "dune.configurator" is not virtual. It cannot be implemented by "foobar".
+  Error: Library "dune.configurator" is not virtual. It cannot be implemented
+  by "foobar".
   [1]
 
 Test that we can implement external libraries.
@@ -305,7 +319,7 @@ Implement external virtual libraries with private modules
 Include variants and implementation information in dune-package
   $ dune build --root dune-package-info
   Entering directory 'dune-package-info'
-  (lang dune 1.9)
+  (lang dune 1.11)
   (name foo)
   (library
    (name foo.impl)
@@ -318,14 +332,21 @@ Include variants and implementation information in dune-package
    (main_module_name Vlib)
    (modes byte native)
    (modules
-    (alias_module
-     (name Vlib__impl__)
-     (obj_name vlib__impl__)
-     (visibility public)
-     (impl))
-    (main_module_name Vlib)
-    (modules ((name Vmod) (obj_name vlib__Vmod) (visibility public) (impl)))
-    (wrapped true)))
+    (wrapped
+     (main_module_name Vlib)
+     (modules
+      ((name Vmod)
+       (obj_name vlib__Vmod)
+       (visibility public)
+       (kind impl_vmodule)
+       (impl)))
+     (alias_module
+      (name Vlib__impl__)
+      (obj_name vlib__impl__)
+      (visibility public)
+      (kind alias)
+      (impl))
+     (wrapped true))))
   (library
    (name foo.vlib)
    (kind normal)
@@ -334,15 +355,21 @@ Include variants and implementation information in dune-package
    (main_module_name Vlib)
    (modes byte native)
    (modules
-    (alias_module (name Vlib) (obj_name vlib) (visibility public) (impl))
-    (main_module_name Vlib)
-    (modules
-     ((name Vmod)
-      (obj_name vlib__Vmod)
+    (wrapped
+     (main_module_name Vlib)
+     (modules
+      ((name Vmod)
+       (obj_name vlib__Vmod)
+       (visibility public)
+       (kind virtual)
+       (intf)))
+     (alias_module
+      (name Vlib)
+      (obj_name vlib)
       (visibility public)
-      (kind virtual)
-      (intf)))
-    (wrapped true)))
+      (kind alias)
+      (impl))
+     (wrapped true))))
 
 Virtual libraries and preprocessed source
   $ dune build --root preprocess

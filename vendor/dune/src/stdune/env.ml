@@ -7,12 +7,13 @@ module Var = struct
       ) else (
         String.compare
       )
+    let to_dyn = Dyn.Encoder.string
   end
-  module Set = Set.Make(T)
+
+  include Comparable.Make(T)
   include T
 end
 
-let map_to_dyn = Map.to_dyn
 module Map = Map.Make(Var)
 
 type t =
@@ -48,8 +49,8 @@ let of_unix arr =
   |> List.map ~f:(fun s ->
     match String.lsplit2 s ~on:'=' with
     | None ->
-      Exn.code_error "Env.of_unix: entry without '=' found in the environ"
-        ["var", Sexp.Encoder.string s]
+      Code_error.raise "Env.of_unix: entry without '=' found in the environ"
+        ["var", String s]
     | Some (k, v) -> (k, v))
   |> Map.of_list_multi
   |> Map.map ~f:(function
@@ -59,7 +60,7 @@ let of_unix arr =
 let initial = make (of_unix (Unix.environment ()))
 
 let add t ~var ~value =
-  make (Map.add t.vars var value)
+  make (Map.set t.vars var value)
 
 let remove t ~var =
   make (Map.remove t.vars var)
@@ -72,10 +73,7 @@ let extend_env x y =
 
 let to_dyn t =
   let open Dyn.Encoder in
-  map_to_dyn Map.to_list string string t.vars
-
-let to_sexp t =
-  Dyn.to_sexp (to_dyn t)
+  Map.to_dyn string t.vars
 
 let diff x y =
   Map.merge x.vars y.vars ~f:(fun _k vx vy ->
@@ -88,12 +86,10 @@ let update t ~var ~f =
   make (Map.update t.vars var ~f)
 
 let of_string_map m =
-  make (String.Map.foldi ~init:Map.empty ~f:(fun k v acc -> Map.add acc k v) m)
+  make (String.Map.foldi ~init:Map.empty ~f:(fun k v acc -> Map.set acc k v) m)
 
 let iter t =
   Map.iteri t.vars
-
-let pp fmt t = Sexp.pp fmt (to_sexp t)
 
 let cons_path t ~dir =
   make (Map.update t.vars "PATH"

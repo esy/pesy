@@ -9,10 +9,9 @@ Can init a public library
 Can build the public library
 
   $ cd _test_lib_dir && touch test_lib.opam && dune build
-  Info: creating file dune-project with this contents:
-  | (lang dune 1.9)
+  Info: Creating file dune-project with this contents:
+  | (lang dune 1.11)
   | (name test_lib)
-  
   $ cat ./_test_lib_dir/dune
   (library
    (public_name test_lib)
@@ -37,14 +36,14 @@ Clean up library with specified public name
 
 Can add a library with inline tests
 
-  $ dune init lib test_lib ./_inline_tests_lib --inline-tests --ppx ppx_inline_tests
+  $ dune init lib test_lib ./_inline_tests_lib --inline-tests --ppx ppx_inline_test
   Success: initialized library component named test_lib
   $ cat ./_inline_tests_lib/dune
   (library
    (inline_tests)
    (name test_lib)
    (preprocess
-    (pps ppx_inline_tests)))
+    (pps ppx_inline_test)))
 
 Clean up library with inlines tests
 
@@ -61,10 +60,9 @@ Can init a public executable
 Can build an executable
 
   $ cd _test_bin_dir && touch test_bin.opam && dune build
-  Info: creating file dune-project with this contents:
-  | (lang dune 1.9)
+  Info: Creating file dune-project with this contents:
+  | (lang dune 1.11)
   | (name test_bin)
-  
 
 Can run the created executable
 
@@ -142,10 +140,9 @@ Can init a library and dependent executable in a combo project
 Can build the combo project
 
   $ cd _test_lib_exe_dir && touch test_bin.opam && dune build
-  Info: creating file dune-project with this contents:
-  | (lang dune 1.9)
+  Info: Creating file dune-project with this contents:
+  | (lang dune 1.11)
   | (name test_bin)
-  
 
 Can run the combo project
 
@@ -176,10 +173,9 @@ Can add multiple libraries in the same directory
 Can build the multiple library project
 
   $ cd _test_lib && touch test_lib1.opam && dune build
-  Info: creating file dune-project with this contents:
-  | (lang dune 1.9)
+  Info: Creating file dune-project with this contents:
+  | (lang dune 1.11)
   | (name test_lib1)
-  
 
 Clan up the multiple library project
 
@@ -209,7 +205,8 @@ Safety and Validation
 Will not overwrite existing files
 
   $ dune init exe test_bin ./existing_project/bin
-  Warning: file existing_project/bin/main.ml was not created because it already exists
+  Warning: File existing_project/bin/main.ml was not created because it already
+  exists
   Success: initialized executable component named test_bin
   $ cat ./existing_project/bin/main.ml
   () = print_endline "Goodbye"
@@ -231,8 +228,10 @@ Comments in dune files are preserved
 Will not create components with invalid names
 
   $ dune init lib invalid-component-name ./_test_lib
-  A component named 'invalid-component-name' cannot be created because it is an invalid library name.
-  Hint: library names must be non-empty and composed only of the following characters: 'A'..'Z',  'a'..'z', '_'  or '0'..'9'
+  Error: A component named 'invalid-component-name' cannot be created because
+  it is an invalid library name.
+  Hint: library names must be non-empty and composed only of the following
+  characters: 'A'..'Z', 'a'..'z', '_' or '0'..'9'
   [1]
   $ test -f ./_test_lib
   [1]
@@ -240,8 +239,8 @@ Will not create components with invalid names
 Will fail and inform user when invalid component command is given
 
   $ dune init foo blah
-  dune: INIT_KIND argument: invalid value `foo', expected one of `exe', `lib'
-        or `test'
+  dune: INIT_KIND argument: invalid value `foo', expected one of `executable',
+        `library', `project' or `test'
   Usage: dune init [OPTION]... INIT_KIND NAME [PATH]
   Try `dune init --help' or `dune --help' for more information.
   [1]
@@ -249,10 +248,10 @@ Will fail and inform user when invalid component command is given
 Will fail and inform user when an invalid option is given to a component
 
   $ dune init test test_foo --public
-  The test component does not support the public option
+  Error: The test component does not support the public option
   [1]
   $ dune init exe test_exe --inline-tests
-  The executable component does not support the inline-tests option
+  Error: The executable component does not support the inline-tests option
   [1]
 
 Adding fields to existing stanzas
@@ -264,7 +263,7 @@ Adding fields to existing stanzas is currently not supported
   $ dune init exe test_bin ./_test_bin --libs test_lib1
   Success: initialized executable component named test_bin
   $ dune init exe test_bin ./_test_bin --libs test_lib2
-  Updating existing stanzas is not yet supported.
+  Error: Updating existing stanzas is not yet supported.
   A preexisting dune stanza conflicts with a generated stanza:
   
   Generated stanza:
@@ -277,3 +276,69 @@ Adding fields to existing stanzas is currently not supported
   (executable
    (name main)
    (libraries test_lib1))
+
+Creating projects
+-----------------
+
+Can init and build a new executable project
+
+  $ dune init proj test_exec_proj
+  Success: initialized project component named test_exec_proj
+
+  $ ls test_exec_proj/**
+  test_exec_proj/test_exec_proj.opam
+  
+  test_exec_proj/bin:
+  dune
+  main.ml
+  
+  test_exec_proj/lib:
+  dune
+  
+  test_exec_proj/test:
+  dune
+  test_exec_proj.ml
+
+  $ cd test_exec_proj && dune build
+  Info: Creating file dune-project with this contents:
+  | (lang dune 1.11)
+  | (name test_exec_proj)
+  $ rm -rf ./test_exec_proj
+
+Can init and build a new library project
+
+  $ dune init proj test_lib_proj --kind lib
+  Success: initialized project component named test_lib_proj
+
+  $ ls test_lib_proj/**
+  test_lib_proj/test_lib_proj.opam
+  
+  test_lib_proj/lib:
+  dune
+  
+  test_lib_proj/test:
+  dune
+  test_lib_proj.ml
+
+  $ cd test_lib_proj && dune build
+  Info: Creating file dune-project with this contents:
+  | (lang dune 1.11)
+  | (name test_lib_proj)
+Can init and build a project using Esy
+
+  $ dune init proj test_esy_proj --pkg esy
+  Success: initialized project component named test_esy_proj
+
+  $ ls test_esy_proj/**
+  test_esy_proj/package.json
+  
+  test_esy_proj/bin:
+  dune
+  main.ml
+  
+  test_esy_proj/lib:
+  dune
+  
+  test_esy_proj/test:
+  dune
+  test_esy_proj.ml

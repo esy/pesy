@@ -3,13 +3,13 @@ open Stdune
 
 type t = Module.Name.Set.t Ml_kind.Dict.t
 
-val pp : t Fmt.t
+val to_dyn : t -> Dyn.t
 
 val rules
-  :  dir:Path.t
+  :  dir:Path.Build.t
   -> ctx:Context.t
   -> unit:Path.t
-  -> (_, Action.t) Build.t * (_, t) Build.t
+  -> Action.t Build.s * t Build.s
 
 (** For testing only *)
 val parse : string -> t

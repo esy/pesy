@@ -43,9 +43,9 @@ module Make(Data : sig type t end) = struct
     let register syntax data =
       let name = Syntax.name syntax in
       if Hashtbl.mem langs name then
-        Exn.code_error "Versioned_file.Lang.register: already registered"
-          [ "name", Sexp.Encoder.string name ];
-      Hashtbl.add langs name { syntax; data }
+        Code_error.raise "Versioned_file.Lang.register: already registered"
+          [ "name", Dyn.Encoder.string name ];
+      Hashtbl.add_exn langs name { syntax; data }
 
     let parse first_line : Instance.t =
       let { Dune_lexer.
@@ -58,8 +58,10 @@ module Make(Data : sig type t end) = struct
           (Atom (ver_loc, Dune_lang.Atom.of_string ver)) in
       match Hashtbl.find langs name with
       | None ->
-        Errors.fail name_loc "Unknown language %S.%s" name
-          (hint name (Hashtbl.keys langs))
+        User_error.raise ~loc:name_loc
+          [ Pp.textf "Unknown language %S." name ]
+          ~hints:(User_message.did_you_mean name
+                    ~candidates:(Hashtbl.keys langs))
       | Some t ->
         Syntax.check_supported t.syntax (ver_loc, ver);
         { syntax  = t.syntax
@@ -95,7 +97,7 @@ let no_more_lang =
       (let+ loc = loc
        and+ _ = repeat raw
        in
-       Errors.fail loc
-         "The (lang ..) line cannot appear more than once.")
+       User_error.raise ~loc
+         [ Pp.text "The (lang ..) line cannot appear more than once." ])
   in
   ()

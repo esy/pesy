@@ -36,13 +36,13 @@ module T = struct
 
   let unset = lazy (Digest.string "unset")
 
-  let trace_file fn = (Path.to_string fn, Utils.Cached_digest.file fn)
+  let trace_file fn = (Path.to_string fn, Cached_digest.file fn)
 
   let trace t ~env ~eval_pred =
     match t with
     | Universe -> ["universe", Digest.string "universe"]
     | File fn -> [trace_file fn]
-    | Alias a -> [trace_file (Alias.stamp_file a)]
+    | Alias a -> [trace_file (Path.build (Alias.stamp_file a))]
     | Glob dir_glob ->
       eval_pred dir_glob
       |> Path.Set.to_list
@@ -56,27 +56,25 @@ module T = struct
       in
       [var, value]
 
-  let pp fmt = function
-    | Env e -> Format.fprintf fmt "Env %S" e
-    | Alias a -> Format.fprintf fmt "Alias %a" Alias.pp a
-    | File f -> Format.fprintf fmt "File %a" Path.pp f
-    | Glob g -> Format.fprintf fmt "Glob %a" File_selector.pp g
-    | Universe -> Format.fprintf fmt "Universe"
-
   let encode t =
     let open Dune_lang.Encoder in
     match t with
     | Glob g -> pair string File_selector.encode ("glob", g)
     | Env e -> pair string string ("Env", e)
-    | File f -> pair string Path_dune_lang.encode ("File", f)
+    | File f -> pair string Dpath.encode ("File", f)
     | Alias a -> pair string Alias.encode ("Alias", a)
     | Universe -> string "Universe"
+
+  let to_dyn _ = Dyn.opaque
 end
 
 include T
 
+module O = Comparable.Make(T)
+
+module Map = O.Map
 module Set = struct
-  include Set.Make(T)
+  include O.Set
 
   let has_universe t = mem t Universe
 
@@ -88,9 +86,6 @@ module Set = struct
   let trace t ~env ~eval_pred =
     List.concat_map (to_list t) ~f:(trace ~env ~eval_pred)
 
-  let pp fmt (t : t) =
-    Format.fprintf fmt "Deps %a" (Fmt.list pp) (to_list t)
-
   let add_paths t paths =
     Path.Set.fold paths ~init:t ~f:(fun p set -> add set (File p))
 
@@ -99,7 +94,7 @@ module Set = struct
   let paths t ~eval_pred =
     fold t ~init:Path.Set.empty ~f:(fun d acc ->
       match d with
-      | Alias a -> Path.Set.add acc (Alias.stamp_file a)
+      | Alias a -> Path.Set.add acc (Path.build (Alias.stamp_file a))
       | File f -> Path.Set.add acc f
       | Glob g -> Path.Set.union acc (eval_pred g)
       | Universe
@@ -115,7 +110,7 @@ module Set = struct
   let dirs t =
     fold t ~init:Path.Set.empty ~f:(fun f acc ->
       match f with
-      | Alias a -> Path.Set.add acc (Alias.dir a)
+      | Alias a -> Path.Set.add acc (Path.build (Alias.dir a))
       | Glob g -> Path.Set.add acc (File_selector.dir g)
       | File f -> Path.Set.add acc (Path.parent_exn f)
       | Universe

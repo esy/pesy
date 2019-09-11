@@ -9,3 +9,6 @@ let force = ref false
 let watch = ref false
 let no_print_directory = ref false
 let store_orig_src_dir = ref false
+let always_show_command_line = ref false
+let promote_install_files = ref false
+let ignore_promoted_rules = ref false

@@ -41,6 +41,7 @@ let dirs =
   ; "src/ocaml-config"              , Some "Ocaml_config"
   ; "vendor/boot"                   , None
   ; "src/dune_lang"                 , Some "Dune_lang"
+  ; "otherlibs/build-info/src"      , None
   ; "src"                           , None
   ]
 
@@ -349,13 +350,16 @@ let compile ~dirs ~generated_file ~exe ~main ~flags ~byte_flags ~native_flags
     let n = List.length deps in
     let deps_by_module = Hashtbl.create n in
     List.iter deps ~f:(fun (m, deps) ->
-      Hashtbl.add deps_by_module m deps);
+      match Hashtbl.find deps_by_module m with
+      | exception Not_found -> Hashtbl.add deps_by_module m (ref deps)
+      | deps' -> deps' :=  deps @ !deps'
+    );
     let not_seen = ref (List.map deps ~f:fst |> String_set.of_list) in
     let res = ref [] in
     let rec loop m =
       if String_set.mem m !not_seen then begin
         not_seen := String_set.remove m !not_seen;
-        List.iter (Hashtbl.find deps_by_module m) ~f:loop;
+        List.iter !(Hashtbl.find deps_by_module m) ~f:loop;
         res := m :: !res
       end
     in
@@ -367,7 +371,16 @@ let compile ~dirs ~generated_file ~exe ~main ~flags ~byte_flags ~native_flags
 
   let modules_deps =
     let files_by_lib =
-      List.map (String_map.bindings modules) ~f:(fun (_, x) -> (x.libname, x.impl))
+      String_map.bindings modules
+      |> List.map ~f:(fun (_, x) ->
+        let deps = [x.impl] in
+        let deps =
+          match x.intf with
+          | None -> deps
+          | Some intf -> intf :: deps
+        in
+        List.map deps ~f:(fun d -> (x.libname, d)))
+      |> List.concat
       |> String_option_map.of_alist_multi
       |> String_option_map.bindings
     in
@@ -506,7 +519,7 @@ let compile ~dirs ~generated_file ~exe ~main ~flags ~byte_flags ~native_flags
   cleanup ~keep_ml_file:(n <> 0);
   if n <> 0 then exit n
 
-(* Shims to reuse the selection scripts in src/future-syntax *)
+(* Shims to reuse the selection scripts in src/ocaml-syntax-shims *)
 
 module Sys = struct
   include Sys
@@ -523,9 +536,9 @@ let get () =
   | None -> assert false
   | Some s -> cell := None; s
 ;;
-#use "src/future-syntax/select-impl";;
+#use "src/ocaml-syntax-shims/select-impl";;
 let impl = get ();;
-#use "src/future-syntax/select-shims";;
+#use "src/ocaml-syntax-shims/select-shims";;
 let shims = get ();;
 let print_string = real_print_string
 
@@ -533,15 +546,15 @@ let print_string = real_print_string
 
 let pp =
   if impl = "real" then begin
-    copy (sprintf "src/future-syntax/pp.%s.ml" impl)
-      "src/future-syntax/pp.ml";
-    copy (sprintf "src/future-syntax/shims.%s.ml" shims)
-      "src/future-syntax/shims.ml";
+    copy (sprintf "src/ocaml-syntax-shims/pp.%s.ml" impl)
+      "src/ocaml-syntax-shims/pp.ml";
+    copy (sprintf "src/ocaml-syntax-shims/shims.%s.ml" shims)
+      "src/ocaml-syntax-shims/shims.ml";
     compile
       ~generated_file:"boot_pp.ml"
       ~exe:"boot-pp.exe"
       ~main:"let () = ()"
-      ~dirs:["src/future-syntax", None]
+      ~dirs:["src/ocaml-syntax-shims", None]
       ~flags:"-I +compiler-libs"
       ~byte_flags:"ocamlcommon.cma"
       ~native_flags:(Some "ocamlcommon.cmxa")

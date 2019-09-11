@@ -1,12 +1,5 @@
 include Loc0
 
-let none_pos p : Lexing.position =
-  { pos_fname = p
-  ; pos_lnum  = 1
-  ; pos_cnum  = 0
-  ; pos_bol   = 0
-  }
-
 let in_file p =
   let pos = none_pos (Path.to_string p) in
   { start = pos
@@ -14,12 +7,6 @@ let in_file p =
   }
 
 let in_dir = in_file
-
-let none =
-  let pos = none_pos "<none>" in
-  { start = pos
-  ; stop = pos
-  }
 
 let drop_position (t : t) =
   let pos = none_pos t.start.pos_fname in
@@ -32,28 +19,12 @@ let of_lexbuf lexbuf : t =
   ; stop  = Lexing.lexeme_end_p   lexbuf
   }
 
-let sexp_of_position_no_file (p : Lexing.position) =
-  let open Sexp.Encoder in
-  record
-    [ "pos_lnum", int p.pos_lnum
-    ; "pos_bol", int p.pos_bol
-    ; "pos_cnum", int p.pos_cnum
-    ]
-
 let dyn_of_position_no_file (p : Lexing.position) =
   let open Dyn in
   Record
     [ "pos_lnum", Int p.pos_lnum
     ; "pos_bol", Int p.pos_bol
     ; "pos_cnum", Int p.pos_cnum
-    ]
-
-let to_sexp t =
-  let open Sexp.Encoder in
-  record (* TODO handle when pos_fname differs *)
-    [ "pos_fname", string t.start.pos_fname
-    ; "start", sexp_of_position_no_file t.start
-    ; "stop", sexp_of_position_no_file t.stop
     ]
 
 let to_dyn t =
@@ -119,7 +90,7 @@ let pp_file_excerpt ~context_lines ~max_lines_to_print_in_full
       Result.try_with (fun () -> Io.String_path.file_line file line_num) in
     if stop_c <= String.length line then begin
       let len = stop_c - start_c in
-      Format.fprintf pp "%a%*s\n"
+      Format.fprintf pp "%a%*s@."
         (pp_line padding_width) (line_num_str, line)
         (stop_c + padding_width + 3)
         (String.make len '^');
@@ -177,8 +148,17 @@ let pp_file_excerpt ~context_lines ~max_lines_to_print_in_full
       let backtrace = Printexc.get_backtrace () in
       Format.eprintf "Raised when trying to print location contents of %s@.%a@."
         file (Exn.pp_uncaught ~backtrace) exn
-    | Ok () -> ()
+    | Ok () ->
+      Format.pp_print_flush pp ()
   end
+
+let print ppf ({ start; stop } as loc) =
+  let start_c = start.pos_cnum - start.pos_bol in
+  let stop_c  = stop.pos_cnum  - start.pos_bol in
+  Format.fprintf ppf
+    "@{<loc>File \"%s\", line %d, characters %d-%d:@}@\n"
+    start.pos_fname start.pos_lnum start_c stop_c;
+  pp_file_excerpt ppf ~context_lines:2 ~max_lines_to_print_in_full:10 loc
 
 let on_same_line loc1 loc2 =
   let start1 = loc1.start in

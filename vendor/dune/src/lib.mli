@@ -12,33 +12,22 @@ val to_dyn : t -> Dyn.t
     present or the [name] if not. *)
 val name : t -> Lib_name.t
 
-(* CR-someday diml: this should be [Path.t list], since some libraries
-   have multiple source directories because of [copy_files]. *)
-(** Directory where the source files for the library are located. *)
-val src_dir : t -> Path.t
-val orig_src_dir : t -> Path.t
+val implements : t -> t Or_exn.t option
 
 (** Directory where the object files for the library are located. *)
-val obj_dir : t -> Obj_dir.t
-val public_cmi_dir : t -> Path.t
+val obj_dir : t -> Path.t Obj_dir.t
 
 (** Same as [Path.is_managed (obj_dir t)] *)
 val is_local : t -> bool
 
-val synopsis     : t -> string option
-val kind         : t -> Lib_kind.t
-val archives     : t -> Path.t list Mode.Dict.t
-val plugins      : t -> Path.t list Mode.Dict.t
-val jsoo_runtime : t -> Path.t list
-val jsoo_archive : t -> Path.t option
-val modes        : t -> Mode.Dict.Set.t
-
-val foreign_objects : t -> Path.t list Lib_info.Source.t
+val info : t -> Path.t Lib_info.t
 
 val main_module_name : t -> Module.Name.t option Or_exn.t
 val wrapped : t -> Wrapped.t option Or_exn.t
 
-val virtual_ : t -> Lib_modules.t Lib_info.Source.t option
+(** [is_impl lib] returns [true] if the library is an implementation
+    of a virtual library *)
+val is_impl : t -> bool
 
 (** A unique integer identifier. It is only unique for the duration of
     the process *)
@@ -53,8 +42,6 @@ module Set : Set.S with type elt = t
 
 module Map : Map.S with type key = t
 
-val status : t -> Lib_info.Status.t
-
 val package : t -> Package.Name.t option
 
 val equal : t -> t -> bool
@@ -65,21 +52,20 @@ module L : sig
   type lib
   type nonrec t = t list
 
-  val to_iflags : Path.Set.t -> ('a, 'b) Arg_spec.t
+  val to_iflags : Path.Set.t -> 'a Command.Args.t
 
-  val include_paths : t -> stdlib_dir:Path.t -> Path.Set.t
-  val include_flags : t -> stdlib_dir:Path.t -> _ Arg_spec.t
+  val include_paths : t -> Path.Set.t
+  val include_flags : t -> _ Command.Args.t
 
-  val c_include_flags : t -> stdlib_dir:Path.t -> _ Arg_spec.t
+  val c_include_flags : t -> _ Command.Args.t
 
-  val link_flags : t -> mode:Mode.t -> stdlib_dir:Path.t -> _ Arg_spec.t
+  val link_flags : t -> mode:Mode.t -> _ Command.Args.t
 
   val compile_and_link_flags
     :  compile:t
     -> link:t
     -> mode:Mode.t
-    -> stdlib_dir:Path.t
-    -> _ Arg_spec.t
+    -> _ Command.Args.t
 
   (** All the library archive files (.a, .cmxa, _stubs.a, ...)  that
       should be linked in when linking an executable. *)
@@ -98,89 +84,17 @@ end with type lib := t
 
 (** Operation on list of libraries and modules *)
 module Lib_and_module : sig
-  type nonrec t =
-    | Lib of t
-    | Module of Module.t
-
-  val link_flags : t list -> mode:Mode.t -> stdlib_dir:Path.t -> _ Arg_spec.t
-
-end
-
-(** {1 Errors} *)
-
-module Error : sig
-  module Library_not_available : sig
-    module Reason : sig
-      type t
-
-      val to_string : t -> string
-      val pp : Format.formatter -> t -> unit
-    end
-
-    type t
-  end
-
-  module No_solution_found_for_select : sig
-    type t
-  end
-
-  module Conflict : sig
-    (** When two libraries in a transitive closure conflict *)
-    type t
-  end
-
-  module Overlap : sig
-    (** A conflict that doesn't prevent compilation, but that we still
-        consider as an error to avoid surprises. *)
-    type t
-  end
-
-  module Multiple_implementations_for_virtual_lib : sig
-    type t
-  end
-
-  module Private_deps_not_allowed : sig
-    type t
-  end
-
-  module Double_implementation : sig
-    type t
-  end
-
-  module No_implementation : sig
-    type t
-  end
-
-  module Not_virtual_lib : sig
-    type t
-  end
-
-  module Default_implementation_cycle : sig
-    type t
-  end
-
+  type lib = t
   type t =
-    | Library_not_available                  of Library_not_available.t
-    | No_solution_found_for_select           of No_solution_found_for_select.t
-    | Dependency_cycle                       of (Path.t * Lib_name.t) list
-    | Conflict                               of Conflict.t
-    | Overlap                                of Overlap.t
-    | Private_deps_not_allowed               of Private_deps_not_allowed.t
-    | Double_implementation                  of Double_implementation.t
-    | No_implementation                      of No_implementation.t
-    | Not_virtual_lib                        of Not_virtual_lib.t
-    | Multiple_implementations_for_virtual_lib  of Multiple_implementations_for_virtual_lib.t
-    | Default_implementation_cycle           of Default_implementation_cycle.t
-end
+    | Lib of lib
+    | Module of Path.t Obj_dir.t * Module.t
 
-exception Error of Error.t
-
-(** Raise a error about a library that is not available *)
-val not_available
-  :  loc:Loc.t
-  -> Error.Library_not_available.Reason.t
-  -> ('a, Format.formatter, unit, 'b) format4
-  -> 'a
+  module L : sig
+    type nonrec t = t list
+    val of_libs : lib list -> t
+    val link_flags : t -> mode:Mode.t -> _ Command.Args.t
+  end
+end with type lib := t
 
 (** {1 Compilation contexts} *)
 
@@ -199,7 +113,7 @@ module Compile : sig
 
   module Resolved_select : sig
     type t =
-      { src_fn : (string, Error.No_solution_found_for_select.t) result
+      { src_fn : string Or_exn.t
       ; dst_fn : string
       }
   end
@@ -228,8 +142,8 @@ module DB : sig
   module Resolve_result : sig
     type nonrec t =
       | Not_found
-      | Found    of Lib_info.t
-      | Hidden   of Lib_info.t * string
+      | Found    of Lib_info.external_
+      | Hidden   of Lib_info.external_ * string
       | Redirect of t option * Lib_name.t
   end
 
@@ -243,31 +157,27 @@ module DB : sig
   *)
   val create
     :  ?parent:t
+    -> stdlib_dir:Path.t
     -> resolve:(Lib_name.t -> Resolve_result.t)
-    -> find_implementations:(Lib_name.t -> Lib_info.t list Variant.Map.t)
     -> all:(unit -> Lib_name.t list)
     -> unit
     -> t
 
-  (** Create a database from a list of library stanzas *)
+  (** Create a database from a list of library/variants stanzas *)
   val create_from_library_stanzas
     :  ?parent:t
     -> lib_config:Lib_config.t
-    -> (Path.t * Dune_file.Library.t) list
+    -> (Path.Build.t * Dune_file.Library.t) list
+    -> Dune_file.External_variant.t list
     -> t
 
   val create_from_findlib
     :  ?external_lib_deps_mode:bool
+    -> stdlib_dir:Path.t
     -> Findlib.t
     -> t
 
-  val find : t -> Lib_name.t -> (lib, Error.Library_not_available.Reason.t) result
-  val find_many
-    :  t
-    -> loc:Loc.t
-    -> Lib_name.t list
-    -> lib list Or_exn.t
-
+  val find : t -> Lib_name.t -> lib option
   val find_even_when_hidden : t -> Lib_name.t -> lib option
 
   val available : t -> Lib_name.t -> bool
@@ -275,8 +185,6 @@ module DB : sig
   (** Retrieve the compile information for the given library. Works
       for libraries that are optional and not available as well. *)
   val get_compile_info : t -> ?allow_overlaps:bool -> Lib_name.t -> Compile.t
-
-  val find_implementations : t -> Lib_name.t -> Lib_info.t list Variant.Map.t
 
   val resolve : t -> Loc.t * Lib_name.t -> lib Or_exn.t
 
@@ -349,7 +257,27 @@ end
 
 val to_dune_lib
   :  t
-  -> lib_modules:Lib_modules.t
+  -> modules:Modules.t
   -> foreign_objects:Path.t list
   -> dir:Path.t
-  -> (Syntax.Version.t * Dune_lang.t list) Dune_package.Lib.t
+  -> (Syntax.Version.t * Dune_lang.t list) Dune_package.Lib.t Or_exn.t
+
+module Local : sig
+  type lib
+  type t = private lib
+
+  val to_dyn : t -> Dyn.t
+  val equal : t -> t -> bool
+  val hash : t -> int
+
+  val of_lib : lib -> t option
+  val of_lib_exn : lib -> t
+  val to_lib : t -> lib
+
+  val info    : t -> Lib_info.local
+  val obj_dir : t -> Path.Build.t Obj_dir.t
+
+  module Set : Stdune.Set.S with type elt = t
+  module Map : Stdune.Map.S with type key = t
+
+end with type lib := t

@@ -71,7 +71,7 @@ let simplify act =
       Run ("cmp", [file1; file2]) :: acc
     | Diff { optional = true; file1; file2; mode = _ } ->
       Sh (Printf.sprintf "test ! -e file1 -o ! -e file2 || diff %s %s"
-            (quote_for_shell file1) (quote_for_shell file2))
+            (String.quote_for_shell file1) (String.quote_for_shell file2))
       :: acc
     | Diff { optional = false; file1; file2; mode = _ } ->
       Run ("diff", [file1; file2]) :: acc
@@ -80,9 +80,9 @@ let simplify act =
             "{ echo -ne %s; cat %s; } | sort -u > %s"
             (Filename.quote (List.map extras ~f:(sprintf "%s\n")
                              |> String.concat ~sep:""))
-            (List.map srcs ~f:quote_for_shell
+            (List.map srcs ~f:String.quote_for_shell
              |> String.concat ~sep:" ")
-            (quote_for_shell target))
+            (String.quote_for_shell target))
       :: acc
   and block act =
     match List.rev (loop act []) with
@@ -91,56 +91,61 @@ let simplify act =
   in
   block act
 
-let quote s = Pp.string (quote_for_shell s)
+let quote s = Pp.verbatim (String.quote_for_shell s)
 
 let rec pp = function
   | Run (prog, args) ->
     Pp.hovbox ~indent:2
-      (quote prog
-       :: List.concat_map args ~f:(fun arg ->
-         [Pp.space; quote arg]))
+      (Pp.concat
+         (quote prog
+          :: List.concat_map args ~f:(fun arg ->
+            [Pp.space; quote arg])))
   | Chdir dir ->
     Pp.hovbox ~indent:2
-      [ Pp.string "cd"
-      ; Pp.space
-      ; quote dir
-      ]
+      (Pp.concat
+         [ Pp.verbatim "cd"
+         ; Pp.space
+         ; quote dir
+         ])
   | Setenv (k, v) ->
-    Pp.concat [Pp.string k; Pp.string "="; quote v]
+    Pp.concat [Pp.verbatim k; Pp.verbatim "="; quote v]
   | Sh s ->
-    Pp.string s
+    Pp.verbatim s
   | Redirect (l, outputs, dest) ->
     let body =
       match l with
       | [x] -> pp x
       | l ->
         Pp.box
-          [ Pp.hvbox ~indent:2
-              [ Pp.char '{'
-              ; Pp.space
-              ; Pp.hvbox [Pp.list l ~f:(fun x -> Pp.seq (pp x) (Pp.char ';'))
-                             ~sep:Pp.space]
-              ]
-          ; Pp.space
-          ; Pp.char '}'
-          ]
+          (Pp.concat
+             [ Pp.hvbox ~indent:2
+                 (Pp.concat
+                    [ Pp.char '{'
+                    ; Pp.space
+                    ; Pp.hvbox (Pp.concat_map l ~sep:Pp.space
+                                  ~f:(fun x -> Pp.seq (pp x) (Pp.char ';')))
+                    ])
+             ; Pp.space
+             ; Pp.char '}'
+             ])
     in
     Pp.hovbox ~indent:2
-      [ body
-      ; Pp.space
-      ; Pp.string (match outputs with
-          | Stdout -> ">"
-          | Stderr -> "2>"
-          | Outputs -> "&>")
-      ; Pp.space
-      ; quote
-          (match dest with
-           | Dev_null -> "/dev/null"
-           | File fn -> fn)
-      ]
+      (Pp.concat
+         [ body
+         ; Pp.space
+         ; Pp.verbatim (match outputs with
+             | Stdout -> ">"
+             | Stderr -> "2>"
+             | Outputs -> "&>")
+         ; Pp.space
+         ; quote
+             (match dest with
+              | Dev_null -> "/dev/null"
+              | File fn -> fn)
+         ])
 
 let rec pp_seq = function
-  | [] -> Pp.string "true"
+  | [] -> Pp.verbatim "true"
   | [x] -> pp x
   | x :: l ->
     Pp.concat

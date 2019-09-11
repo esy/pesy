@@ -117,7 +117,8 @@ module Test = struct
                        ; sprintf "test-cases/%s" t.name]
         ]
       ) ~action
-    |> Dune_lang.pp Dune fmt
+    |> Dune_lang.pp Dune
+    |> Pp.render_ignore_tags fmt
 end
 
 let exclusions =
@@ -132,6 +133,7 @@ let exclusions =
   ; odoc "odoc-unique-mlds"
   ; odoc "github717-odoc-index"
   ; odoc "multiple-private-libs"
+  ; make "cinaps" ~external_deps:true ~enabled:false
   ; make "ppx-rewriter" ~skip_ocaml:"4.02.3" ~external_deps:true
   ; make "cross-compilation" ~external_deps:true
   ; make "dune-ppx-driver-system" ~external_deps:true
@@ -149,6 +151,8 @@ let exclusions =
   ; make "menhir"~external_deps:true
   ; make "utop" ~external_deps:true
   ; make "utop-default" ~external_deps:true ~skip_ocaml:"<4.05.0"
+  ; make "utop-default-implementation"
+      ~external_deps:true ~skip_ocaml:"<4.05.0"
   ; make "toplevel-stanza" ~skip_ocaml:"<4.05.0"
   ; make "configurator" ~skip_platforms:[Win]
   ; make "github764" ~skip_platforms:[Win]
@@ -161,6 +165,7 @@ let exclusions =
   ; make "env" ~skip_ocaml:"<4.06.0"
   ; make "env-cflags" ~skip_ocaml:"<4.06.0"
   ; make "wrapped-transition" ~skip_ocaml:"<4.06.0"
+  ; make "explicit_js_mode" ~external_deps:true ~js:true
   ]
 
 let all_tests = lazy (
@@ -179,7 +184,8 @@ let pp_group fmt (name, tests) =
   alias name ~deps:(
     (List.map tests ~f:(fun (t : Test.t) ->
        Sexp.strings ["alias"; t.name])))
-  |> Dune_lang.pp Dune fmt
+  |> Dune_lang.pp Dune
+  |> Pp.render_ignore_tags fmt
 
 let () =
   let tests = Lazy.force all_tests in

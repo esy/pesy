@@ -14,14 +14,17 @@ Welcome to dune's documentation!
    terminology
    project-layout-specification
    dune-files
+   executables
    tests
    foreign-code
    documentation
+   installation
    usage
    advanced-topics
    configurator
    menhir
    jsoo
+   opam
    variants
    formatting
    coq

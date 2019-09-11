@@ -47,9 +47,11 @@ let description s = rule "description" []      Set s
 let directory   s = rule "directory"   []      Set s
 let archive preds s = rule "archive"   preds Set s
 let plugin preds  s = rule "plugin"    preds Set s
+
 let archives ?(preds=[]) lib =
-  let archives = Lib.archives lib in
-  let plugins  = Lib.plugins  lib in
+  let info = Lib.info lib in
+  let archives = Lib_info.archives info in
+  let plugins  = Lib_info.plugins info in
   let make ps =
     String.concat ~sep:" " (List.map ps ~f:Path.basename)
   in
@@ -60,8 +62,11 @@ let archives ?(preds=[]) lib =
   ]
 
 let gen_lib pub_name lib ~version =
+  let info = Lib.info lib in
+  let synopsis = Lib_info.synopsis info in
+  let kind = Lib_info.kind info in
   let desc =
-    match Lib.synopsis lib with
+    match synopsis with
     | Some s -> s
     | None ->
       (* CR-someday jdimino: wut? this looks old *)
@@ -73,9 +78,9 @@ let gen_lib pub_name lib ~version =
       | _ -> ""
   in
   let preds =
-    match Lib.kind lib with
+    match kind with
     | Normal -> []
-    | Ppx_rewriter | Ppx_deriver -> [Pos "ppx_driver"]
+    | Ppx_rewriter _ | Ppx_deriver _ -> [Pos "ppx_driver"]
   in
   let lib_deps    = Lib.Meta.requires lib in
   let ppx_rt_deps = Lib.Meta.ppx_runtime_deps lib in
@@ -93,9 +98,9 @@ let gen_lib pub_name lib ~version =
         ; Comment "a preprocessor"
         ; ppx_runtime_deps ppx_rt_deps
         ]
-    ; (match Lib.kind lib with
+    ; (match kind with
        | Normal -> []
-       | Ppx_rewriter | Ppx_deriver ->
+       | Ppx_rewriter _ | Ppx_deriver _ ->
          (* Deprecated ppx method support *)
          let no_ppx_driver = Neg "ppx_driver" and no_custom_ppx = Neg "custom_ppx" in
          List.concat
@@ -105,12 +110,12 @@ let gen_lib pub_name lib ~version =
              ; requires ~preds:[no_ppx_driver]
                  (Lib.Meta.ppx_runtime_deps_for_deprecated_method lib)
              ]
-           ; match Lib.kind lib with
+           ; match kind with
            | Normal -> assert false
-           | Ppx_rewriter ->
+           | Ppx_rewriter _ ->
              [ rule "ppx" [no_ppx_driver; no_custom_ppx]
                  Set "./ppx.exe --as-ppx" ]
-           | Ppx_deriver ->
+           | Ppx_deriver _ ->
              [ rule "requires" [no_ppx_driver; no_custom_ppx] Add
                  "ppx_deriving"
              ; rule "ppxopt" [no_ppx_driver; no_custom_ppx] Set
@@ -118,7 +123,7 @@ let gen_lib pub_name lib ~version =
              ]
            ]
       )
-    ; (match Lib.jsoo_runtime lib with
+    ; (match Lib_info.jsoo_runtime info with
        | [] -> []
        | l  ->
          let root = Pub_name.root pub_name in

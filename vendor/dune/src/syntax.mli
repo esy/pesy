@@ -12,21 +12,21 @@ module Version : sig
 
   include Dune_lang.Conv with type t := t
 
+  val pp : t Fmt.t
+
+  val to_dyn : t Dyn.Encoder.t
+
   val hash : t -> int
 
   val equal : t -> t -> bool
 
-  val to_sexp : t Sexp.Encoder.t
-
   val to_string : t -> string
-
-  val pp : t Fmt.t
 
   (** Whether the parser can read the data or not *)
   val can_read : parser_version:t -> data_version:t -> bool
 
   val compare : t -> t -> Ordering.t
-  module Infix : Comparable.OPS with type t = t
+  module Infix : Comparator.OPS with type t = t
 end
 
 type t
@@ -39,7 +39,7 @@ module Error : sig
   val deleted_in
     :  Loc.t
     -> t
-    -> ?repl:string
+    -> ?repl:User_message.Style.t Pp.t list
     -> Version.t
     -> what:string
     -> _
@@ -49,7 +49,7 @@ module Warning : sig
   val deprecated_in
     :  Loc.t
     -> t
-    -> ?repl:string
+    -> ?repl:User_message.Style.t Pp.t list
     -> Version.t
     -> what:string
     -> unit

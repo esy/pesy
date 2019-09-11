@@ -42,6 +42,13 @@ exception ImportsParserFailure(unit);
 /* let%test "getSuffix(): must return suffix" = getSuffix("foo.lib") == "lib"; */
 /* */
 
+let findIndex = (s1, s2) => {
+  let re = Str.regexp_string(s2);
+  try(Str.search_forward(re, s1, 0)) {
+  | Not_found => (-1)
+  };
+};
+
 let resolveRelativePath = path => {
   let separator = "/";
   let revParts = List.rev(Str.split(Str.regexp(separator), path));
@@ -243,7 +250,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
 
   let rootName =
     /* "name" in root package.json */
-    try (
+    try(
       doubleKebabifyIfScoped(
         JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
       )
@@ -261,7 +268,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
 
         let binJSON = JSON.member(conf, "bin");
         let bin =
-          try (
+          try(
             Some(
               {
                 let kvPairs = JSON.toKeyValuePairs(binJSON);
@@ -281,7 +288,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           /* If its a string and not a JSON */
           | JSON.InvalidJSONValue(_) =>
             let binaryMainFile =
-              try (binJSON |> JSON.toValue |> FieldTypes.toString) {
+              try(binJSON |> JSON.toValue |> FieldTypes.toString) {
               | _ => raise(InvalidBinProperty(dir))
               };
             if (!isValidSourceFile(binaryMainFile)) {
@@ -294,7 +301,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
         /* Pesy'name is Dune's public_name */
         /* If name is provided and binary's public_name is also provided in the bin property, name takes precedence */
         let name =
-          try (
+          try(
             JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString
           ) {
           | JSON.NullJSONValue(_) =>
@@ -308,16 +315,15 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
         let (<|>) = (f, g, x) => g(f(x));
         /* "my-package/lib/here" => "my-package.lib.here" */
         let require =
-          try (
+          try(
             JSON.member(conf, "require")
             |> JSON.toValue
             |> FieldTypes.toList
             |> List.map(
                  FieldTypes.toString
                  <|> (
-                   x => {
-                     x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x;
-                   }
+                   x =>
+                     x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x
                  )
                  <|> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x)
                  <|> resolveRelativePath
@@ -329,7 +335,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let imports =
-          try (
+          try(
             JSON.member(conf, "imports")
             |> JSON.toValue
             |> FieldTypes.toList
@@ -368,11 +374,28 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                      )
                      |> resolveRelativePath
                      |> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x);
+
                    let exportedNamespace =
-                     libraryAsPath
-                     |> String.split_on_char('/')
-                     |> List.map(upperCamelCasify)
-                     |> List.fold_left((++), "");
+                     if (findIndex(libraryAsPath, rootName) != (-1)) {
+                       libraryAsPath
+                       |> String.split_on_char('/')
+                       |> List.map(upperCamelCasify)
+                       |> List.fold_left((++), "");
+                     } else {
+                       /** ie. external library. We use findlib and figure out namespace **/
+                       Str.global_replace(
+                         Str.regexp("\\.cmxa"),
+                         "",
+                         Findlib.package_property(
+                           ["native"],
+                           pathToOCamlLibName(libraryAsPath),
+                           "archive",
+                         ),
+                       )
+                       |> String.mapi((i, c) =>
+                            i == 0 ? Char.uppercase_ascii(c) : c
+                          );
+                     };
 
                    PesyModule.Alias.create(
                      ~alias=
@@ -387,7 +410,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                  }),
           );
         let flags =
-          try (
+          try(
             Some(
               JSON.member(conf, "flags")
               |> JSON.toValue
@@ -399,7 +422,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let ocamlcFlags =
-          try (
+          try(
             Some(
               JSON.member(conf, "ocamlcFlags")
               |> JSON.toValue
@@ -411,7 +434,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let ocamloptFlags =
-          try (
+          try(
             Some(
               JSON.member(conf, "ocamloptFlags")
               |> JSON.toValue
@@ -423,7 +446,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let jsooFlags =
-          try (
+          try(
             Some(
               JSON.member(conf, "jsooFlags")
               |> JSON.toValue
@@ -435,7 +458,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let preprocess =
-          try (
+          try(
             Some(
               JSON.member(conf, "preprocess")
               |> JSON.toValue
@@ -447,7 +470,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let includeSubdirs =
-          try (
+          try(
             Some(
               JSON.member(conf, "includeSubdirs")
               |> JSON.toValue
@@ -459,7 +482,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let rawBuildConfig =
-          try (
+          try(
             Some(
               JSON.member(conf, "rawBuildConfig")
               |> JSON.toValue
@@ -471,7 +494,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
 
         let rawBuildConfigFooter =
-          try (
+          try(
             Some(
               JSON.member(conf, "rawBuildConfigFooter")
               |> JSON.toValue
@@ -507,7 +530,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
               moduleNameOf(mainFileName)
 
             | _ =>
-              try (
+              try(
                 JSON.member(conf, "main")
                 |> JSON.toValue
                 |> FieldTypes.toString
@@ -526,7 +549,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             };
 
           let modes =
-            try (
+            try(
               Some(
                 Executable.Mode.ofList(
                   JSON.member(conf, "modes")
@@ -546,7 +569,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
           };
         } else {
           let namespace =
-            try (
+            try(
               JSON.member(conf, "namespace")
               |> JSON.toValue
               |> FieldTypes.toString
@@ -559,7 +582,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             | e => raise(e)
             };
           let libraryModes =
-            try (
+            try(
               Some(
                 JSON.member(conf, "modes")
                 |> JSON.toValue
@@ -572,7 +595,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             | e => raise(e)
             };
           let cStubs =
-            try (
+            try(
               Some(
                 JSON.member(conf, "cNames")
                 |> JSON.toValue
@@ -584,7 +607,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             | e => raise(e)
             };
           let virtualModules =
-            try (
+            try(
               Some(
                 JSON.member(conf, "virtualModules")
                 |> JSON.toValue
@@ -596,7 +619,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             | e => raise(e)
             };
           let implements =
-            try (
+            try(
               Some(
                 JSON.member(conf, "implements")
                 |> JSON.toValue
@@ -618,7 +641,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             | e => raise(e)
             };
           let wrapped =
-            try (
+            try(
               Some(
                 JSON.member(conf, "wrapped")
                 |> JSON.toValue
@@ -718,7 +741,7 @@ let gen = (projectPath, pkgPath) => {
       mkdirp(path);
 
       let duneFileStr = DuneFile.toString(duneFile);
-      try (
+      try(
         if (duneFile != DuneFile.ofFile(duneFilePath)) {
           write(duneFilePath, duneFileStr);
           operations :=
@@ -755,7 +778,7 @@ let gen = (projectPath, pkgPath) => {
   let foundAnOpamFile = ref(false);
   let dirForEachEntry = (f, dirname) => {
     let d = Unix.opendir(dirname);
-    try (
+    try(
       while (true) {
         f(Unix.readdir(d));
       }
@@ -764,7 +787,7 @@ let gen = (projectPath, pkgPath) => {
     };
   };
   let contains = (n, s) =>
-    try (Str.search_forward(Str.regexp(s), n, 0) != (-1)) {
+    try(Str.search_forward(Str.regexp(s), n, 0) != (-1)) {
     | Not_found => false
     };
 
@@ -1278,7 +1301,7 @@ let validateDuneFiles = (projectPath, pkgPath) => {
   let foundAnOpamFile = ref(false);
   let dirForEachEntry = (f, dirname) => {
     let d = Unix.opendir(dirname);
-    try (
+    try(
       while (true) {
         f(Unix.readdir(d));
       }
@@ -1287,7 +1310,7 @@ let validateDuneFiles = (projectPath, pkgPath) => {
     };
   };
   let contains = (n, s) =>
-    try (Str.search_forward(Str.regexp(s), n, 0) != (-1)) {
+    try(Str.search_forward(Str.regexp(s), n, 0) != (-1)) {
     | Not_found => false
     };
 

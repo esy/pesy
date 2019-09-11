@@ -9,12 +9,14 @@ open Import
 type t
 (** A sequence of text and variables. *)
 
+val compare_no_loc: t -> t -> Ordering.t
+
 val loc : t -> Loc.t
 (** [loc t] returns the location of [t] — typically, in the jbuild file. *)
 
 val syntax_version : t -> Syntax.Version.t
 
-val to_sexp : t Sexp.Encoder.t
+val to_dyn : t Dyn.Encoder.t
 
 include Dune_lang.Conv with type t := t
 
@@ -41,16 +43,10 @@ module Mode : sig
     | Many : Value.t list t
 end
 
-module Partial : sig
-  type nonrec 'a t =
-    | Expanded of 'a
-    | Unexpanded of t
-end
-
 module Var : sig
   type t
 
-  val to_sexp : t -> Sexp.t
+  val to_dyn : t -> Dyn.t
 
   val name : t -> string
   val loc : t -> Loc.t
@@ -64,6 +60,40 @@ module Var : sig
   (** Describe what this variable is *)
   val describe : t -> string
 end
+
+type yes_no_unknown =
+  | Yes | No | Unknown of Var.t
+
+module Partial : sig
+  type nonrec 'a t =
+    | Expanded of 'a
+    | Unexpanded of t
+
+  val to_dyn : ('a -> Dyn.t) -> 'a t -> Dyn.t
+
+  val map : 'a t -> f:('a -> 'b) -> 'b t
+
+  val is_suffix : string t -> suffix:string -> yes_no_unknown
+
+  val is_prefix : string t -> prefix:string -> yes_no_unknown
+end
+
+type known_suffix =
+  | Full of string
+  | Partial of (Var.t * string)
+
+type known_prefix =
+  | Full of string
+  | Partial of (string * Var.t)
+
+val known_suffix : t -> known_suffix
+
+val known_prefix : t -> known_prefix
+
+val is_suffix : t -> suffix:string -> yes_no_unknown
+
+val is_prefix : t -> prefix:string -> yes_no_unknown
+val fold_vars : t -> init:'a -> f:(Var.t -> 'a -> 'a) -> 'a
 
 type 'a expander = Var.t -> Syntax.Version.t -> 'a
 

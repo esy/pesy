@@ -11,11 +11,7 @@ open Dune_file
 
 type t
 
-val equal : t -> t -> bool
-val hash : t -> int
-
 val to_dyn : t -> Dyn.t
-val to_sexp : t -> Sexp.t
 
 val create
   :  context:Context.t
@@ -29,12 +25,12 @@ val create
 
 val context   : t -> Context.t
 val stanzas   : t -> Stanzas.t Dir_with_dune.t list
-val stanzas_in : t -> dir:Path.t -> Stanzas.t Dir_with_dune.t option
+val stanzas_in : t -> dir:Path.Build.t -> Stanzas.t Dir_with_dune.t option
 val packages  : t -> Package.t Package.Name.Map.t
-val libs_by_package : t -> (Package.t * Lib.Set.t) Package.Name.Map.t
+val libs_by_package : t -> (Package.t * Lib.Local.Set.t) Package.Name.Map.t
 val file_tree : t -> File_tree.t
 val artifacts : t -> Artifacts.t
-val build_dir : t -> Path.t
+val build_dir : t -> Path.Build.t
 val profile   : t -> string
 val host : t -> t
 val external_lib_deps_mode : t -> bool
@@ -52,26 +48,31 @@ val internal_lib_names : t -> Lib_name.Set.t
     buildable stanza *)
 val ocaml_flags
   :  t
-  -> dir:Path.t
+  -> dir:Path.Build.t
   -> Buildable.t
   -> Ocaml_flags.t
 
 val c_flags
   :  t
-  -> dir:Path.t
+  -> dir:Path.Build.t
   -> expander:Expander.t
-  -> lib:Library.t
+  -> flags:Ordered_set_lang.Unexpanded.t C.Kind.Dict.t
   -> (unit, string list) Build.t C.Kind.Dict.t
 
 (** Binaries that are symlinked in the associated .bin directory of [dir]. This
     associated directory is [Path.relative dir ".bin"] *)
-val local_binaries : t -> dir:Path.t -> File_binding.Expanded.t list
+val local_binaries : t -> dir:Path.Build.t -> File_binding.Expanded.t list
 
 (** Dump a directory environment in a readable form *)
-val dump_env : t -> dir:Path.t -> (unit, Dune_lang.t list) Build.t
+val dump_env : t -> dir:Path.Build.t -> (unit, Dune_lang.t list) Build.t
 
-val find_scope_by_dir  : t -> Path.t              -> Scope.t
-val find_scope_by_name : t -> Dune_project.Name.t -> Scope.t
+val find_scope_by_dir  : t -> Path.Build.t        -> Scope.t
+val find_scope_by_name : t -> Dune_project.Name.t -> Scope.t list
+val find_scope_by_project : t -> Dune_project.t -> Scope.t
+val find_project_by_key : t -> Dune_project.File_key.t -> Dune_project.t
+
+(** Tells whether the given source directory is marked as vendored *)
+val dir_is_vendored : t -> Path.Source.t -> bool
 
 val add_rule
   :  t
@@ -79,7 +80,7 @@ val add_rule
   -> ?mode:Dune_file.Rule.Mode.t
   -> ?locks:Path.t list
   -> ?loc:Loc.t
-  -> dir:Path.t
+  -> dir:Path.Build.t
   -> (unit, Action.t) Build.t
   -> unit
 val add_rule_get_targets
@@ -88,26 +89,26 @@ val add_rule_get_targets
   -> ?mode:Dune_file.Rule.Mode.t
   -> ?locks:Path.t list
   -> ?loc:Loc.t
-  -> dir:Path.t
+  -> dir:Path.Build.t
   -> (unit, Action.t) Build.t
-  -> Path.t list
+  -> Path.Build.Set.t
 val add_rules
   :  t
   -> ?sandbox:bool
-  -> dir:Path.t
+  -> dir:Path.Build.t
   -> (unit, Action.t) Build.t list
   -> unit
 val add_alias_action
   :  t
   -> Build_system.Alias.t
-  -> dir:Path.t
+  -> dir:Path.Build.t
   -> loc:Loc.t option
   -> ?locks:Path.t list
   -> stamp:_
   -> (unit, Action.t) Build.t
   -> unit
 
-val source_files : t -> src_path:Path.t -> String.Set.t
+val source_files : t -> src_path:Path.Source.t -> String.Set.t
 
 (** [prog_spec t ?hint name] resolve a program. [name] is looked up in the
     workspace, if it is not found in the tree is is looked up in the PATH. If it
@@ -118,7 +119,7 @@ val source_files : t -> src_path:Path.t -> String.Set.t
 *)
 val resolve_program
   :  t
-  -> dir:Path.t
+  -> dir:Path.Build.t
   -> ?hint:string
   -> loc:Loc.t option
   -> string
@@ -136,23 +137,29 @@ module Libs : sig
   val with_lib_deps
     :  t
     -> Lib.Compile.t
-    -> dir:Path.t
+    -> dir:Path.Build.t
     -> f:(unit -> 'a)
     -> 'a
 
   (** Generate the rules for the [(select ...)] forms in library dependencies *)
-  val gen_select_rules : t -> dir:Path.t -> Lib.Compile.t -> unit
+  val gen_select_rules : t -> dir:Path.Build.t -> Lib.Compile.t -> unit
 end
 
 (** Interpret dependencies written in jbuild files *)
 module Deps : sig
-  (** Evaluates to the actual list of dependencies, ignoring aliases *)
+
+  (** Evaluates to the actual list of dependencies, ignoring aliases,
+      and registers them as the action dependencies. *)
   val interpret
     :  t
     -> expander:Expander.t
     -> Dep_conf.t list
-    -> (unit, Path.t list) Build.t
+    -> (unit, unit) Build.t
 
+  (** Evaluates to the actual list of dependencies, ignoring aliases,
+      and registers them as the action dependencies.
+
+      It returns bindings that are later used for action expansion. *)
   val interpret_named
     :  t
     -> expander:Expander.t
@@ -162,14 +169,17 @@ end
 
 (** Interpret action written in jbuild files *)
 module Action : sig
-  (** The arrow takes as input the list of actual dependencies *)
+
+  (** The arrow takes as input the list of dependencies written by user, which
+      is used for action expansion. These must be registered with the build
+      arrow before calling [run]. *)
   val run
     :  t
     -> loc:Loc.t
     -> expander:Expander.t
     -> dep_kind:Lib_deps_info.Kind.t
     -> targets:Expander.Targets.t
-    -> targets_dir:Path.t
+    -> targets_dir:Path.Build.t
     -> Action_unexpanded.t
     -> (Path.t Bindings.t, Action.t) Build.t
 
@@ -177,17 +187,24 @@ module Action : sig
 end
 
 module Pkg_version : sig
-  val set : t -> Package.t -> (unit, string option) Build.t -> (unit, string option) Build.t
-end
+  val set
+    :  t
+    -> Package.t
+    -> (unit, string option) Build.t
+    -> (unit, string option) Build.t
 
-module Scope_key : sig
-  val of_string : t -> string -> string * Lib.DB.t
-
-  val to_string : string -> Dune_project.Name.t -> string
+  val read : t -> Package.t -> (unit, string option) Build.t
 end
 
 val opaque : t -> bool
 
-val expander : t -> dir:Path.t -> Expander.t
+val expander : t -> dir:Path.Build.t -> Expander.t
 
 val dir_status_db : t -> Dir_status.DB.t
+
+module As_memo_key : sig
+  type nonrec t = t
+  val to_dyn : t -> Dyn.t
+  val equal : t -> t -> bool
+  val hash : t -> int
+end

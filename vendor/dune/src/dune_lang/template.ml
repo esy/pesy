@@ -2,13 +2,43 @@ open! Stdune
 
 include Types.Template
 
+let compare_var_syntax x y =
+  match x, y with
+  | Percent, Percent
+  | Dollar_brace, Dollar_brace
+  | Dollar_paren, Dollar_paren -> Ordering.Eq
+  | Percent, (Dollar_brace | Dollar_paren) -> Ordering.Lt
+  | (Dollar_brace | Dollar_paren), Percent -> Ordering.Gt
+  | Dollar_brace, Dollar_paren -> Ordering.Lt
+  | Dollar_paren, Dollar_brace -> Ordering.Gt
+
+let compare_var_no_loc v1 v2 =
+   match String.compare v1.name v2.name with
+   | Ordering.Lt | Gt as a -> a
+   | Eq ->
+       match Option.compare String.compare v1.payload v2.payload with
+       | Ordering.Lt | Gt as a -> a
+       | Eq -> compare_var_syntax v1.syntax v2.syntax
+
+let compare_part p1 p2 =
+   match p1, p2 with
+   | Text s1, Text s2 -> String.compare s1 s2
+   | Var v1, Var v2 -> compare_var_no_loc v1 v2
+   | Text _, Var _ -> Ordering.Lt
+   | Var _, Text _ -> Ordering.Gt
+
+let compare_no_loc t1 t2 =
+  match List.compare ~compare:compare_part t1.parts t2.parts with
+  | Ordering.Lt | Gt as a -> a
+  | Eq -> Bool.compare t1.quoted t2.quoted
+
 let var_enclosers = function
   | Percent      -> "%{", "}"
   | Dollar_brace -> "${", "}"
   | Dollar_paren -> "$(", ")"
 
 module Pp : sig
-  val to_string : t -> syntax:Syntax.t -> string
+  val to_string : t -> syntax:File_syntax.t -> string
 end = struct
   let buf = Buffer.create 16
 
@@ -27,8 +57,8 @@ end = struct
   (* TODO use the loc for the error *)
   let check_valid_unquoted s ~syntax ~loc:_ =
     if not (Atom.is_valid (Atom.of_string s) syntax) then
-      Exn.code_error "Invalid text in unquoted template"
-        ["s", Sexp.Encoder.string s]
+      Code_error.raise "Invalid text in unquoted template"
+        ["s", String s]
 
   let to_string { parts; quoted; loc } ~syntax =
     Buffer.clear buf;
@@ -65,11 +95,10 @@ let string_of_var { loc = _; syntax; name; payload } =
   | None -> before ^ name ^ after
   | Some p -> before ^ name ^ ":" ^ p ^ after
 
-let pp syntax ppf t =
-  Format.pp_print_string ppf (Pp.to_string ~syntax t)
+let pp syntax t = Stdune.Pp.verbatim (Pp.to_string ~syntax t)
 
 let pp_split_strings ppf (t : t) =
-  let syntax = Syntax.Dune in
+  let syntax = File_syntax.Dune in
   if t.quoted || List.exists t.parts ~f:(function
     | Text s -> String.contains s '\n'
     | Var _ -> false) then begin
@@ -90,7 +119,7 @@ let pp_split_strings ppf (t : t) =
     Format.fprintf ppf "@}\"@]"
   end
   else
-    pp syntax ppf t
+    Format.pp_print_string ppf (Pp.to_string ~syntax t)
 
 let remove_locs t =
   { t with
@@ -100,3 +129,31 @@ let remove_locs t =
         | Var v -> Var { v with loc = Loc.none }
         | Text _ as s -> s)
   }
+
+let dyn_of_var_syntax =
+  let open Dyn.Encoder in
+  function
+  | Dollar_brace -> constr "Dollar_brace" []
+  | Dollar_paren -> constr "Dollar_paren" []
+  | Percent -> constr "Percent" []
+
+let dyn_of_var { loc = _; name; payload; syntax } =
+  let open Dyn.Encoder in
+  record
+    [ "name", string name
+    ; "payload", option string payload
+    ; "syntax", dyn_of_var_syntax syntax
+    ]
+
+let dyn_of_part =
+  let open Dyn.Encoder in
+  function
+  | Text s -> constr "Text" [string s]
+  | Var v -> constr "Var" [dyn_of_var v]
+
+let to_dyn { quoted ; parts; loc = _ } =
+  let open Dyn.Encoder in
+  record
+    [ "quoted", bool quoted
+    ; "parts", list dyn_of_part parts
+    ]

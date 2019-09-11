@@ -1,6 +1,52 @@
 open! Stdune
 open Fiber.O
 
+let on_already_reported = ref Exn_with_backtrace.reraise
+
+module Code_error_with_memo_backtrace = struct
+
+  (* A single memo frame and the OCaml frames it called which lead to the
+     error *)
+  type frame = {
+    ocaml : string;
+    memo : Dyn.t;
+  }
+
+  type t = {
+    exn : Code_error.t;
+    reverse_backtrace : frame list;
+    (* [outer_call_stack] is a trick to capture some of the information
+       that's lost by the async memo error handler. It can be safely ignored by
+       the sync error handler. *)
+    outer_call_stack : Dyn.t;
+  }
+
+  type exn += E of t
+
+  let frame_to_dyn { ocaml; memo } =
+    Dyn.Record [
+      "ocaml", Dyn.String ocaml;
+      "memo", memo;
+    ]
+
+  let to_dyn { exn; reverse_backtrace; outer_call_stack } =
+    Dyn.Record [
+      "exn", Code_error.to_dyn exn;
+      "backtrace", Dyn.Encoder.list frame_to_dyn (List.rev reverse_backtrace);
+      "outer_call_stack", outer_call_stack;
+    ]
+
+  let () =
+    Printexc.register_printer (function
+      | E t -> Some (Dyn.to_string (to_dyn t))
+      | _ -> None)
+
+end
+
+
+
+let already_reported exn = Nothing.unreachable_code (!on_already_reported exn)
+
 module Function_name = Interned.Make(struct
     let initial_size = 1024
     let resize_policy = Interned.Greedy
@@ -24,7 +70,8 @@ module Function = struct
     | Async : ('a -> 'b Fiber.t) -> ('a, 'b, ('a -> 'b Fiber.t)) t
 
   let of_type
-        (type a) (type b) (type f) (t : (a, b, f) Function_type.t) (f : f) : (a, b, f) t =
+        (type a) (type b) (type f) (t : (a, b, f) Function_type.t)
+        (f : f) : (a, b, f) t =
     match t with
     | Function_type.Sync -> Sync f
     | Function_type.Async -> Async f
@@ -68,18 +115,17 @@ end
 
 module type Output_simple = sig
   type t
-  val to_sexp : t -> Sexp.t
+  val to_dyn : t -> Dyn.t
 end
 
 module type Output_allow_cutoff = sig
   type t
-  val to_sexp : t -> Sexp.t
+  val to_dyn : t -> Dyn.t
   val equal : t -> t -> bool
 end
 
 module type Input = sig
   type t
-  val to_sexp : t -> Sexp.t
   include Table.Key with type t := t
 end
 
@@ -106,7 +152,7 @@ module Spec = struct
   let register t =
     match find t.name with
     | Some _ ->
-      Exn.code_error "[Spec.register] called twice on the same function" []
+      Code_error.raise "[Spec.register] called twice on the same function" []
     | None ->
       Function_name.Table.set by_name ~key:t.name ~data:(Some (T t))
 
@@ -167,10 +213,11 @@ module M = struct
 
   and State : sig
     type 'a t =
-      (* [Running] includes computations that already terminated with an exception
-         or cancelled because we've advanced to the next run. *)
+      (* [Running] includes computations that already terminated with an
+         exception or cancelled because we've advanced to the next run. *)
       | Running_sync of Run.t
       | Running_async of Run.t * 'a Fiber.Ivar.t
+      | Failed of Run.t * Exn_with_backtrace.t
       | Done of 'a Cached_value.t
   end = State
 
@@ -222,15 +269,21 @@ module Cached_value = struct
       let dep_changed = function
         | Last_dep.T (node, prev_output) ->
           match node.state with
+          | Failed (run, exn) ->
+            if Run.is_current run then
+              already_reported exn
+            else
+              true
           | Running_sync run ->
             if Run.is_current run then
-              Exn.code_error "dependency_cycle" []
+              Code_error.raise "dependency_cycle 1" []
             else
               true
           | Running_async _ ->
-            Exn.code_error
-              "Synchronous function depends on an asynchronous one. That is not allowed. \
-               (in fact this case should be unreachable)" []
+            Code_error.raise
+              "Synchronous function depends on an asynchronous \
+               one. That is not allowed. (in fact this case should be \
+               unreachable)" []
           | Done t' ->
             get_sync t' |> function
             | None -> true
@@ -254,8 +307,14 @@ module Cached_value = struct
           Fiber.parallel_map acc ~f:Fn.id >>| List.exists ~f:Fn.id
         | Last_dep.T (node, prev_output) :: deps ->
           match node.state with
+          | Failed (run, exn) ->
+            if Run.is_current run then
+              already_reported exn
+            else
+              Fiber.return true
           | Running_sync _ ->
-            Exn.code_error "Synchronous function called [Cached_value.get_async]" []
+            Code_error.raise "Synchronous function called \
+                              [Cached_value.get_async]" []
           | Running_async (run, ivar) ->
             if not (Run.is_current run) then
               Fiber.return true
@@ -298,7 +357,7 @@ end
 
 let ser_input (type a) (node : (a, _, _) Dep_node.t) =
   let (module Input : Input with type t = a) = node.spec.input in
-  Input.to_sexp node.input
+  Input.to_dyn node.input
 
 let dag_node (dep_node : _ Dep_node.t) = Lazy.force dep_node.dag_node
 
@@ -314,10 +373,7 @@ module Stack_frame0 = struct
   let equal (T a) (T b) = Id.equal a.id b.id
   let compare (T a) (T b) = Id.compare a.id b.id
 
-  let pp ppf t =
-    Format.fprintf ppf "%s %a"
-      (name t)
-      Sexp.pp (input t)
+  let to_dyn t = Dyn.Tuple [String (name t); input t]
 end
 
 module To_open = struct
@@ -348,6 +404,10 @@ module Call_stack = struct
   let get_call_stack () =
     Fiber.Var.get call_stack_key |> Option.value ~default:[]
 
+  let get_call_stack_as_dyn () =
+    Dyn.Encoder.list
+      Stack_frame.to_dyn (get_call_stack ())
+
   let get_call_stack_tip () =
     List.hd_opt (get_call_stack ())
 
@@ -363,16 +423,16 @@ module Call_stack = struct
 
 end
 
-let pp_stack ppf () =
+let pp_stack () =
+  let open Pp.O in
   let stack = Call_stack.get_call_stack () in
-  Format.fprintf ppf "Memoized function stack:@\n";
-  Format.pp_print_list ~pp_sep:Fmt.nl
-    (fun ppf t -> Format.fprintf ppf "  %a" Stack_frame.pp t)
-    ppf
-    stack
+  Pp.vbox
+    (Pp.box (Pp.text "Memoized function stack:") ++ Pp.cut ++
+     Pp.chain stack ~f:(fun frame ->
+       Dyn.pp (Stack_frame.to_dyn frame)))
 
 let dump_stack () =
-  Format.eprintf "%a" pp_stack ()
+  Format.eprintf "%a" Pp.render_ignore_tags (pp_stack ())
 
 let add_rev_dep dep_node =
   match Call_stack.get_call_stack_tip () with
@@ -394,6 +454,7 @@ let get_deps_from_graph_exn dep_node =
   Dag.children (dag_node dep_node)
   |> List.map ~f:(fun { Dag.data = Dep_node.T node; _ } ->
     match node.state with
+    | Failed _ -> assert false
     | Running_sync _ -> assert false
     | Running_async _ -> assert false
     | Done res ->
@@ -402,15 +463,15 @@ let get_deps_from_graph_exn dep_node =
 type ('input, 'output, 'f) t =
   { spec  : ('input, 'output, 'f) Spec.t
   ; cache : ('input, ('input, 'output, 'f) Dep_node.t) Table.t
-  ; fdecl : 'f Fdecl.t option
   }
 
 module Stack_frame = struct
-  type ('input, 'output, 'fdecl) memo = ('input, 'output, 'fdecl) t
+  type ('input, 'output, 'f) memo = ('input, 'output, 'f) t
 
   include Stack_frame0
 
-  let as_instance_of (type i) (Dep_node.T t) ~of_:(memo : (i, _, _) memo) : i option =
+  let as_instance_of
+        (type i) (Dep_node.T t) ~of_:(memo : (i, _, _) memo) : i option =
     match Witness.same memo.spec.witness t.spec.witness with
     | Some Type_eq.T ->
       Some t.input
@@ -436,28 +497,15 @@ let create (type i) (type o) (type f)
       ~visibility
       ~(output : o Output.t)
       (typ : (i, o, f) Function_type.t)
-      (body : f option)
+      (f : f)
   =
   let name = Function_name.make name in
-  let fdecl, f =
-    match body with
-    | None ->
-      let decl_and_get () =
-        let f = Fdecl.create () in
-        Some f, (fun x -> Fdecl.get f x)
-      in
-      ((match typ with
-       | Function_type.Sync -> decl_and_get ()
-       | Function_type.Async -> decl_and_get ()) : f Fdecl.t option * f)
-    | Some f ->
-      None, f
-  in
   let decode : i Dune_lang.Decoder.t =
     match visibility with
     | Visibility.Hidden ->
       let open Dune_lang.Decoder in
       let+ loc = loc in
-      Exn.fatalf ~loc "<not-implemented>"
+      User_error.raise ~loc [ Pp.text "<not-implemented>" ]
     | Public decode -> decode
   in
   let (output : (module Output_simple with type t = o)), allow_cutoff =
@@ -486,15 +534,63 @@ let create (type i) (type o) (type f)
   Caches.register ~clear:(fun () -> Table.clear cache);
   { cache
   ; spec
-  ; fdecl
   }
 
+let create_hidden (type output) name ~doc ~input typ impl =
+  let module O =
+  struct
+    type t = output
+    let to_dyn (_ : t) = Dyn.Opaque
+  end
+  in
+  create
+    ~output:(Simple (module O))
+    ~visibility:Hidden name ~doc ~input typ impl
+
 module Exec_sync = struct
-    let compute t inp dep_node =
+  let compute t run inp dep_node =
     (* define the function to update / double check intermediate result *)
     (* set context of computation then run it *)
-    let res = Call_stack.push_sync_frame (T dep_node) (fun () -> match t.spec.f with
-      | Function.Sync f -> f inp)
+    let res =
+      match Call_stack.push_sync_frame (T dep_node) (fun () ->
+        match t.spec.f with
+        | Function.Sync f ->
+          (* If [f] raises an exception, [push_sync_frame] re-raises it twice,
+             so you'd end up with ugly "re-raised by" stack frames.
+             Catching it here cuts the backtrace to just the desired part. *)
+          Exn_with_backtrace.try_with (fun () -> f inp))
+      with
+      | Error exn ->
+        dep_node.state <- Failed (run, exn);
+        let code_error (e : Code_error_with_memo_backtrace.t) =
+          let bt = exn.backtrace in
+          let {
+            Code_error_with_memo_backtrace.
+            exn; reverse_backtrace; outer_call_stack = _
+          } = e
+          in
+          (Code_error_with_memo_backtrace.E {
+             exn;
+             reverse_backtrace = {
+               ocaml = Printexc.raw_backtrace_to_string bt;
+               memo = Stack_frame.to_dyn (T dep_node);
+             } :: reverse_backtrace;
+             outer_call_stack = Call_stack.get_call_stack_as_dyn ();
+           })
+        in
+        (match exn.exn with
+         | Code_error.E exn ->
+           raise (code_error {
+             Code_error_with_memo_backtrace.
+             exn;
+             reverse_backtrace = [];
+             outer_call_stack = Dyn.String "<n/a>";
+           })
+         | Code_error_with_memo_backtrace.E e ->
+           raise (code_error e)
+         | _exn ->
+           Exn_with_backtrace.reraise exn)
+      | Ok res -> res
     in
     (* update the output cache with the correct value *)
     let deps =
@@ -504,18 +600,20 @@ module Exec_sync = struct
     res
 
   let recompute t inp (dep_node : _ Dep_node.t) =
-    dep_node.state <- Running_sync (Run.current ());
-    compute t inp dep_node
+    let run = Run.current () in
+    dep_node.state <- Running_sync run;
+    compute t run inp dep_node
 
   let exec t inp =
     match Table.find t.cache inp with
     | None ->
+      let run = Run.current () in
       let dep_node : _ Dep_node.t =
         { id = Id.gen ()
         ; input = inp
         ; spec = t.spec
         ; dag_node = lazy (assert false)
-        ; state = Running_sync (Run.current ())
+        ; state = Running_sync run
         }
       in
       let dag_node : Dag.node =
@@ -524,19 +622,27 @@ module Exec_sync = struct
         }
       in
       dep_node.dag_node <- lazy dag_node;
-      Table.add t.cache inp dep_node;
+      Table.set t.cache inp dep_node;
       add_rev_dep dag_node;
-      compute t inp dep_node
+      compute t run inp dep_node
     | Some dep_node ->
       add_rev_dep (dag_node dep_node);
       match dep_node.state with
+      | Failed (run, exn) ->
+        if Run.is_current run then
+          Nothing.unreachable_code (!on_already_reported exn)
+        else
+          recompute t inp dep_node
       | Running_async _ ->
         assert false
       | Running_sync run ->
         if Run.is_current run then
           (* hopefully this branch should be unreachable and [add_rev_dep]
              reports a cycle above instead *)
-          Exn.code_error "dependency_cycle" []
+          Code_error.raise "bug: unreported sync dependency_cycle"
+            [ "stack", Call_stack.get_call_stack_as_dyn ()
+            ; "adding", Stack_frame.to_dyn (T dep_node);
+            ]
         else
           recompute t inp dep_node
       | Done cv ->
@@ -561,6 +667,10 @@ module Exec_async = struct
     let deps =
       get_deps_from_graph_exn dep_node
     in
+    (* CR-someday aalekseyev:
+       Set [dep_node.state] to [Failed] if there are errors file running [f].
+       Currently not doing that because sometimes [f] both returns a
+       result and keeps producing errors. Not sure why. *)
     dep_node.state <- Done (Cached_value.create res ~deps);
     (* fill the ivar for any waiting threads *)
     Fiber.Ivar.fill ivar res >>= fun () ->
@@ -592,12 +702,17 @@ module Exec_async = struct
         }
       in
       dep_node.dag_node <- lazy dag_node;
-      Table.add t.cache inp dep_node;
+      Table.set t.cache inp dep_node;
       add_rev_dep dag_node;
       compute t inp ivar dep_node
     | Some dep_node ->
       add_rev_dep (dag_node dep_node);
       match dep_node.state with
+      | Failed (run, exn) ->
+        if Run.is_current run then
+          already_reported exn
+        else
+          recompute t inp dep_node
       | Running_sync _ -> assert false
       | Running_async (run, fut) ->
         if Run.is_current run then
@@ -623,6 +738,7 @@ let peek t inp =
     match dep_node.state with
     | Running_sync _ -> None
     | Running_async _ -> None
+    | Failed _ -> None
     | Done cv ->
       if Run.is_current cv.calculated_at then
         Some cv.data
@@ -631,15 +747,12 @@ let peek t inp =
 
 let peek_exn t inp = Option.value_exn (peek t inp)
 
-let set_impl t f =
-  match t.fdecl with
-  | None -> Exn.code_error "Memo.set_impl" []
-  | Some fdecl -> Fdecl.set fdecl f
-
 let get_deps t inp =
   match Table.find t.cache inp with
   | None | Some { state = Running_async _; _ } -> None
   | Some { state = Running_sync _; _ } ->
+    None
+  | Some { state = Failed _; _ } ->
     None
   | Some { state = Done cv; _ } ->
     Some (List.map cv.deps ~f:(fun (Last_dep.T (n,_u)) ->
@@ -650,7 +763,7 @@ let get_func name =
     let open Option.O in
     Function_name.get name >>= Spec.find
   with
-  | None -> Exn.fatalf "@{<error>Error@}: function %s doesn't exist!" name
+  | None -> User_error.raise [ Pp.textf "function %s doesn't exist!" name ]
   | Some spec -> spec
 
 let call name input =
@@ -662,7 +775,7 @@ let call name input =
      | Function.Async f -> f
      | Function.Sync f -> (fun x -> Fiber.return (f x))) input
   in
-  Output.to_sexp output
+  Output.to_dyn output
 
 module Function_info = struct
   type t =
@@ -701,7 +814,7 @@ module Lazy_id = Stdune.Id.Make()
 let lazy_ (type a) f =
   let module Output = struct
     type t = a
-    let to_sexp _ = Sexp.Atom "<opaque>"
+    let to_dyn _ = Dyn.Opaque
     let equal = (==)
   end
   in
@@ -714,7 +827,7 @@ let lazy_ (type a) f =
       ~visibility:Hidden
       ~output:(Allow_cutoff (module Output))
       Sync
-      (Some f)
+      f
   in
   (fun () -> exec memo ())
 
@@ -724,6 +837,13 @@ module Lazy = struct
   let of_val x = fun () -> x
   let create f = lazy_ f
   let force f = f ()
+
+  let map2 x y ~f =
+    create (fun () -> f (x ()) (y ()))
+
+  let bind x ~f =
+    create (fun () -> force (f (force x)))
+
 end
 
 module With_implicit_output = struct
@@ -745,10 +865,10 @@ module With_implicit_output = struct
       (Output.Simple (
          module struct
            type t = o * io option
-           let to_sexp ((o, _io) : t) =
-             Sexp.List
-               [ O.to_sexp o;
-                 Sexp.Atom "<implicit output is opaque>" ]
+           let to_dyn ((o, _io) : t) =
+             Dyn.List
+               [ O.to_dyn o;
+                 Dyn.String "<implicit output is opaque>" ]
          end))
     in
     match typ with
@@ -759,8 +879,8 @@ module With_implicit_output = struct
              ~doc ~input ~visibility
              ~output
              Sync
-             (Some (fun i ->
-                Implicit_output.collect_sync implicit_output (fun () -> impl i))))
+             (fun i ->
+                Implicit_output.collect_sync implicit_output (fun () -> impl i)))
       in
       ((fun input ->
          let (res, output) = exec memo input in
@@ -774,8 +894,8 @@ module With_implicit_output = struct
              ~doc ~input ~visibility
              ~output
              Async
-             (Some (fun i ->
-                Implicit_output.collect_async implicit_output (fun () -> impl i))))
+             (fun i ->
+                Implicit_output.collect_async implicit_output (fun () -> impl i)))
       in
       ((fun input ->
          Fiber.map
@@ -790,3 +910,5 @@ module With_implicit_output = struct
 
 end
 module Implicit_output = Implicit_output
+
+let on_already_reported f = on_already_reported := f

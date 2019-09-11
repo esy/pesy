@@ -90,7 +90,7 @@ let rec find l ~f =
 let find_exn l ~f =
   match find l ~f with
   | Some x -> x
-  | None -> Exn.code_error "List.find_exn" []
+  | None -> Code_error.raise "List.find_exn" []
 
 let rec last = function
   | [] -> None
@@ -137,7 +137,7 @@ let rec nth t i =
   | x :: _, 0 -> Some x
   | _ :: xs, i -> nth xs (i - 1)
 
-let physically_equal = Pervasives.(==)
+let physically_equal = Pervasives.(==) [@warning "-3"]
 
 let init =
   let rec loop acc i n f =
@@ -159,3 +159,17 @@ let rec equal eq xs ys =
   | _, _ -> false
 
 let hash f xs = Dune_caml.Hashtbl.hash (map ~f xs)
+
+let cons xs x = x :: xs
+
+(* copy&paste from [base] *)
+let fold_map t ~init ~f =
+  let acc = ref init in
+  let result =
+    map t ~f:(fun x ->
+      let new_acc, y = f !acc x in
+      acc := new_acc;
+      y)
+  in
+  !acc, result
+;;

@@ -1,46 +1,6 @@
 open! Stdune
 open Import
 
-type styles = Ansi_color.Style.t list
-
-let apply_string styles str =
-  sprintf "%s%s%s"
-    (Ansi_color.Style.escape_sequence styles)
-    str
-    (Ansi_color.Style.escape_sequence [])
-
-let colorize =
-  let color_combos =
-    let open Ansi_color.Color in
-    [| Blue,          Bright_green
-     ; Red,           Bright_yellow
-     ; Yellow,        Blue
-     ; Magenta,       Bright_cyan
-     ; Bright_green,  Blue
-     ; Bright_yellow, Red
-     ; Blue,          Yellow
-     ; Bright_cyan,   Magenta
-    |]
-  in
-  fun ~key str ->
-    let hash = Hashtbl.hash key in
-    let fore, back = color_combos.(hash mod (Array.length color_combos)) in
-    apply_string [Fg fore; Bg back] str
-
-let stderr_supports_colors = lazy(
-  Unix.(isatty stderr) &&
-  match Env.get Env.initial "TERM" with
-  | None        -> false
-  | Some "dumb" -> false
-  | Some _      -> true
-)
-
-let strip_colors_for_stderr s =
-  if Lazy.force stderr_supports_colors then
-    s
-  else
-    Ansi_color.strip s
-
 (* We redirect the output of all commands, so by default the various
    tools will disable colors. Since we support colors in the output of
    commands, we force it via specific environment variables if stderr
@@ -56,29 +16,9 @@ let setup_env_for_colors env =
   env
 
 module Style = struct
-  open Ansi_color.Style
+  include User_message.Style
 
-  type t =
-    | Loc
-    | Error
-    | Warning
-    | Kwd
-    | Id
-    | Prompt
-    | Details
-    | Ok
-    | Debug
-
-  let to_styles = function
-    | Loc     -> [Bold]
-    | Error   -> [Bold; Fg Red]
-    | Warning -> [Bold; Fg Magenta]
-    | Kwd     -> [Bold; Fg Blue]
-    | Id      -> [Bold; Fg Yellow]
-    | Prompt  -> [Bold; Fg Green]
-    | Details -> [Dim; Fg White]
-    | Ok      -> [Dim; Fg Green]
-    | Debug   -> [Underlined; Fg Bright_cyan]
+  let to_styles = User_message.Print_config.default
 
   let of_string = function
     | "loc"     -> Some Loc
@@ -93,37 +33,21 @@ module Style = struct
     | _         -> None
 end
 
-let styles_of_tag s =
+let mark_open_tag s =
   match Style.of_string s with
-  | None -> []
-  | Some style -> Style.to_styles style
+  | Some style -> Ansi_color.Style.escape_sequence (Style.to_styles style)
+  | None ->
+    if s <> "" && s.[0] = '\027' then s else ""
 
 let setup_err_formatter_colors () =
   let open Format in
-  if Lazy.force stderr_supports_colors then begin
-    List.iter [err_formatter; err_ppf] ~f:(fun ppf ->
-      let funcs = pp_get_formatter_tag_functions ppf () in
+  if Lazy.force Ansi_color.stderr_supports_color then begin
+    List.iter [err_formatter; Report_error.ppf] ~f:(fun ppf ->
+      let funcs = pp_get_formatter_tag_functions ppf () [@warning "-3"] in
       pp_set_mark_tags ppf true;
       pp_set_formatter_tag_functions ppf
         { funcs with
-          mark_close_tag = (fun _   -> Ansi_color.Style.escape_sequence [])
-        ; mark_open_tag  = (fun tag -> Ansi_color.Style.escape_sequence
-                                         (styles_of_tag tag))
-        })
+          mark_close_tag = (fun _ -> Ansi_color.Style.escape_sequence [])
+        ; mark_open_tag
+        } [@warning "-3"])
   end
-
-let output_filename : styles = [Bold; Fg Green]
-
-let command_success : styles = [Bold; Fg Green]
-
-let command_error : styles = [Bold; Fg Red]
-
-module Render = Pp.Renderer.Make(struct
-    type t = Style.t
-
-    module Handler = struct
-      include Ansi_color.Render.Tag.Handler
-
-      let handle t style = handle t (Style.to_styles style)
-    end
-  end)

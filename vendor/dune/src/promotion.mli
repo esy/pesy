@@ -2,9 +2,11 @@ open! Stdune
 
 module File : sig
   type t =
-    { src : Path.t
-    ; dst : Path.t
+    { src : Path.Build.t
+    ; dst : Path.Source.t
     }
+
+  val to_dyn : t -> Dyn.t
 
   (** Register a file to promote *)
   val register : t -> unit
@@ -19,6 +21,6 @@ val finalize : unit -> unit
     promoted. *)
 type files_to_promote =
   | All
-  | These of Path.t list * (Path.t -> unit)
+  | These of Path.Source.t list * (Path.Source.t -> unit)
 
 val promote_files_registered_in_last_run : files_to_promote -> unit

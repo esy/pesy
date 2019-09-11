@@ -1,7 +1,20 @@
   $ env -u OCAMLRUNPARAM dune runtest simple
            run alias simple/runtest (exit 2)
   (cd _build/default/simple && .foo_simple.inline-tests/run.exe)
-  Fatal error: exception File "simple/.foo_simple.inline-tests/run.ml", line 1, characters 10-16: Assertion failed
+  Fatal error: exception File "simple/.foo_simple.inline-tests/run.ml-gen", line 1, characters 40-46: Assertion failed
+  [1]
+
+The expected behavior for the following three tests is to output nothing: the tests are disabled or ignored. 
+  $ env -u OCAMLRUNPARAM dune runtest simple --profile release
+
+  $ env -u OCAMLRUNPARAM dune runtest simple --profile disable-inline-tests
+
+  $ env -u OCAMLRUNPARAM dune runtest simple --profile ignore-inline-tests
+
+  $ env -u OCAMLRUNPARAM dune runtest simple --profile enable-inline-tests
+           run alias simple/runtest (exit 2)
+  (cd _build/default/simple && .foo_simple.inline-tests/run.exe)
+  Fatal error: exception File "simple/.foo_simple.inline-tests/run.ml-gen", line 1, characters 40-46: Assertion failed
   [1]
 
   $ dune runtest missing-backend
@@ -25,7 +38,7 @@
   backend_mbc1
 
   $ dune runtest dune-file
-  (lang dune 1.9)
+  (lang dune 1.11)
   (name foo)
   (library
    (name foo)
@@ -36,9 +49,15 @@
    (main_module_name Foo)
    (modes byte native)
    (modules
-    (alias_module (name Foo) (obj_name foo) (visibility public) (impl))
-    (main_module_name Foo)
-    (wrapped true))
+    (wrapped
+     (main_module_name Foo)
+     (alias_module
+      (name Foo)
+      (obj_name foo)
+      (visibility public)
+      (kind alias)
+      (impl))
+     (wrapped true)))
    (inline_tests.backend
     (runner_libraries str)
     (flags

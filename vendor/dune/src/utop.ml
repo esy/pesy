@@ -15,21 +15,22 @@ let utop_exe =
 
 let source ~dir =
   Toplevel.Source.make
-    ~dir:(Path.relative dir utop_dir_basename)
-    ~loc:(Loc.in_dir dir)
+    ~dir:(Path.Build.relative dir utop_dir_basename)
+    ~loc:(Loc.in_dir (Path.build dir))
     ~main:"UTop_main.main ();"
     ~name:exe_name
 
-let is_utop_dir dir = Path.basename dir = utop_dir_basename
+let is_utop_dir dir = Path.Build.basename dir = utop_dir_basename
 
 let libs_under_dir sctx ~db ~dir =
   (let open Option.O in
    let* dir = Path.drop_build_context dir in
    let+ dir = File_tree.find_dir (Super_context.file_tree sctx) dir in
-   File_tree.Dir.fold dir ~traverse_ignored_dirs:true
+   File_tree.Dir.fold dir ~traverse:Sub_dirs.Status.Set.all
      ~init:[] ~f:(fun dir acc ->
        let dir =
-         Path.append (Super_context.build_dir sctx) (File_tree.Dir.path dir) in
+         Path.Build.append_source (Super_context.build_dir sctx)
+           (File_tree.Dir.path dir) in
        match Super_context.stanzas_in sctx ~dir with
        | None -> acc
        | Some (d : _ Dir_with_dune.t) ->
@@ -41,7 +42,13 @@ let libs_under_dir sctx ~db ~dir =
              | Some lib ->
                (* still need to make sure that it's not coming from an external
                   source *)
-               if Path.is_descendant ~of_:dir (Lib.src_dir lib) then
+               let info = Lib.info lib in
+               let src_dir = Lib_info.src_dir info in
+               (* Only select libraries that are not implementations.
+                  Implementations are selected using the default implementation
+                  feature. *)
+               let not_impl = Option.is_none (Lib_info.implements info) in
+               if not_impl && Path.is_descendant ~of_:(Path.build dir) src_dir then
                  lib :: acc
                else
                  acc (* external lib with a name matching our private name *)
@@ -54,7 +61,7 @@ let setup sctx ~dir =
   let expander = Super_context.expander sctx ~dir in
   let scope = Super_context.find_scope_by_dir sctx dir in
   let db = Scope.libs scope in
-  let libs = libs_under_dir sctx ~db ~dir in
+  let libs = libs_under_dir sctx ~db ~dir:(Path.build dir) in
   let source = source ~dir in
   let obj_dir = Toplevel.Source.obj_dir source in
   let loc = Toplevel.Source.loc source in
@@ -64,6 +71,14 @@ let setup sctx ~dir =
     (loc, Lib_name.of_string_exn ~loc:(Some loc) "utop")
     |> Lib.DB.resolve db >>| (fun utop -> utop :: libs)
     >>= Lib.closure ~linking:true
+  in
+  let flags =
+    let project = Scope.project scope in
+    let dune_version = Dune_project.dune_version project in
+    (Ocaml_flags.append_common
+       (Ocaml_flags.default ~dune_version
+          ~profile:(Super_context.profile sctx))
+       ["-w"; "-24"])
   in
   let cctx =
     Compilation_context.create ()
@@ -75,9 +90,10 @@ let setup sctx ~dir =
       ~opaque:false
       ~requires_link:(lazy requires)
       ~requires_compile:requires
-      ~flags:(Ocaml_flags.append_common
-                (Ocaml_flags.default ~profile:(Super_context.profile sctx))
-                ["-w"; "-24"])
+      ~flags
+      ~js_of_ocaml:None
+      ~dynlink:false
+      ~package:None
   in
   let toplevel = Toplevel.make ~cctx ~source in
   Toplevel.setup_rules toplevel
