@@ -8,7 +8,7 @@ let to_string = function
 
 let pp fmt t = Format.pp_print_string fmt (to_string t)
 
-let to_sexp t = Sexp.Encoder.string (to_string t)
+let to_dyn t = Dyn.Encoder.string (to_string t)
 
 let encode =
   let open Dune_lang.Encoder in
@@ -21,11 +21,25 @@ let decode =
   plain_string (fun ~loc -> function
     | "public" -> Public
     | "private" -> Private
-    | _ -> Errors.fail loc
-             "Not a valid visibility. Valid visibility is public or private")
+    | _ -> User_error.raise ~loc
+             [ Pp.text "Not a valid visibility. Valid visibility is \
+                        public or private" ])
 
 let is_public = function
   | Public -> true
   | Private -> false
 
 let is_private t = not (is_public t)
+
+module Map = struct
+  type 'a t =
+    { public : 'a
+    ; private_ : 'a
+    }
+
+  let make_both a = { public = a; private_ = a }
+
+  let find { private_ ; public } = function
+    | Private -> private_
+    | Public -> public
+end

@@ -214,19 +214,7 @@ let both a b =
   let* y = b in
   return (x, y)
 
-let all l =
-  let rec loop l acc =
-    match l with
-    | [] -> return (List.rev acc)
-    | t :: l ->
-      let* x = t in
-      loop l (x :: acc)
-  in
-  loop l []
-
-let all_unit l = List.fold_left l ~init:(return ()) ~f:(>>>)
-
-let map_all l ~f =
+let sequential_map l ~f =
   let rec loop l acc =
     match l with
     | [] -> return (List.rev acc)
@@ -236,7 +224,7 @@ let map_all l ~f =
   in
   loop l []
 
-let map_all_unit l ~f =
+let sequential_iter l ~f =
   let rec loop l =
     match l with
     | [] -> return ()
@@ -343,7 +331,7 @@ module Var = struct
     EC.set_vars (Univ_map.remove (EC.vars ()) var) f () k
 
   let create () =
-    create ~name:"var" (fun _ -> Sexp.Encoder.string "var")
+    create ~name:"var" (fun _ -> Dyn.Encoder.string "var")
 end
 
 let with_error_handler f ~on_error k =

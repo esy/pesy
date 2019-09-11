@@ -1,4 +1,5 @@
-type t = Dyn0.t =
+type t =
+  | Opaque
   | Unit
   | Int of int
   | Bool of bool
@@ -6,7 +7,6 @@ type t = Dyn0.t =
   | Bytes of bytes
   | Char of char
   | Float of float
-  | Sexp of Sexp0.t
   | Option of t option
   | List of t list
   | Array of t array
@@ -33,8 +33,6 @@ module Encoder : sig
   val array      : 'a t -> 'a array          t
   val option     : 'a t -> 'a option         t
 
-  val via_sexp : ('a -> Sexp0.t) -> 'a t
-
   val record : (string * dyn) list -> dyn
 
   val unknown : _ t
@@ -43,8 +41,14 @@ module Encoder : sig
   val constr : string -> dyn list -> dyn
 end with type dyn := t
 
-val pp : Format.formatter -> t -> unit
+val pp : t -> _ Pp.t
 
 val opaque : t
 
-val to_sexp : t Sexp.Encoder.t
+val compare : t -> t -> Ordering.t
+
+val hash : t -> int
+
+val to_string : t -> string
+
+type dyn = t

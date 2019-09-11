@@ -1,7 +1,7 @@
 open Stdune
 
 type is_component_of_a_group_but_not_the_root = {
-  group_root : Path.t;
+  group_root : Path.Build.t;
   stanzas : Stanza.t list Dir_with_dune.t option;
 }
 
@@ -26,9 +26,9 @@ module DB : sig
 
   val make
     :  File_tree.t
-    -> stanzas_per_dir:Dune_file.Stanzas.t Dir_with_dune.t Path.Map.t
+    -> stanzas_per_dir:Dune_file.Stanzas.t Dir_with_dune.t Path.Build.Map.t
     -> t
 
-  val get : t -> dir:Path.t -> status
+  val get : t -> dir:Path.Build.t -> status
 
 end with type status := t

@@ -5,30 +5,31 @@ open Fiber.O
 (* Return a mapping [Path.t -> Dune_lang.Ast.t list] containing [path]
    and all the files in includes, recursiverly *)
 let scan_included_files path =
-  let files = ref Path.Map.empty in
+  let files = ref Path.Source.Map.empty in
   let rec iter path =
-    if not (Path.Map.mem !files path) then begin
-      let s = Io.read_file path in
+    if not (Path.Source.Map.mem !files path) then begin
+      let s = Io.read_file (Path.source path) in
       let csts =
-        Dune_lang.parse_cst_string s ~fname:(Path.to_string path)
+        Dune_lang.parse_cst_string s ~fname:(Path.Source.to_string path)
           ~lexer:Dune_lang.Lexer.jbuild_token
         |> List.map ~f:(Dune_lang.Cst.fetch_legacy_comments
                           ~file_contents:s)
       in
       let comments = Dune_lang.Cst.extract_comments csts in
       let sexps = List.filter_map csts ~f:Dune_lang.Cst.abstract in
-      files := Path.Map.add !files path (sexps, comments);
+      files := Path.Source.Map.set !files path (sexps, comments);
       List.iter sexps ~f:(function
         | Dune_lang.Ast.List
             (_,
              [ Atom (_, A "include")
              ; (Atom (loc, A fn) | Quoted_string (loc, fn))
              ]) ->
-          let dir = Path.parent_exn path in
-          let included_file = Path.relative dir fn in
-          if not (Path.exists included_file) then
-            Errors.fail loc "File %s doesn't exist."
-              (Path.to_string_maybe_quoted included_file);
+          let dir = Path.Source.parent_exn path in
+          let included_file = Path.Source.relative dir fn in
+          if not (Path.exists (Path.source included_file)) then
+            User_error.raise ~loc
+              [ Pp.textf "File %s doesn't exist."
+                  (Path.Source.to_string_maybe_quoted included_file) ];
           iter included_file
         | _ -> ())
     end
@@ -37,16 +38,16 @@ let scan_included_files path =
   !files
 
 type rename_and_edit =
-  { original_file : Path.t
-  ; extra_files_to_delete : Path.t list
-  ; new_file : Path.t
+  { original_file : Path.Source.t
+  ; extra_files_to_delete : Path.Source.t list
+  ; new_file : Path.Source.t
   ; contents : string
   }
 
 type todo =
   { mutable to_rename_and_edit : rename_and_edit list
-  ; mutable to_add : Path.t list
-  ; mutable to_edit : (Path.t * string) list
+  ; mutable to_add : Path.Source.t list
+  ; mutable to_edit : (Path.Source.t * string) list
   }
 
 let rename_basename base =
@@ -188,11 +189,11 @@ let upgrade_stanza stanza =
   upgrade stanza
 
 let upgrade_file todo file sexps comments ~look_for_jbuild_ignore =
-  let dir = Path.parent_exn file in
+  let dir = Path.Source.parent_exn file in
   let new_file =
-    let base = Path.basename file in
+    let base = Path.Source.basename file in
     let new_base = rename_basename base in
-    Path.relative dir new_base
+    Path.Source.relative dir new_base
   in
   let sexps =
     List.filter sexps ~f:(function
@@ -202,8 +203,9 @@ let upgrade_file todo file sexps comments ~look_for_jbuild_ignore =
   let sexps = List.map sexps ~f:upgrade_stanza in
   let sexps, extra_files_to_delete =
     (* Port the jbuild-ignore file if necessary *)
-    let jbuild_ignore = Path.relative dir "jbuild-ignore" in
-    if not (look_for_jbuild_ignore && Path.exists jbuild_ignore) then
+    let jbuild_ignore = Path.Source.relative dir "jbuild-ignore" in
+    if not (look_for_jbuild_ignore
+            && Path.exists (Path.source jbuild_ignore)) then
       (sexps, [])
     else begin
       let data_only_dirs = File_tree.load_jbuild_ignore jbuild_ignore in
@@ -249,14 +251,8 @@ let rec end_offset_of_opam_value : OpamParserTypes.value -> int =
 
 let upgrade_opam_file todo fn =
   let open OpamParserTypes in
-  let s = Io.read_file fn ~binary:true in
-  let lb = Lexing.from_string s in
-  lb.lex_curr_p <-
-    { pos_fname = Path.to_string fn
-    ; pos_lnum  = 1
-    ; pos_bol   = 0
-    ; pos_cnum  = 0
-    };
+  let s = Io.read_file (Path.source fn) ~binary:true in
+  let lb = Lexbuf.from_string s ~fname:(Path.Source.to_string fn) in
   let t =
     Opam_file.parse lb
     |> Opam_file.absolutify_positions ~file_contents:s
@@ -319,11 +315,11 @@ let upgrade_opam_file todo fn =
     let ofs =
       List.fold_left substs ~init:0 ~f:(fun ofs (start, stop, repl) ->
         if not (ofs <= start && start <= stop) then
-          Exn.code_error "Invalid text subsitution"
-            [ "ofs", Sexp.Encoder.int ofs
-            ; "start", Sexp.Encoder.int start
-            ; "stop", Sexp.Encoder.int stop
-            ; "repl", Sexp.Encoder.string repl
+          Code_error.raise "Invalid text subsitution"
+            [ "ofs", Dyn.Encoder.int ofs
+            ; "start", Dyn.Encoder.int start
+            ; "stop", Dyn.Encoder.int stop
+            ; "repl", Dyn.Encoder.string repl
             ];
         Buffer.add_substring buf s ofs (start - ofs);
         Buffer.add_string buf repl;
@@ -337,7 +333,7 @@ let upgrade_opam_file todo fn =
 
 let upgrade_dir todo dir =
   let project = File_tree.Dir.project dir in
-  let project_root = Path.of_local (Dune_project.root project) in
+  let project_root = Dune_project.root project in
   if project_root = File_tree.Dir.path dir then begin
     (match Dune_project.ensure_project_file_exists project with
      | Already_exist -> ()
@@ -345,20 +341,27 @@ let upgrade_dir todo dir =
        todo.to_add <- Dune_project.file project :: todo.to_add);
     Package.Name.Map.iter (Dune_project.packages project) ~f:(fun pkg ->
       let fn = Package.opam_file pkg in
-      if Path.exists fn then upgrade_opam_file todo fn)
+      if Path.exists (Path.source fn) then upgrade_opam_file todo fn)
   end;
   Option.iter (File_tree.Dir.dune_file dir) ~f:(fun dune_file ->
     match dune_file.kind, dune_file.contents with
     | Dune, _ -> ()
     | Jbuild, Ocaml_script fn ->
-      Errors.warn (Loc.in_file fn)
-        "Cannot upgrade this jbuild file as it is using the OCaml syntax.\n\
-         You need to upgrade it manually."
+      User_warning.emit ~loc:(Loc.in_file (Path.source fn))
+        [ Pp.text
+            "Cannot upgrade this jbuild file as it is using the OCaml syntax."
+        ; Pp.text "You need to upgrade it manually."
+        ]
     | Jbuild, Plain { path; sexps = _ } ->
       let files = scan_included_files path in
-      Path.Map.iteri files ~f:(fun fn (sexps, comments) ->
+      Path.Source.Map.iteri files ~f:(fun fn (sexps, comments) ->
         upgrade_file todo fn sexps comments
-          ~look_for_jbuild_ignore:(fn = path)))
+          ~look_for_jbuild_ignore:(Path.Source.equal fn path)))
+
+let lookup_git_repo ft fn =
+  match File_tree.Dir.vcs (File_tree.nearest_dir ft fn) with
+  | Some { kind = Git; root } -> Some root
+  | _ -> None
 
 let upgrade ft =
   Dune_project.default_dune_language_version := (1, 0);
@@ -368,45 +371,29 @@ let upgrade ft =
     ; to_edit = []
     }
   in
-  File_tree.fold ft ~traverse_ignored_dirs:false ~init:() ~f:(fun dir () ->
-    upgrade_dir todo dir);
+  File_tree.fold ft ~traverse:Sub_dirs.Status.Set.normal_only ~init:()
+    ~f:(fun dir () -> upgrade_dir todo dir);
   let git = lazy (
     match Bin.which ~path:(Env.path Env.initial) "git" with
     | Some x -> x
     | None -> Utils.program_not_found "git" ~loc:None)
   in
-  let has_git_table = Hashtbl.create 128 in
-  let rec has_git path =
-    match Hashtbl.find has_git_table path with
-    | None ->
-      let v =
-        if Path.is_directory (Path.relative path ".git") then
-          Some path
-        else
-          match Path.parent path with
-          | None -> None
-          | Some p -> has_git p
-      in
-      Hashtbl.add has_git_table path v;
-      v
-    | Some v -> v
-  in
   let log fmt =
-    Printf.ksprintf print_to_console fmt
+    Printf.ksprintf Console.print fmt
   in
   let* () =
-  Fiber.map_all_unit todo.to_add ~f:(fun fn ->
-    match has_git (Path.parent_exn fn) with
-    | Some dir ->
-      Process.run Strict ~dir ~env:Env.initial
-        (Lazy.force git)
-        ["add"; Path.reach fn ~from:dir]
-    | None -> Fiber.return ())
+    Fiber.sequential_iter todo.to_add ~f:(fun fn ->
+      match lookup_git_repo ft fn with
+      | Some dir ->
+        Process.run Strict ~dir ~env:Env.initial
+          (Lazy.force git)
+          ["add"; Path.reach (Path.source fn) ~from:dir]
+      | None -> Fiber.return ())
   in
   List.iter todo.to_edit ~f:(fun (fn, s) ->
-    log "Upgrading %s...\n" (Path.to_string_maybe_quoted fn);
-    Io.write_file fn s ~binary:true);
-  Fiber.map_all_unit todo.to_rename_and_edit ~f:(fun x ->
+    log "Upgrading %s...\n" (Path.Source.to_string_maybe_quoted fn);
+    Io.write_file (Path.source fn) s ~binary:true);
+  Fiber.sequential_iter todo.to_rename_and_edit ~f:(fun x ->
     let { original_file
         ; new_file
         ; extra_files_to_delete
@@ -415,15 +402,18 @@ let upgrade ft =
     in
     log "Upgrading %s to %s...\n"
       (List.map (extra_files_to_delete @ [original_file])
-         ~f:Path.to_string_maybe_quoted |> String.enumerate_and)
-      (Path.to_string_maybe_quoted new_file);
-    (match has_git (Path.parent_exn original_file) with
+         ~f:Path.Source.to_string_maybe_quoted |> String.enumerate_and)
+      (Path.Source.to_string_maybe_quoted new_file);
+    (match lookup_git_repo ft original_file with
      | Some dir ->
-       Fiber.map_all_unit extra_files_to_delete ~f:(fun fn ->
+       Fiber.sequential_iter extra_files_to_delete ~f:(fun fn ->
+         let fn = Path.source fn in
          Process.run Strict ~dir ~env:Env.initial
            (Lazy.force git)
            ["rm"; Path.reach fn ~from:dir])
        >>>
+       let original_file = Path.source original_file in
+       let new_file = Path.source new_file in
        Process.run Strict ~dir ~env:Env.initial
          (Lazy.force git)
          [ "mv"
@@ -431,7 +421,8 @@ let upgrade ft =
          ; Path.reach new_file ~from:dir
          ]
      | None ->
-       List.iter (original_file :: extra_files_to_delete) ~f:Path.unlink;
+       List.iter (original_file :: extra_files_to_delete)
+         ~f:(fun p -> Path.unlink (Path.source p));
        Fiber.return ())
     >>| fun () ->
-    Io.write_file new_file contents ~binary:true)
+    Io.write_file (Path.source new_file) contents ~binary:true)

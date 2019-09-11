@@ -31,6 +31,17 @@ Not compatible with Dune
   using ocaml-migrate-parsetree, ppxlib or ppx_driver.
   [1]
 
+Incompatible Cookies
+
+  $ dune build --root driver-tests foo4.cma
+  Entering directory 'driver-tests'
+  File "dune", line 27, characters 13-28:
+  27 |  (preprocess (pps ppx3 ppx4)))
+                    ^^^^^^^^^^^^^^^
+  Error: foo.ppx3 and foo.ppx4 have inconsistent requests for cookie "germany";
+  foo.ppx3 requests "spritzgeback" and foo.ppx4 requests "lebkuchen"
+  [1]
+
 Same, but with error pointing to .ppx
 
   $ dune build --root driver-tests .ppx/foo.ppx1+foo.ppx2/ppx.exe
@@ -54,11 +65,17 @@ Test the argument syntax
   $ dune build --root driver-tests test_ppx_args.cma
   Entering directory 'driver-tests'
            ppx test_ppx_args.pp.ml
-  .ppx/eb9468425030036114a3b9ffa4c89e4d/ppx.exe
+  .ppx/a45c15d61f473f6a301551552d3f7586/ppx.exe
   -arg1
   -arg2
+  -arg3=Oreo
   -foo
   bar
+  Snickerdoodle
+  --cookie
+  france="Petit Beurre"
+  --cookie
+  italy="Biscotti"
   --cookie
   library-name="test_ppx_args"
   -o
@@ -66,10 +83,10 @@ Test the argument syntax
   --impl
   test_ppx_args.ml
   --as-ppx
-  File "dune", line 68, characters 13-60:
-  68 |  (preprocess (pps -arg1 driver_print_args -arg2 -- -foo bar)))
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  Error: rule failed to generate the following targets:
+  File "dune", line 101, characters 3-138:
+  101 |    (pps -arg1 driver_print_args ppx_with_cookies_print_args -arg2 -arg3=%{env:AMERICA=undefined} --
+  102 |     -foo bar %{env:ENGLAND=undefined})))
+  Error: Rule failed to generate the following targets:
   - test_ppx_args.pp.ml
   [1]
 
@@ -79,10 +96,10 @@ Test that going throught the -ppx option of the compiler works
   Entering directory 'driver-tests'
       ocamldep .test_ppx_staged.objs/test_ppx_staged.ml.d
   tool name: ocamldep
-  args:--as-ppx -arg1 -arg2 -foo bar --cookie library-name="test_ppx_staged"
+  args:--as-ppx -arg1 -arg2 -arg3=Oreo -foo bar Snickerdoodle --cookie france="Petit Beurre" --cookie italy="Biscotti" --cookie library-name="test_ppx_staged"
         ocamlc .test_ppx_staged.objs/byte/test_ppx_staged.{cmi,cmo,cmt}
   tool name: ocamlc
-  args:--as-ppx -arg1 -arg2 -foo bar --cookie library-name="test_ppx_staged"
+  args:--as-ppx -arg1 -arg2 -arg3=Oreo -foo bar Snickerdoodle --cookie france="Petit Beurre" --cookie italy="Biscotti" --cookie library-name="test_ppx_staged"
 
 Test using installed drivers
 
@@ -106,7 +123,7 @@ Test using installed drivers
   File "dune", line 6, characters 13-53:
   6 |  (preprocess (pps -arg1 testdriver -arg2 -- -foo bar)))
                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  Error: rule failed to generate the following targets:
+  Error: Rule failed to generate the following targets:
   - driveruser.pp.ml
   [1]
 
@@ -129,7 +146,7 @@ Test using installed drivers
   File "dune", line 13, characters 13-57:
   13 |  (preprocess (pps -arg1 replacesdriver -arg2 -- -foo bar)))
                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  Error: rule failed to generate the following targets:
+  Error: Rule failed to generate the following targets:
   - driveruser.pp.ml
   [1]
 
@@ -154,14 +171,15 @@ Test using installed drivers
   File "dune", line 5, characters 13-57:
   5 |  (preprocess (pps -arg1 replacesdriver -arg2 -- -foo bar)))
                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  Error: rule failed to generate the following targets:
+  Error: Rule failed to generate the following targets:
   - driveruser.pp.ml
   [1]
 
   $ dune build --display short --root jbuild-driver @all
   Entering directory 'jbuild-driver'
   File "jbuild", line 1, characters 0-0:
-  Warning: jbuild files are deprecated, please convert this file to a dune file instead.
+  Warning: jbuild files are deprecated, please convert this file to a dune file
+  instead.
   Note: You can use "dune upgrade" to convert your project to dune.
         ocamlc .testdriver.objs/byte/testdriver.{cmi,cmo,cmt}
         ocamlc testdriver.cma
@@ -180,7 +198,8 @@ Test using installed drivers
   $ dune build --display short --root jbuild-driver @install
   Entering directory 'jbuild-driver'
   File "jbuild", line 1, characters 0-0:
-  Warning: jbuild files are deprecated, please convert this file to a dune file instead.
+  Warning: jbuild files are deprecated, please convert this file to a dune file
+  instead.
   Note: You can use "dune upgrade" to convert your project to dune.
   $ OCAMLPATH=jbuild-driver/_build/install/default/lib dune build --root use-external-driver driveruser.cma
   Entering directory 'use-external-driver'
@@ -200,6 +219,6 @@ Test using installed drivers
   File "dune", line 6, characters 13-53:
   6 |  (preprocess (pps -arg1 testdriver -arg2 -- -foo bar)))
                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  Error: rule failed to generate the following targets:
+  Error: Rule failed to generate the following targets:
   - driveruser.pp.ml
   [1]

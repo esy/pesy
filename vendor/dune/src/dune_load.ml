@@ -4,19 +4,19 @@ open Dune_file
 
 module Dune_file = struct
   type t =
-    { dir     : Path.t
+    { dir     : Path.Source.t
     ; project : Dune_project.t
     ; stanzas : Stanzas.t
-    ; kind    : Dune_lang.Syntax.t
+    ; kind    : Dune_lang.File_syntax.t
     }
 
-  let parse sexps ~dir ~file ~project ~kind ~ignore_promoted_rules =
+  let parse sexps ~dir ~file ~project ~kind =
     let stanzas = Stanzas.parse ~file ~kind project sexps in
     let stanzas =
-      if ignore_promoted_rules then
+      if !Clflags.ignore_promoted_rules then
         List.filter stanzas ~f:(function
-          | Rule { mode = Promote _; _ }
-          | Dune_file.Menhir.T { mode = Promote _; _ } -> false
+          | Rule { mode = Promote { only = None; _ }; _ }
+          | Dune_file.Menhir.T { mode = Promote { only = None; _ }; _ } -> false
           | _ -> true)
       else
         stanzas
@@ -26,30 +26,40 @@ module Dune_file = struct
     ; stanzas
     ; kind
     }
+
+  let rec fold_stanzas l ~init ~f =
+    match l with
+    | [] -> init
+    | t :: l -> inner_fold t t.stanzas l ~init ~f
+
+  and inner_fold t inner_list l ~init ~f =
+    match inner_list with
+    | [] -> fold_stanzas l ~init ~f
+    | x :: inner_list ->
+      inner_fold t inner_list l ~init:(f t x init) ~f
+
 end
 
 module Dune_files = struct
   type script =
-    { dir     : Path.t
-    ; file    : Path.t
+    { dir     : Path.Source.t
+    ; file    : Path.Source.t
     ; project : Dune_project.t
-    ; kind    : Dune_lang.Syntax.t
+    ; kind    : Dune_lang.File_syntax.t
     }
 
   type one =
     | Literal of Dune_file.t
     | Script  of script
 
-  type t =
-    { dune_files            : one list
-    ; ignore_promoted_rules : bool
-    }
+  type t = one list
 
-  let generated_dune_files_dir = Path.relative Path.build_dir ".dune"
+  let generated_dune_files_dir = Path.Build.relative Path.Build.root ".dune"
 
   let ensure_parent_dir_exists path =
-    if Path.is_in_build_dir path then
-      Option.iter (Path.parent path) ~f:Path.mkdir_p
+    Path.build path
+    |> Path.parent
+    |> Option.iter ~f:(Path.mkdir_p)
 
   type requires = No_requires | Unix
 
@@ -72,23 +82,28 @@ module Dune_files = struct
               in
               { start; stop = { start with pos_cnum = String.length line } }
             in
-            (match (kind : Dune_lang.Syntax.t) with
+            (match (kind : Dune_lang.File_syntax.t) with
              | Jbuild -> ()
              | Dune ->
-               Errors.fail loc
-                 "#require is no longer supported in dune files.\n\
-                  You can use the following function instead of \
-                  Unix.open_process_in:\n\
-                  \n\
-                 \  (** Execute a command and read it's output *)\n\
-                 \  val run_and_read_lines : string -> string list");
+               User_error.raise ~loc
+                 [ Pp.text
+                     "#require is no longer supported in dune files."
+                 ; Pp.text
+                     "You can use the following function instead of \
+                      Unix.open_process_in:\n\
+                      \n\
+                     \  (** Execute a command and read it's output *)\n\
+                     \  val run_and_read_lines : string -> string list"
+                 ]);
             match String.split s ~on:',' with
             | [] -> acc
             | ["unix"] -> Unix
             | _ ->
-              Errors.fail loc
-                "Using libraries other that \"unix\" is not supported.\n\
-                 See the manual for details.";
+              User_error.raise ~loc
+                [ Pp.text
+                    "Using libraries other that \"unix\" is not supported."
+                ; Pp.text "See the manual for details."
+                ];
         in
         loop (n + 1) lines acc
     in
@@ -97,7 +112,7 @@ module Dune_files = struct
   let create_plugin_wrapper (context : Context.t) ~exec_dir ~plugin ~wrapper
         ~target ~kind =
     let plugin_contents = Io.read_file plugin in
-    Io.with_file_out wrapper ~f:(fun oc ->
+    Io.with_file_out (Path.build wrapper) ~f:(fun oc ->
       let ocamlc_config =
         let vars =
           Ocaml_config.to_list context.ocaml_config
@@ -158,11 +173,11 @@ end
         context.name
         context.version_string
         ocamlc_config
-        (Path.reach ~from:exec_dir target)
+        (Path.reach ~from:exec_dir (Path.build target))
         (Path.to_string plugin) plugin_contents);
     extract_requires plugin plugin_contents ~kind
 
-  let eval { dune_files; ignore_promoted_rules } ~(context : Context.t) =
+  let eval dune_files ~(context : Context.t) =
     let open Fiber.O in
     let static, dynamic =
       List.partition_map dune_files ~f:(function
@@ -171,12 +186,15 @@ end
     in
     Fiber.parallel_map dynamic ~f:(fun { dir; file; project; kind } ->
       let generated_dune_file =
-        Path.append (Path.relative generated_dune_files_dir context.name) file
+        Path.Build.append_source
+          (Path.Build.relative generated_dune_files_dir context.name) file
       in
-      let wrapper = Path.extend_basename generated_dune_file ~suffix:".ml" in
+      let wrapper =
+        Path.Build.extend_basename generated_dune_file ~suffix:".ml" in
       ensure_parent_dir_exists generated_dune_file;
       let requires =
-        create_plugin_wrapper context ~exec_dir:dir ~plugin:file ~wrapper
+        create_plugin_wrapper context
+          ~exec_dir:(Path.source dir) ~plugin:(Path.source file) ~wrapper
           ~target:generated_dune_file ~kind
       in
       let context = Option.value context.for_host ~default:context in
@@ -189,7 +207,7 @@ end
         List.concat
           [ [ "-I"; "+compiler-libs" ]
           ; cmas
-          ; [ Path.to_absolute_filename wrapper ]
+          ; [ Path.to_absolute_filename (Path.build wrapper) ]
           ]
       in
       (* CR-someday jdimino: if we want to allow plugins to use findlib:
@@ -202,15 +220,18 @@ end
          ]}
       *)
       let* () =
-        Process.run Strict ~dir ~env:context.env context.ocaml args in
-      if not (Path.exists generated_dune_file) then
-        die "@{<error>Error:@} %s failed to produce a valid dune_file file.\n\
-             Did you forgot to call [Jbuild_plugin.V*.send]?"
-          (Path.to_string file);
+        Process.run Strict ~dir:(Path.source dir)
+          ~env:context.env context.ocaml args in
+      if not (Path.exists (Path.build generated_dune_file)) then
+        User_error.raise
+          [ Pp.textf "%s failed to produce a valid dune_file file."
+              (Path.Source.to_string_maybe_quoted file)
+          ; Pp.textf "Did you forgot to call [Jbuild_plugin.V*.send]?"
+          ];
       Fiber.return
-        (Dune_lang.Io.load generated_dune_file ~mode:Many
+        (Dune_lang.Io.load (Path.build generated_dune_file) ~mode:Many
            ~lexer:(Dune_lang.Lexer.of_syntax kind)
-         |> Dune_file.parse ~dir ~file ~project ~kind ~ignore_promoted_rules))
+         |> Dune_file.parse ~dir ~file ~project ~kind))
     >>| fun dynamic ->
     static @ dynamic
 end
@@ -222,31 +243,33 @@ type conf =
   ; projects   : Dune_project.t list
   }
 
-let interpret ~dir ~project ~ignore_promoted_rules
-      ~(dune_file:File_tree.Dune_file.t) =
+let interpret ~dir ~project ~(dune_file:File_tree.Dune_file.t) =
   match dune_file.contents with
   | Plain p ->
     let dune_file =
       Dune_files.Literal
         (Dune_file.parse p.sexps ~dir ~file:p.path
            ~project
-           ~kind:dune_file.kind
-           ~ignore_promoted_rules)
+           ~kind:dune_file.kind)
     in
     p.sexps <- [];
     dune_file
   | Ocaml_script file ->
     Script { dir; project; file; kind = dune_file.kind }
 
-let load ?(ignore_promoted_rules=false) () =
-  let ftree = File_tree.load Path.root in
+let load ~ancestor_vcs () =
+  let ftree = File_tree.load Path.Source.root ~ancestor_vcs in
   let projects =
-    File_tree.fold ftree ~traverse_ignored_dirs:false ~init:[]
+    File_tree.fold ftree
+      ~traverse:{data_only = false; vendored = true; normal = true}
+      ~init:[]
       ~f:(fun dir acc ->
         let p = File_tree.Dir.project dir in
-        match Path.kind (File_tree.Dir.path dir) with
-        | Local d when Path.Local.equal d (Dune_project.root p) -> p :: acc
-        | _ -> acc)
+        if Path.Source.equal
+             (File_tree.Dir.path dir)
+             (Dune_project.root p)
+        then p :: acc
+        else acc)
   in
   let packages =
     List.fold_left projects ~init:Package.Name.Map.empty
@@ -257,10 +280,14 @@ let load ?(ignore_promoted_rules=false) () =
           | None, Some _ -> b
           | Some _, None -> a
           | Some a, Some b ->
-            die "Too many opam files for package %S:\n- %s\n- %s"
-              (Package.Name.to_string name)
-              (Path.to_string_maybe_quoted (Package.opam_file a))
-              (Path.to_string_maybe_quoted (Package.opam_file b))))
+            User_error.raise
+              [ Pp.textf "Too many opam files for package %S:"
+                  (Package.Name.to_string name)
+              ; Pp.textf "- %s"
+                  (Path.Source.to_string_maybe_quoted (Package.opam_file a))
+              ; Pp.textf "- %s"
+                  (Path.Source.to_string_maybe_quoted (Package.opam_file b))
+              ]))
   in
 
   let rec walk dir dune_files =
@@ -274,9 +301,7 @@ let load ?(ignore_promoted_rules=false) () =
         match File_tree.Dir.dune_file dir with
         | None -> dune_files
         | Some dune_file ->
-          let dune_file =
-            interpret ~dir:path ~project ~ignore_promoted_rules ~dune_file
-          in
+          let dune_file = interpret ~dir:path ~project ~dune_file in
           dune_file :: dune_files
       in
       String.Map.fold sub_dirs ~init:dune_files ~f:walk
@@ -284,7 +309,7 @@ let load ?(ignore_promoted_rules=false) () =
   in
   let dune_files = walk (File_tree.root ftree) [] in
   { file_tree = ftree
-  ; dune_files = { dune_files; ignore_promoted_rules }
+  ; dune_files
   ; packages
   ; projects
   }

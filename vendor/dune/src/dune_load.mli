@@ -2,11 +2,17 @@ open! Stdune
 
 module Dune_file : sig
   type t =
-    { dir     : Path.t
+    { dir     : Path.Source.t
     ; project : Dune_project.t
     ; stanzas : Dune_file.Stanzas.t
-    ; kind    : Dune_lang.Syntax.t
+    ; kind    : Dune_lang.File_syntax.t
     }
+
+  val fold_stanzas :
+      t list
+    -> init:'acc
+    -> f:(t -> Stanza.t -> 'acc -> 'acc)
+    -> 'acc
 end
 
 module Dune_files : sig
@@ -26,6 +32,6 @@ type conf = private
   }
 
 val load
-  :  ?ignore_promoted_rules:bool
+  :  ancestor_vcs:Vcs.t option
   -> unit
   -> conf

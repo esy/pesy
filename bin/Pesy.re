@@ -27,6 +27,7 @@ let reconcile = projectRoot => {
 };
 
 let main = () => {
+  Findlib.init();
   ignore(
     switch (Sys.getenv_opt("cur__root")) {
     | Some(curRoot) =>
@@ -48,7 +49,7 @@ let main = () => {
 
 let main = () => {
   PesyConf.(
-    try (main()) {
+    try(main()) {
     | BootstrappingError(message) =>
       let message =
         Pastel.(
@@ -161,7 +162,7 @@ let pesy_build = () =>
       switch (Sys.getenv_opt("cur__root")) {
       | Some(curRoot) =>
         let buildTarget =
-          try (build(curRoot)) {
+          try(build(curRoot)) {
           | BuildValidationFailures(failures) =>
             let errorMessages =
               String.concat(

@@ -19,8 +19,14 @@ type t =
 
 val true_ : t
 
+val fold_vars : t -> init:'a -> f:(String_with_vars.Var.t -> 'a -> 'a) -> 'a
+
 val eval
   :  t
   -> dir:Path.t
-  -> f:Value.t list option  String_with_vars.expander
+  -> f:Value.t list option String_with_vars.expander
   -> bool
+
+val to_dyn : t -> Dyn.t
+
+val decode : t Stanza.Decoder.t

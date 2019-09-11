@@ -21,9 +21,9 @@ module Ast = struct
   let decode elt =
     let open Stanza.Decoder in
     let elt = let+ e = elt in Element e in
-    let rec one (kind : Dune_lang.Syntax.t) =
+    let rec one (kind : Dune_lang.File_syntax.t) =
       peek_exn >>= function
-      | Atom (loc, A "\\") -> Errors.fail loc "unexpected \\"
+      | Atom (loc, A "\\") -> User_error.raise ~loc [ Pp.text "unexpected \\" ]
       | (Atom (_, A "") | Quoted_string (_, _)) | Template _ ->
         elt
       | Atom (loc, A s) -> begin
@@ -31,21 +31,26 @@ module Ast = struct
           | ":standard" ->
             junk >>> return Standard
           | ":include" ->
-            Errors.fail loc ":include isn't supported in the predicate language"
+            User_error.raise ~loc
+              [ Pp.text ":include isn't supported in the predicate language" ]
           | _ when s.[0] = ':' ->
-            Errors.fail loc "undefined symbol %s" s
+            User_error.raise ~loc
+              [ Pp.textf "undefined symbol %s" s ]
           | _ ->
             elt
         end
       | List (_, Atom (loc, A s) :: _) -> begin
           match s, kind with
           | ":include", _ ->
-            Errors.fail loc ":include isn't supported in the predicate language"
+            User_error.raise ~loc
+              [ Pp.text ":include isn't supported in the predicate language" ]
           | ("or" | "and" | "not"), _ -> bool_ops kind
           | s, Dune when s <> "" && s.[0] <> '-' && s.[0] <> ':' ->
-            Errors.fail loc
-              "This atom must be quoted because it is the first element \
-               of a list and doesn't start with - or :"
+            User_error.raise ~loc
+              [ Pp.text
+                  "This atom must be quoted because it is the first \
+                   element of a list and doesn't start with - or:"
+              ]
           | _ -> enter (many union [] kind)
         end
       | List _ -> enter (many union [] kind)
@@ -69,20 +74,20 @@ module Ast = struct
     | Dune -> many union [] kind
     | Jbuild -> one kind
 
-  let rec to_sexp f =
-    let open Sexp.Encoder in
+  let rec to_dyn f =
+    let open Dyn.Encoder in
     function
     | Element a -> f a
-    | Compl a -> constr "compl" [to_sexp f a]
+    | Compl a -> constr "compl" [to_dyn f a]
     | Standard -> string ":standard"
-    | Union xs -> constr "or" (List.map ~f:(to_sexp f) xs)
-    | Inter xs -> constr "and" (List.map ~f:(to_sexp f) xs)
+    | Union xs -> constr "or" (List.map ~f:(to_dyn f) xs)
+    | Inter xs -> constr "and" (List.map ~f:(to_dyn f) xs)
 end
 
 type t = (string -> bool) Ast.t
 
-let pp ppf t =
-  Sexp.pp ppf (Ast.to_sexp (fun _ -> Sexp.Encoder.string "opaque") t)
+let to_dyn t =
+  Ast.to_dyn (fun _ -> Dyn.Encoder.string "opaque") t
 
 let decode : t Dune_lang.Decoder.t =
   let open Stanza.Decoder in
@@ -90,26 +95,28 @@ let decode : t Dune_lang.Decoder.t =
 
 let empty = Ast.Union []
 
-let rec mem t ~standard ~elem =
+let rec exec t ~standard elem =
   match (t : _ Ast.t) with
-  | Compl t -> not (mem t ~standard ~elem)
+  | Compl t -> not (exec t ~standard elem)
   | Element f -> f elem
-  | Union xs -> List.exists ~f:(mem ~standard ~elem) xs
-  | Inter xs -> List.for_all ~f:(mem ~standard ~elem) xs
-  | Standard -> mem standard ~standard ~elem
+  | Union xs -> List.exists ~f:(fun t -> exec t ~standard elem) xs
+  | Inter xs -> List.for_all ~f:(fun t -> exec t ~standard elem) xs
+  | Standard -> exec standard ~standard elem
 
 let filter (t : t) ~standard elems =
   match t with
   | Inter []
   | Union [] -> []
   | _ ->
-    (List.filter elems ~f:(fun elem -> mem t ~standard ~elem))
+    (List.filter elems ~f:(fun elem -> exec t ~standard elem))
 
 let union t = Ast.Union t
 
 let of_glob g = Ast.Element (Glob.test g)
 
 let of_pred p = Ast.Element p
+let true_ = of_pred (fun _ -> true)
+let false_ = of_pred (fun _ -> false)
 
 let of_string_set s = Ast.Element (String.Set.mem s)
 

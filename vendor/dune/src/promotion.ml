@@ -2,16 +2,15 @@ open! Stdune
 
 module File = struct
   type t =
-    { src : Path.t
-    ; dst : Path.t
+    { src : Path.Build.t
+    ; dst : Path.Source.t
     }
 
-  (* XXX these sexp converters will be useful for the dump command *)
-  let _to_sexp { src; dst } =
-    Sexp.List
-      [ Path.to_sexp src
-      ; Sexp.Atom "as"
-      ; Path.to_sexp dst
+  let to_dyn { src; dst } =
+    let open Dyn.Encoder in
+    record
+      [ "src", Path.Build.to_dyn src
+      ; "dst", Path.Source.to_dyn dst
       ]
 
   let db : t list ref = ref []
@@ -19,17 +18,17 @@ module File = struct
   let register t = db := t :: !db
 
   let promote { src; dst } =
-    let src_exists = Path.exists src in
+    let src_exists = Path.exists (Path.build src) in
     Console.print
       (Format.sprintf
          (if src_exists then
             "Promoting %s to %s.@."
           else
             "Skipping promotion of %s to %s as the file is missing.@.")
-         (Path.to_string_maybe_quoted src)
-         (Path.to_string_maybe_quoted dst));
+         (Path.to_string_maybe_quoted (Path.build src))
+         (Path.Source.to_string_maybe_quoted dst));
     if src_exists then
-      Io.copy_file ~src ~dst ()
+      Io.copy_file ~src:(Path.build src) ~dst:(Path.source dst) ()
 end
 
 let clear_cache () =
@@ -37,7 +36,7 @@ let clear_cache () =
 
 let () = Hooks.End_of_build.always clear_cache
 
-module P = Utils.Persistent(struct
+module P = Persistent.Make(struct
     type t = File.t list
     let name = "TO-PROMOTE"
     let version = 1
@@ -57,20 +56,21 @@ let load_db () = Option.value ~default:[] (P.load db_file)
 let group_by_targets db =
   List.map db ~f:(fun { File. src; dst } ->
     (dst, src))
-  |> Path.Map.of_list_multi
+  |> Path.Source.Map.of_list_multi
   (* Sort the list of possible sources for deterministic behavior *)
-  |> Path.Map.map ~f:(List.sort ~compare:Path.compare)
+  |> Path.Source.Map.map ~f:(List.sort ~compare:Path.Build.compare)
 
 type files_to_promote =
   | All
-  | These of Path.t list * (Path.t -> unit)
+  | These of Path.Source.t list * (Path.Source.t -> unit)
 
 let do_promote db files_to_promote =
   let by_targets = group_by_targets db  in
   let potential_build_contexts =
     match Path.readdir_unsorted Path.build_dir with
     | exception _ -> []
-    | files ->
+    | Error _ -> []
+    | Ok files ->
       List.filter_map files ~f:(fun fn ->
         if fn = "" || fn.[0] = '.' || fn = "install" then
           None
@@ -89,31 +89,31 @@ let do_promote db files_to_promote =
          quickly, it will look like it hasn't changed even though it
          might have. *)
       List.iter dirs_to_clear_from_cache ~f:(fun dir ->
-        Utils.Cached_digest.remove (Path.append dir dst));
+        Cached_digest.remove (Path.append_source dir dst));
       File.promote { src; dst };
       List.iter others ~f:(fun path ->
         Format.eprintf " -> ignored %s.@."
-          (Path.to_string_maybe_quoted path))
+          (Path.to_string_maybe_quoted (Path.build path)))
   in
   match files_to_promote with
   | All ->
-    Path.Map.iteri by_targets ~f:promote_one;
+    Path.Source.Map.iteri by_targets ~f:promote_one;
     []
   | These (files, on_missing) ->
     let files =
-      Path.Set.of_list files |> Path.Set.to_list
+      Path.Source.Set.of_list files |> Path.Source.Set.to_list
     in
     let by_targets =
       List.fold_left files ~init:by_targets ~f:(fun map fn ->
-        match Path.Map.find by_targets fn with
+        match Path.Source.Map.find by_targets fn with
         | None ->
           on_missing fn;
           map
         | Some srcs ->
           promote_one fn srcs;
-          Path.Map.remove by_targets fn)
+          Path.Source.Map.remove by_targets fn)
     in
-    Path.Map.to_list by_targets
+    Path.Source.Map.to_list by_targets
     |> List.concat_map ~f:(fun (dst, srcs) ->
       List.map srcs ~f:(fun src -> { File.src; dst }))
 

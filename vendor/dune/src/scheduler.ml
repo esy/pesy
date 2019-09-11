@@ -11,9 +11,10 @@ module Signal = struct
   type t = Int | Quit | Term
   let compare : t -> t -> Ordering.t = compare
 
-  module Set = Set.Make(struct
+  include Comparable.Make(struct
       type nonrec t = t
       let compare = compare
+      let to_dyn _ = Dyn.opaque
     end)
 
   let all = [Int; Quit; Term]
@@ -28,7 +29,7 @@ module Signal = struct
     |> Int.Map.of_list_reduce ~f:(fun _ t -> t)
     |> Int.Map.find
 
-  let name t = Utils.signal_name (to_int t)
+  let name t = Signal.name (to_int t)
 end
 
 module Thread = struct
@@ -217,8 +218,11 @@ end = struct
              "--event"; "Updated";
              "--event"; "Removed"] @ excludes
          | None ->
-           die "@{<error>Error@}: fswatch (or inotifywait) was not found. \
-                One of them needs to be installed for watch mode to work.\n"))
+           User_error.raise
+             [ Pp.text "fswatch (or inotifywait) was not found. One of \
+                        them needs to be installed for watch mode to \
+                        work."
+             ]))
 
   let buffering_time = 0.5 (* seconds *)
   let buffer_capacity = 65536
@@ -355,7 +359,7 @@ end = struct
     let add job =
       match Hashtbl.find table job.pid with
       | None ->
-        Hashtbl.add table job.pid (Running job);
+        Hashtbl.set table job.pid (Running job);
         incr running_count;
         if !running_count = 1 then Condition.signal something_is_running_cv
       | Some (Zombie status) ->
@@ -367,7 +371,7 @@ end = struct
     let remove ~pid status =
       match Hashtbl.find table pid with
       | None ->
-        Hashtbl.add table pid (Zombie status)
+        Hashtbl.set table pid (Zombie status)
       | Some (Running job) ->
         decr running_count;
         Hashtbl.remove table pid;
@@ -677,7 +681,7 @@ end = struct
              let* pump_events_result = pump_events t in
              Fiber.return (pump_events_result, user_action_result)) with
     | exception Fiber.Never ->
-      Exn.code_error "[Scheduler.pump_events] got stuck somehow" []
+      Code_error.raise "[Scheduler.pump_events] got stuck somehow" []
     | exception exn ->
       Error (Exn (exn, (Printexc.get_raw_backtrace ())))
     | (a, b) ->
@@ -696,7 +700,10 @@ end = struct
      | Error Files_changed ->
        set_status_line_generator
          (fun () ->
-            { message = Some "Had errors, killing current build..."
+            { message =
+                Some (Pp.seq (Pp.tag ~tag:User_message.Style.Error
+                                (Pp.verbatim "Had errors"))
+                        (Pp.verbatim ", killing current build..."))
             ; show_jobs = false
             })
      | _ -> ());
@@ -717,11 +724,11 @@ let go ?log ?config f =
   | Ok res ->
     res
   | Error Got_signal ->
-    raise Already_reported
+    raise Report_error.Already_reported
   | Error Never ->
     raise Fiber.Never
   | Error Files_changed ->
-    Exn.code_error
+    Code_error.raise
       "Scheduler.go: files changed even though we're running without filesystem watcher"
       []
 
@@ -742,7 +749,8 @@ let poll ?log ?config ~once ~finally () =
     let old_generator = Console.get_status_line_generator () in
     set_status_line_generator
       (fun () ->
-         { message = Some (msg ^ ", waiting for filesystem changes...")
+         { message = Some (Pp.seq msg
+                             (Pp.verbatim ", waiting for filesystem changes..."))
          ; show_jobs = false
          });
     let res = block_waiting_for_changes () in
@@ -754,17 +762,21 @@ let poll ?log ?config ~once ~finally () =
     finally ();
     match res with
     | Ok () ->
-      wait (Colors.apply_string Colors.command_success "Success") |> after_wait
+      wait (Pp.tag ~tag:User_message.Style.Success
+              (Pp.verbatim "Success"))
+      |> after_wait
     | Error Got_signal ->
-      (Already_reported, None)
+      (Report_error.Already_reported, None)
     | Error Never ->
-      wait (Colors.apply_string Colors.command_error "Had errors") |> after_wait
+      wait (Pp.tag ~tag:User_message.Style.Error
+              (Pp.verbatim "Had errors"))
+      |> after_wait
     | Error Files_changed ->
       loop ()
     | Error (Exn (exn, bt)) -> (exn, Some bt)
   and
     after_wait = function
-    | Exit -> (Already_reported, None)
+    | Exit -> (Report_error.Already_reported, None)
     | Continue -> loop ()
   in
   let exn, bt = loop () in

@@ -8,7 +8,7 @@ let rules (t : Dune_file.Tests.t) ~sctx ~dir ~scope ~expander ~dir_contents
     let expected_basename = name ^ ".expected" in
     if String.Set.mem files expected_basename then
       `Expect
-        { Action_unexpanded.Diff.
+        { Diff.
           file1 = String_with_vars.make_text loc expected_basename
         ; file2 = String_with_vars.make_text loc (name ^ ".output")
         ; optional = false
@@ -28,7 +28,8 @@ let rules (t : Dune_file.Tests.t) ~sctx ~dir ~scope ~expander ~dir_contents
     let extra_bindings =
       let test_exe = s ^ ".exe" in
       let test_exe_path =
-        Super_context.Action.map_exe sctx (Path.relative dir test_exe) in
+        Super_context.Action.map_exe sctx
+          (Path.relative (Path.build dir) test_exe) in
       Pform.Map.singleton test_var_name (Values [Path test_exe_path]) in
     let add_alias ~loc ~action ~locks =
       let alias =
@@ -61,5 +62,5 @@ let rules (t : Dune_file.Tests.t) ~sctx ~dir ~scope ~expander ~dir_contents
         } in
       add_alias ~loc ~action:(Diff diff) ~locks:t.locks;
       ignore (Simple_rules.user_rule sctx rule ~extra_bindings ~dir ~expander
-              : Path.t list));
+              : Path.Build.Set.t));
   Exe_rules.rules t.exes ~sctx ~dir ~scope ~expander ~dir_kind ~dir_contents

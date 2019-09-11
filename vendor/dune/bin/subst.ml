@@ -62,14 +62,14 @@ let term =
     Common.set_common common ~targets:[];
     Scheduler.go ~common (Watermarks.subst ?name)
   | Dune ->
-    let+ () = Term.const () in
+    let+ () = Common.build_info in
     let config : Config.t =
       { display     = Quiet
       ; concurrency = Fixed 1
       }
     in
     Path.set_root (Path.External.cwd ());
-    Path.set_build_dir (Path.Kind.of_string Common.default_build_dir);
+    Path.Build.set_build_dir (Path.Build.Kind.of_string Common.default_build_dir);
     Dune.Scheduler.go ~config Watermarks.subst
 
 let command = term, info

@@ -20,30 +20,46 @@ let user_rule sctx ?extra_bindings ~dir ~expander (rule : Rule.t) =
     let targets : Expander.Targets.t =
       match rule.targets with
       | Infer -> Infer
-      | Static fns ->
-        let f fn =
-          let not_in_dir ~error_loc s =
-            Errors.fail
-              error_loc
-              "%s does not denote a file in the current directory" s;
-          in
-          let error_loc = String_with_vars.loc fn in
-          Expander.expand expander ~mode:Many ~template:fn
-          |> List.map ~f:(function
+      | Static { targets; multiplicity } ->
+        let not_in_dir ~error_loc s =
+          User_error.raise ~loc:error_loc
+            [ Pp.textf
+                "%s does not denote a file in the current directory" s ];
+        in
+        let check_filename ~error_loc fn =
+          match fn with
             | Value.String ("." | "..") ->
-              Errors.fail error_loc "'.' and '..' are not valid filenames"
+              User_error.raise~loc:error_loc
+                [ Pp.text "'.' and '..' are not valid filenames" ]
             | String s ->
               if Filename.dirname s <> Filename.current_dir_name then
                 not_in_dir ~error_loc s;
-              Path.relative ~error_loc dir s
+              Path.Build.relative ~error_loc dir s
             | Path p ->
-              if Path.parent p <> Some dir then
+              if Option.compare Path.compare
+                   (Path.parent p) (Some (Path.build dir))
+                 <> Eq
+              then
                 not_in_dir ~error_loc (Path.to_string p);
-              p
+              Path.as_in_build_dir_exn p
             | Dir p ->
-              not_in_dir ~error_loc (Path.to_string p))
+              not_in_dir ~error_loc (Path.to_string p)
         in
-        Static (List.concat_map ~f fns)
+
+        let targets = List.concat_map targets ~f:(fun target ->
+          let error_loc = String_with_vars.loc target in
+          match multiplicity with
+          | One ->
+            let res = Expander.expand expander ~mode:Single ~template:target in
+            [check_filename ~error_loc res]
+          | Multiple ->
+            Expander.expand expander ~mode:Many ~template:target
+            |> List.map ~f:(check_filename ~error_loc))
+        in
+        Expander.Targets.Static
+          { multiplicity;
+            targets
+          }
     in
     let bindings = dep_bindings ~extra_bindings rule.deps in
     let expander = Expander.add_bindings expander ~bindings in
@@ -60,47 +76,49 @@ let user_rule sctx ?extra_bindings ~dir ~expander (rule : Rule.t) =
          ~targets
          ~targets_dir:dir)
   end else
-    []
+    Path.Build.Set.empty
 
 let copy_files sctx ~dir ~expander ~src_dir (def: Copy_files.t) =
   let loc = String_with_vars.loc def.glob in
   let glob_in_src =
     let src_glob = Expander.expand_str expander def.glob in
-    Path.relative src_dir src_glob ~error_loc:loc
+    Path.Source.relative src_dir src_glob ~error_loc:loc
   in
   let since = (1, 3) in
   if def.syntax_version < since
-  && not (Path.is_descendant glob_in_src ~of_:src_dir) then
+  && not (Path.Source.is_descendant glob_in_src ~of_:src_dir) then
     Syntax.Error.since loc Stanza.syntax since
       ~what:(sprintf "%s is not a sub-directory of %s. This"
-               (Path.to_string_maybe_quoted glob_in_src)
-               (Path.to_string_maybe_quoted src_dir));
-  let src_in_src = Path.parent_exn glob_in_src in
+               (Path.Source.to_string_maybe_quoted glob_in_src)
+               (Path.Source.to_string_maybe_quoted src_dir));
+  let src_in_src = Path.Source.parent_exn glob_in_src in
   let pred =
-    Path.basename glob_in_src
+    Path.Source.basename glob_in_src
     |> Glob.of_string_exn (String_with_vars.loc def.glob)
     |> Glob.to_pred
   in
   let file_tree = Super_context.file_tree sctx in
   if not (File_tree.dir_exists file_tree src_in_src) then
-    Errors.fail
-      loc
-      "cannot find directory: %a"
-      Path.pp src_in_src;
+    User_error.raise ~loc
+      [ Pp.textf "Cannot find directory: %s"
+          (Path.Source.to_string src_in_src)
+      ];
   (* add rules *)
-  let src_in_build = Path.append (SC.context sctx).build_dir src_in_src in
+  let src_in_build =
+    Path.Build.append_source (SC.context sctx).build_dir src_in_src in
   let files =
-    Build_system.eval_pred (File_selector.create ~dir:src_in_build pred) in
+    Build_system.eval_pred
+      (File_selector.create ~dir:(Path.build src_in_build) pred) in
   Path.Set.map files ~f:(fun file_src ->
     let basename = Path.basename file_src in
-    let file_dst = Path.relative dir basename in
+    let file_dst = Path.Build.relative dir basename in
     SC.add_rule sctx ~loc ~dir
       ((if def.add_line_directive
         then Build.copy_and_add_line_directive
         else Build.copy)
          ~src:file_src
          ~dst:file_dst);
-    file_dst)
+    Path.build file_dst)
 
 let add_alias sctx ~dir ~name ~stamp ~loc ?(locks=[]) build =
   let alias = Alias.make name ~dir in

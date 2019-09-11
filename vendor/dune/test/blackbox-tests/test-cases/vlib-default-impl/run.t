@@ -18,7 +18,7 @@ Check that ambiguity is handled correctly.
   $ dune build --root dependency-cycle
   Entering directory 'dependency-cycle'
   Error: Default implementation cycle detected between the following libraries:
-  -> "clock"
+     "clock"
   -> "clock_ocaml"
   -> "async_ocaml"
   -> "async"
@@ -34,7 +34,7 @@ Check that default implementation data is installed in the dune package file.
   $ dune build --root dune-package
   Entering directory 'dune-package'
   $ cat dune-package/_build/install/default/lib/a/dune-package
-  (lang dune 1.9)
+  (lang dune 1.11)
   (name a)
   (library
    (name a)
@@ -45,11 +45,17 @@ Check that default implementation data is installed in the dune package file.
    (main_module_name A)
    (modes byte native)
    (modules
-    (alias_module (name A) (obj_name a) (visibility public) (impl))
-    (main_module_name A)
-    (modules
-     ((name X) (obj_name a__X) (visibility public) (kind virtual) (intf)))
-    (wrapped true)))
+    (wrapped
+     (main_module_name A)
+     (modules
+      ((name X) (obj_name a__X) (visibility public) (kind virtual) (intf)))
+     (alias_module
+      (name A)
+      (obj_name a)
+      (visibility public)
+      (kind alias)
+      (impl))
+     (wrapped true))))
 
 Test default implementation for an external library
 

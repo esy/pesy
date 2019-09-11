@@ -16,7 +16,9 @@ val of_cm_kind : Cm_kind.t -> t
 
 val variant : t -> Variant.t
 
-val pp : t Fmt.t
+val to_string : t -> string
+
+val to_dyn : t -> Dyn.t
 
 module Dict : sig
   type mode = t
@@ -28,7 +30,7 @@ module Dict : sig
 
   val for_all : 'a t -> f:('a -> bool) -> bool
 
-  val pp : 'a Fmt.t -> 'a t Fmt.t
+  val to_dyn : ('a -> Dyn.t) -> 'a t -> Dyn.t
 
   module List : sig
     type 'a dict
@@ -45,6 +47,7 @@ module Dict : sig
   val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 
   val map : 'a t -> f:('a -> 'b) -> 'b t
+  val mapi : 'a t -> f:(mode -> 'a -> 'b) -> 'b t
 
   val make_both : 'a -> 'a t
 

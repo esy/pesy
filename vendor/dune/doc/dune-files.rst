@@ -20,9 +20,9 @@ Stanzas
      (libraries base lwt))
 
     (rule
-     (targets foo.ml)
-     (deps    generator/gen.exe)
-     (action  (run %{deps} -o %{targets})))
+     (target foo.ml)
+     (deps   generator/gen.exe)
+     (action (run %{deps} -o %{target})))
 
 The following sections describe the available stanzas and their meaning.
 
@@ -140,7 +140,12 @@ to use the :ref:`include_subdirs` stanza.
   available choices are ``ppx_rewriter`` and ``ppx_deriver`` and must be set
   when the library is intended to be used as a ppx rewriter or a ``[@@deriving
   ...]`` plugin. The reason why ``ppx_rewriter`` and ``ppx_deriver`` are split
-  is historical and hopefully we won't need two options soon
+  is historical and hopefully we won't need two options soon. Both ppx kinds
+  support an optional field ``(cookies <cookies>)`` where ``<cookies>`` is a
+  list of pairs ``(<name> <value>)`` with ``<name>`` being the cookie name and
+  ``<value>`` is a string that supports `Variables expansion`_ evaluated
+  by each invocation of the preprocessor (note: libraries that share
+  cookies with the same name should agree on their expanded value)
 
 - ``(ppx_runtime_libraries (<library-names>))`` is for when the library is a ppx
   rewriter or a ``[@@deriving ...]`` plugin and has runtime dependencies. You
@@ -193,9 +198,9 @@ to use the :ref:`include_subdirs` stanza.
   such modules to avoid surprises. ``<modules>`` must be a subset of
   the modules listed in the ``(modules ...)`` field.
 
-- ``(private_modules <modules>)`` species a list of modules that will be marked
-  as private. Private modules are inaccessible from outside the libraries they
-  are defined in.
+- ``(private_modules <modules>)`` specifies a list of modules that will be
+  marked as private. Private modules are inaccessible from outside the libraries
+  they are defined in.
 
 - ``(allow_overlapping_dependencies)`` allows external dependencies to
   overlap with libraries that are present in the workspace
@@ -203,6 +208,14 @@ to use the :ref:`include_subdirs` stanza.
 - ``(no_keep_locs)`` does nothing. It used to be a necessary hack when
   we were waiting for proper support for virtual libraries. Do not use
   in new code, it will be deleted in dune 2.0
+
+- ``(enabled_if <blang expression>)`` allows to conditionally disable
+  a library. A disabled library cannot be built and will not be
+  installed. The condition is specified using the blang_, and the
+  field allows for the ``%{os_type}`` variable, which is expanded to
+  the type of OS being targeted by the current build. Its value is
+  the same as the value of the ``os_type`` parameter in the output of
+  ``ocamlc -config``
 
 Note that when binding C libraries, dune doesn't provide special support for
 tools such as ``pkg-config``, however it integrates easily with configurator_ by
@@ -300,6 +313,12 @@ Executables can also be linked as object or shared object files. See
 - ``(allow_overlapping_dependencies)`` is the same as the
   corresponding field of `library`_
 
+- ``(promote <options>)`` allows to promote the linked executables to
+  the source tree. The options are the same as for the :ref:`rule
+  promote mode <_promote>`. Adding ``(promote (until-clean))`` to an
+  ``executable`` stanza will cause Dune to copy the ``.exe`` files to
+  the source tree and ``dune clean`` to delete them
+
 Linking modes
 ~~~~~~~~~~~~~
 
@@ -322,6 +341,8 @@ compilation is not available.
 - ``shared_object`` for producing object files that can be dynamically
   loaded into an application. This mode can be used to write a plugin
   in OCaml for a non-OCaml application.
+- ``js`` for producing Javascript from bytecode executables, see
+  :ref:`explicit-js-mode`.
 
 For instance the following ``executables`` stanza will produce byte
 code executables and native shared objects:
@@ -340,6 +361,7 @@ Additionally, you can use the following short-hands:
 - ``shared_object`` for ``(best shared_object)``
 - ``byte`` for ``(byte exe)``
 - ``native`` for ``(native exe)``
+- ``js`` for ``(byte js)``
 
 For instance the following ``modes`` fields are all equivalent:
 
@@ -362,6 +384,7 @@ native/best      object        .exe%{ext_obj}
 byte             shared_object .bc%{ext_dll}
 native/best      shared_object %{ext_dll}
 byte             c             .bc.c
+byte             js            .bc.js
 ================ ============= =================
 
 Where ``%{ext_obj}`` and ``%{ext_dll}`` are the extensions for object
@@ -406,12 +429,14 @@ The syntax is as follows:
 .. code:: scheme
 
     (rule
-     (targets <filenames>)
+     (target[s] <filenames>)
      (action  <action>)
      <optional-fields>)
 
-``<filenames>`` is a list of file names. Note that currently dune only
-support user rules with targets in the current directory.
+``<filenames>`` is a list of file names (if defined with ``targets``)
+or exactly one file name (if defined with ``target``). Note that
+currently dune only supports user rules with targets in the current
+directory.
 
 ``<action>`` is the action to run to produce the targets from the dependencies.
 See the `User actions`_ section for more details.
@@ -450,27 +475,42 @@ field. The following modes are available:
   of fallback rules is to generate default configuration files that
   may be generated by a configure script.
 
-- ``promote``, in this mode, the files in the source tree will be
-  ignored. Once the rule has been executed, the targets will be copied
-  back to the source tree
+.. _promote:
 
-- ``promote-until-clean`` is the same as ``promote`` except than
-  ``dune clean`` will remove the promoted files from the source
-  tree
+- ``promote`` or ``(promote <options>)``, in this mode, the files
+  in the source tree will be ignored. Once the rule has been executed,
+  the targets will be copied back to the source tree
 
-- ``(promote-into <dir>)`` (resp. ``(promote-until-clean-into
-  <dir>)``) is the same as ``promote`` (resp. ``promote-until-clean``)
-  except that the files are promoted in ``<dir>`` instead of the
-  current directory. This feature is available since Dune 1.8.
+     The following options are available:
+     - ``(until-clean)`` means that ``dune clean`` will remove the
+     promoted files from the source tree
+     - ``(into <dir>)`` means that the files are promoted in ``<dir>``
+     instead of the current directory. This feature is available since
+     Dune 1.8
+     - ``(only <predicate>)`` means that only a subset of the targets
+     should be promoted. The argument is a predicate in a syntax
+     similar to the argument of :ref:`(dirs ...) <dune-subdirs>`. This
+     feature is available since dune 1.10
+
+- ``promote-until-clean`` is the same as ``(promote (until-clean))``
+- ``(promote-into <dir>)`` is the same as ``(promote (into <dir>))``
+- ``(promote-until-clean-into <dir>)`` is the same as ``(promote
+  (until-clean) (into <dir>))``
+
+The ``(promote <options>)`` form is only available since Dune
+1.10. Before Dune 1.10, you need to use one of the ``promote-...``
+forms. The ``promote-...`` forms should disappear in Dune 2.0, so
+using the more generic ``(promote <options>)`` form should be prefered
+in new projects.
 
 There are two use cases for promote rules. The first one is when the
 generated code is easier to review than the generator, so it's easier
 to commit the generated code and review it. The second is to cut down
 dependencies during releases: by passing ``--ignore-promoted-rules``
-to dune, rules will ``(mode promote)`` will be ignored and the
-source files will be used instead. The
-``-p/--for-release-of-packages`` flag implies
-``--ignore-promote-rules``.
+to dune, rules will ``(mode promote)`` will be ignored and the source
+files will be used instead. The ``-p/--for-release-of-packages`` flag
+implies ``--ignore-promote-rules``. However, rules that promotes only
+a subset of their targets via ``(only ...)`` are never ignored.
 
 inferred rules
 ~~~~~~~~~~~~~~
@@ -483,9 +523,9 @@ For instance:
 .. code:: scheme
 
     (rule
-     (targets b)
-     (deps    a)
-     (action  (copy %{deps} %{targets})))
+     (target b)
+     (deps   a)
+     (action (copy %{deps} %{target})))
 
 In this example it is obvious by inspecting the action what the
 dependencies and targets are. When this is the case you can use the
@@ -519,10 +559,10 @@ ocamllex
 .. code:: scheme
 
     (rule
-     (targets <name>.ml)
-     (deps    <name>.mll)
-     (action  (chdir %{workspace_root}
-               (run %{bin:ocamllex} -q -o %{targets} %{deps}))))
+     (target <name>.ml)
+     (deps   <name>.mll)
+     (action (chdir %{workspace_root}
+              (run %{bin:ocamllex} -q -o %{target} %{deps}))))
 
 To use a different rule mode, use the long form:
 
@@ -558,6 +598,13 @@ menhir
 
 A ``menhir`` stanza is available to support the menhir_ parser generator. See
 the :ref:`menhir-main` section for details.
+
+cinaps
+------
+
+A ``cianps`` stanza is available to support the ``cinaps`` tool.  See
+the `cinaps website <https://github.com/janestreet/cinaps>`_ for more
+details.
 
 .. _alias-stanza:
 
@@ -619,63 +666,9 @@ tests.
 install
 -------
 
-The ``install`` stanza is what lets you describe what dune should install,
-either when running ``dune install`` or through opam.
-
-Libraries and executables don't need an ``install`` stanza to be
-installed, just a ``public_name`` field. Everything else needs an
-``install`` stanza.
-
-The syntax is as follows:
-
-.. code:: scheme
-
-    (install
-     (section <section>)
-     (files   <filenames>)
-     <optional-fields>)
-
-``<section>`` is the installation section, as described in the opam
-manual. The following sections are available:
-
--  ``lib``
--  ``lib_root``
--  ``libexec``
--  ``libexec_root``
--  ``bin``
--  ``sbin``
--  ``toplevel``
--  ``share``
--  ``share_root``
--  ``etc``
--  ``doc``
--  ``stublibs``
--  ``man``
--  ``misc``
-
-``<files>`` is the list of files to install. Each element in the list
-must be either a literal filename or a S-expression of the form:
-
-.. code:: scheme
-
-    (<filename> as <destination>)
-
-where ``<destination>`` describe how the file will be installed. For
-instance, to install a file ``mylib.el`` as
-``emacs/site-lisp/mylib.el`` in the ``share_root`` section:
-
-.. code:: scheme
-
-    (install
-     (section share_root)
-     (files   (mylib.el as emacs/site-lisp/mylib.el)))
-
-``<optional-fields>`` are:
-
-- ``(package <name>)``. If there are no ambiguities, you can omit this field.
-  Otherwise you need it to specify which package these files are part of. The
-  package is not ambiguous when the first parent directory to contain a
-  ``<package>.opam`` file contains exactly one ``<package>.opam`` file
+Dune supports installing packages on the system, i.e. copying freshly
+built artifacts from the workspace to the system.  See the
+`installation` section for more details.
 
 Handling of the .exe extension on Windows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -761,6 +754,18 @@ fields. In particular, all fields except for ``public_names`` are supported from
 the :ref:`executables stanza <shared-exe-fields>`. Alias fields apart from
 ``name`` are allowed.
 
+By default the test binaries are run without options.  The ``action`` field can
+be used to override the test binary invocation, for example if you're using
+alcotest and wish to see all the test failures on the standard output when
+running dune runtest you can use the following stanza:
+
+.. code:: scheme
+
+   (tests
+    (names mytest)
+    (libraries alcotest mylib)
+    (action (run %{test} -e)))
+
 test
 ----
 
@@ -812,6 +817,12 @@ Fields supported in ``<settings>`` are:
   ``<filepath>`` as ``<name>``. If the ``<name>`` isn't provided, then it will
   be inferred from the basename of ``<filepath>`` by dropping the ``.exe``
   suffix if it exists.
+
+- ``(inline_tests <state>)`` where state is either ``enabled``, ``disabled`` or
+  ``ignored``. This field is available since Dune 1.11. It controls the value
+  of the variable ``%{inline_tests}`` that is read by the inline test framework.
+  The default value is ``disabled`` for the ``release`` profile and ``enabled``
+  otherwise.
 
 .. _dune-subdirs:
 
@@ -886,6 +897,30 @@ instead of this stanza. For example:
 
   (dirs :standard \ <sub-dir1> <sub-dir2> ...)
 
+.. _dune-vendored_dirs:
+
+vendored_dirs (since 1.11)
+-------------------------
+
+Dune supports vendoring of other dune-based projects natively since simply
+copying a project into a subdirectory of your own project will work. Simply
+doing that has a few limitations though. You can workaround those by explicitly
+marking such directories as containing vendored code.
+
+Example:
+
+.. code:: scheme
+
+   (vendored_dirs vendor)
+
+
+Dune will not resolve aliases in vendored directories meaning by default it will
+not build all installable targets, run the test, format or lint the code located
+in such a directory while still building the parts your project depend upon.
+Libraries and executable in vendored directories will also be built with a ``-w
+-a`` flag to suppress all warnings and prevent pollution of your build output.
+
+
 .. _include_subdirs:
 
 include_subdirs
@@ -944,6 +979,23 @@ run this toplevel with:
 .. code:: shell
 
    $ dune exec ./tt.exe
+
+external_variant
+-----------------
+
+The ``external_variant`` allow to declare a tagged implementation that does not
+live inside the virtual library project.
+
+.. code:: scheme
+
+   (external_variant
+    (variant foo)
+    (implementation lib-foo)
+    (virtual_library vlib))
+
+This will add `lib-foo` to the list of known implementations of `vlib`. For more
+details see :ref:`dune-variants`
+
 
 Common items
 ============
@@ -1057,9 +1109,21 @@ Dune supports the following variables:
 - ``profile`` the profile selected via ``--profile``
 - ``context_name`` the name of the context (``default`` or defined in the
   workspace file)
+- ``os_type`` is the type of the OS the build is targetting. This is
+  the same as ``ocaml-config:os_type``
+- ``architecture`` is the type of the architecture the build is targetting. This
+  is the same as ``ocaml-config:architecture``
+- ``model`` is the type of the cpu the build is targetting. This is
+  the same as ``ocaml-config:model``
+- ``system`` is the name of the OS the build is targetting. This is the same as
+  ``ocaml-config:system``
+- ``ignoring_promoted_rule`` is ``true`` if
+  ``--ignore-promoted-rules`` was passed on the command line and
+  ``false`` otherwise
 
 In addition, ``(action ...)`` fields support the following special variables:
 
+- ``target`` expands to the one target
 - ``targets`` expands to the list of target
 - ``deps`` expands to the list of dependencies
 - ``^`` expands to the list of dependencies, separated by spaces
@@ -1157,9 +1221,9 @@ Here is another example:
 .. code:: scheme
 
     (rule
-     (targets foo.exe)
-     (deps    foo.c)
-     (action  (run %{cc} -o %{targets} %{deps} -lfoolib)))
+     (target foo.exe)
+     (deps   foo.c)
+     (action (run %{cc} -o %{target} %{deps} -lfoolib)))
 
 
 Library dependencies
@@ -1253,6 +1317,8 @@ instance. When using such ppx rewriters, you must use ``staged_pps``
 instead of ``pps`` in order to force Dune to use the second pipeline,
 which is slower but necessary in this case.
 
+.. _preprocessing-actions:
+
 Preprocessing with actions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1268,10 +1334,10 @@ you had setup a rule for every file of the form:
    .. code:: scheme
 
        (rule
-        (targets file.pp.ml)
-        (deps    file.ml)
-        (action  (with-stdout-to %{targets}
-                  (chdir %{workspace_root} <action>))))
+        (target file.pp.ml)
+        (deps   file.ml)
+        (action (with-stdout-to %{target}
+                 (chdir %{workspace_root} <action>))))
 
 The equivalent of a ``-pp <command>`` option passed to the OCaml compiler is
 ``(system "<command> %{input-file}")``.
@@ -1387,7 +1453,7 @@ Named Dependencies
 
 dune allows a user to organize dependency lists by naming them. The user is
 allowed to assign a group of dependencies a name that can later be referred to
-in actions (like the ``%{deps}`` and ``%{targets}`` built in variables).
+in actions (like the ``%{deps}``, ``%{target}`` and ``%{targets}`` built in variables).
 
 One instance where this is useful is for naming globs. Here's an
 example of an imaginary bundle command:
@@ -1395,14 +1461,14 @@ example of an imaginary bundle command:
 .. code:: scheme
 
    (rule
-    (targets archive.tar)
+    (target archive.tar)
     (deps
      index.html
      (:css (glob_files *.css))
      (:js foo.js bar.js)
      (:img (glob_files *.png) (glob_files *.jpg)))
     (action
-     (run %{bin:bundle} index.html -css %{css} -js %{js} -img %{img} -o %{targets})))
+     (run %{bin:bundle} index.html -css %{css} -js %{js} -img %{img} -o %{target})))
 
 Note that such named dependency list can also include unnamed
 dependencies (like ``index.html`` in the example above). Also, such
@@ -1561,9 +1627,9 @@ To understand why this is important, let's consider this dune file living in
 ::
 
     (rule
-     (targets blah.ml)
-     (deps    blah.mll)
-     (action  (run ocamllex -o %{targets} %{deps})))
+     (target blah.ml)
+     (deps   blah.mll)
+     (action (run ocamllex -o %{target} %{deps})))
 
 Here the command that will be executed is:
 
@@ -1585,9 +1651,9 @@ of your project. What you should write instead is:
 ::
 
     (rule
-     (targets blah.ml)
-     (deps    blah.mll)
-     (action  (chdir %{workspace_root} (run ocamllex -o %{targets} %{deps}))))
+     (target blah.ml)
+     (deps   blah.mll)
+     (action (chdir %{workspace_root} (run ocamllex -o %{target} %{deps}))))
 
 Locks
 -----

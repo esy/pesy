@@ -53,14 +53,14 @@ module Make_loc (Key : Key)(Value : Value with type key = Key.t) : sig
   val eval
     :  t
     -> parse:(loc:Loc.t -> string -> Value.t)
-    -> standard:Value.t list
+    -> standard:(Loc.t * Value.t) list
     -> (Loc.t * Value.t) list
 
   (** Same as [eval] but the result is unordered *)
   val eval_unordered
     :  t
     -> parse:(loc:Loc.t -> string -> Value.t)
-    -> standard:Value.t Key.Map.t
+    -> standard:(Loc.t * Value.t) Key.Map.t
     -> (Loc.t * Value.t) Key.Map.t
 end
 
@@ -97,7 +97,7 @@ module Unexpanded : sig
   val files
     : t
     -> f:(String_with_vars.t -> Path.t)
-    -> Dune_lang.syntax * Path.Set.t
+    -> Dune_lang.File_syntax.t * Path.Set.t
 
   (** Expand [t] using with the given file contents. [file_contents] is a map from
       filenames to their parsed contents. Every [(:include fn)] in [t] is replaced by

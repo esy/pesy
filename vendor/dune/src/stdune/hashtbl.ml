@@ -11,7 +11,10 @@ include struct
   let find_exn t key = Option.value_exn (find_opt t key)
 end
 
-module Make(H : Hashable.S) = struct
+module Make(H : sig
+    include Hashable.S
+    val to_dyn : t -> Dyn.t
+  end) = struct
   include MoreLabels.Hashtbl.Make(H)
 
   include struct
@@ -25,15 +28,22 @@ module Make(H : Hashable.S) = struct
 
   include struct
     let find = find_opt
-    let find_exn t key = Option.value_exn (find_opt t key)
-    let add t key data = add t ~key ~data
+    let find_exn t key =
+      match find_opt t key with
+      | Some v -> v
+      | None ->
+        Code_error.raise "Hashtbl.find_exn"
+          [ "key", H.to_dyn key
+          ]
+
+    let set t key data = add t ~key ~data
 
     let find_or_add t key ~f =
       match find t key with
       | Some x -> x
       | None ->
         let x = f key in
-        add t key x;
+        set t key x;
         x
 
     let foldi t ~init ~f =
@@ -47,7 +57,7 @@ module Make(H : Hashable.S) = struct
       | [] -> Result.Ok h
       | (k, v) :: xs ->
         begin match find h k with
-        | None -> add h k v; loop xs
+        | None -> set h k v; loop xs
         | Some v' -> Error (k, v', v)
         end
     in
@@ -56,8 +66,21 @@ module Make(H : Hashable.S) = struct
   let of_list_exn l =
     match of_list l with
     | Result.Ok h -> h
-    | Error (_, _, _) ->
-      Exn.code_error "Hashtbl.of_list_exn duplicate keys" []
+    | Error (key, _, _) ->
+      Code_error.raise "Hashtbl.of_list_exn duplicate keys"
+        ["key", H.to_dyn key]
+
+  let add_exn t key data =
+    match find t key with
+    | None -> set t key data
+    | Some _ ->
+      Code_error.raise "Hastbl.add_exn: key already exists"
+        ["key", H.to_dyn key]
+
+  let add t key data =
+    match find t key with
+    | None -> set t key data; Result.Ok ()
+    | Some p -> Result.Error p
 end
 
 open MoreLabels.Hashtbl
@@ -66,7 +89,6 @@ type nonrec ('a, 'b) t = ('a, 'b) t
 
 let hash = hash
 let create = create
-let add = add
 let replace = replace
 let length = length
 let remove = remove
@@ -75,15 +97,25 @@ let reset = reset
 
 let find = find_opt
 
-let add t key data = add t ~key ~data
+let set t key data = add t ~key ~data
 
 let find_or_add t key ~f =
   match find t key with
   | Some x -> x
   | None ->
     let x = f key in
-    add t key x;
+    set t key x;
     x
+
+let add_exn t key data =
+  match find t key with
+  | None -> set t key data
+  | Some _ -> Code_error.raise "Hastbl.add_exn: key already exists" []
+
+let add t key data =
+  match find t key with
+  | None -> set t key data; Result.Ok ()
+  | Some p -> Error p
 
 let foldi t ~init ~f = fold  t ~init ~f:(fun ~key ~data acc -> f key data acc)
 let fold  t ~init ~f = foldi t ~init ~f:(fun _ x -> f x)
@@ -97,11 +129,10 @@ let to_dyn (type key) f g t =
     Map.Make(struct
       type t = key
       let compare a b = Ordering.of_int (compare a b)
+      let to_dyn = f
     end)
   in
-  Map.to_dyn M.to_list f g
-    (foldi t ~init:M.empty ~f:(fun key data acc ->
-       M.add acc key data))
-
-let to_sexp f g t =
-  Dyn.to_sexp (to_dyn (Dyn.Encoder.via_sexp f) (Dyn.Encoder.via_sexp g) t)
+  let m =
+    foldi t ~init:M.empty ~f:(fun key data acc -> M.set acc key data)
+  in
+  M.to_dyn g m

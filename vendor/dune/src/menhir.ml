@@ -38,7 +38,11 @@ module type PARAMS = sig
   (* [dir] is the directory inside [_build/<context>/...] where the build
      happens. If the [(menhir ...)] stanza appears in [src/jbuild], then [dir]
      is of the form [_build/<context>/src], e.g., [_build/default/src]. *)
-  val dir : Path.t
+  val dir : Path.Build.t
+
+  (* [build_dir] is the base directory of the context; we run menhir
+     from this directoy to we get correct error paths. *)
+  val build_dir : Path.Build.t
 
   (* [stanza] is the [(menhir ...)] stanza, as found in the [jbuild] file. *)
 
@@ -72,11 +76,11 @@ module Run (P : PARAMS) : sig end = struct
      that Menhir must build. *)
 
   let source m =
-    Path.relative dir (m ^ ".mly")
+    Path.relative (Path.build dir) (m ^ ".mly")
 
   let targets m ~cmly =
     let base = [m ^ ".ml"; m ^ ".mli"] in
-    List.map ~f:(Path.relative dir) (
+    List.map ~f:(Path.Build.relative dir) (
       if cmly then
         (m ^ ".cmly") :: base
       else
@@ -95,36 +99,36 @@ module Run (P : PARAMS) : sig end = struct
   let mock m =
     m ^ "__mock"
 
-  let mock_ml m : Path.t =
-    Path.relative dir (mock m ^ ".ml.mock")
+  let mock_ml m : Path.Build.t =
+    Path.Build.relative dir (mock m ^ ".ml.mock")
 
-  let inferred_mli m : Path.t =
-    Path.relative dir (mock m ^ ".mli.inferred")
+  let inferred_mli m : Path.Build.t =
+    Path.Build.relative dir (mock m ^ ".mli.inferred")
 
   (* ------------------------------------------------------------------------ *)
 
   (* Rule generation. *)
 
   let menhir_binary =
-    SC.resolve_program sctx ~dir "menhir" ~loc:None
+    SC.resolve_program sctx ~dir "menhir"
+      ~loc:None
       ~hint:"try: opam install menhir"
 
-  (* Reminder (from arg_spec.mli):
+  (* Reminder (from command.mli):
 
      [Deps]           is for command line arguments that are dependencies.
      [As]             is for command line arguments
      that are neither dependencies nor targets.
      [Hidden_targets] is for targets that are *not* command line arguments.  *)
 
-  type 'a args =
-    (string list, 'a) Arg_spec.t list
+  type 'a args = 'a Command.Args.t list
 
   (* [menhir args] generates a Menhir command line (a build action). *)
 
-  let menhir (args : 'a args) : (string list, Action.t) Build.t =
-    Build.run ~dir menhir_binary args
+  let menhir (args : 'a args) : Action.t Build.s =
+    Command.run ~dir:(Path.build build_dir) menhir_binary args
 
-  let rule ?(mode=stanza.mode) : (unit, Action.t) Build.t -> unit =
+  let rule ?(mode=stanza.mode) :Action.t Build.s -> unit =
     SC.add_rule sctx ~dir ~mode ~loc:stanza.loc
 
   let expand_flags flags =
@@ -172,8 +176,9 @@ module Run (P : PARAMS) : sig end = struct
                       ; "--infer-write-query"
                       ; "--infer-read-reply"
                       ] then
-              Errors.fail (String_with_vars.loc sw)
-                "The flag %s must not be used in a menhir stanza." text
+              User_error.raise ~loc:(String_with_vars.loc sw)
+                [ Pp.textf
+                    "The flag %s must not be used in a menhir stanza." text ]
         )
     )
 
@@ -190,12 +195,10 @@ module Run (P : PARAMS) : sig end = struct
     (* 1. A first invocation of Menhir creates a mock [.ml] file. *)
 
     rule ~mode:Standard (
-      expanded_flags
-      >>>
       menhir
-        [ Dyn (fun flags -> As flags)
+        [ Command.Args.dyn expanded_flags
         ; Deps (sources stanza.modules)
-        ; As [ "--base" ; base ]
+        ; A "--base" ; Path (Path.relative (Path.build dir) base)
         ; A "--infer-write-query"; Target (mock_ml base)
         ]
     );
@@ -205,41 +208,43 @@ module Run (P : PARAMS) : sig end = struct
     let name = Module.Name.of_string (mock base) in
 
     let mock_module : Module.t =
-      Module.make
-        name
-        ~visibility:Public
-        ~kind:Impl
-        ~impl:{ path = mock_ml base; syntax = OCaml }
-        ~obj_dir:(Compilation_context.obj_dir cctx)
+      let source =
+        let impl = Module.File.make Dialect.ocaml (Path.build (mock_ml base)) in
+        Module.Source.make ~impl name
+      in
+      Module.of_source ~visibility:Public ~kind:Impl source
     in
 
-    (* The following incantation allows the mock [.ml] file to be preprocessed
-       by the user-specified [ppx] rewriters. *)
+    let modules =
+      (* The following incantation allows the mock [.ml] file to be preprocessed
+         by the user-specified [ppx] rewriters. *)
 
-    let mock_module =
-      Preprocessing.pp_module_as
-        (Compilation_context.preprocessing cctx)
-        name
-        mock_module
-        ~lint:false
+      let mock_module =
+        Preprocessing.pp_module_as
+          (Compilation_context.preprocessing cctx)
+          name
+          mock_module
+          ~lint:false
+      in
+      Modules.singleton_exe mock_module
     in
+    let dep_graphs = Dep_rules.rules cctx ~modules in
 
-    Module_compilation.ocamlc_i
-      ~dep_graphs:(Ocamldep.rules_for_auxiliary_module cctx mock_module)
-      cctx
-      mock_module
-      ~output:(inferred_mli base);
+    Modules.iter_no_vlib modules ~f:(fun m ->
+      Module_compilation.ocamlc_i
+        ~dep_graphs
+        cctx
+        m
+        ~output:(inferred_mli base));
 
     (* 3. A second invocation of Menhir reads the inferred [.mli] file. *)
 
     rule (
-      expanded_flags
-      >>>
       menhir
-        [ Dyn (fun flags -> As flags)
+        [ Command.Args.dyn expanded_flags
         ; Deps (sources stanza.modules)
-        ; As [ "--base" ; base ]
-        ; A "--infer-read-reply"; Dep (inferred_mli base)
+        ; A "--base" ; Path (Path.relative (Path.build dir) base)
+        ; A "--infer-read-reply"; Dep (Path.build (inferred_mli base))
         ; Hidden_targets (targets base ~cmly)
         ]
     )
@@ -252,12 +257,10 @@ module Run (P : PARAMS) : sig end = struct
   let process1 base ~cmly (stanza : stanza) : unit =
     let expanded_flags = expand_flags stanza.flags in
     rule (
-      expanded_flags
-      >>>
       menhir
-        [ Dyn (fun flags -> As flags)
+        [ Command.Args.dyn expanded_flags
         ; Deps (sources stanza.modules)
-        ; As [ "--base" ; base ]
+        ; A "--base" ; Path (Path.relative (Path.build dir) base)
         ; Hidden_targets (targets base ~cmly)
         ]
     )
@@ -317,11 +320,12 @@ let targets (stanza : Dune_file.Menhir.t) : string list =
 let module_names (stanza : Dune_file.Menhir.t) : Module.Name.t list =
   List.map (modules stanza) ~f:Module.Name.of_string
 
-let gen_rules ~dir cctx stanza =
+let gen_rules ~build_dir ~dir cctx stanza =
   let module R =
     Run (struct
       let cctx = cctx
       let dir = dir
+      let build_dir = build_dir
       let stanza = stanza
     end) in
   ()

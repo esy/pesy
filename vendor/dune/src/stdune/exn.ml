@@ -2,28 +2,9 @@ module List = Dune_caml.ListLabels
 module String = Dune_caml.StringLabels
 type t = exn
 
-exception Code_error of Sexp.t
-
-exception Fatal_error of string
-
-exception Loc_error of Loc0.t * string
-
 external raise         : exn -> _ = "%raise"
 external raise_notrace : exn -> _ = "%raise_notrace"
 external reraise       : exn -> _ = "%reraise"
-
-let () =
-  Printexc.register_printer (function
-    | Code_error s -> Some (Format.asprintf "%a" Sexp.pp s)
-    | Loc_error (loc, s) -> Some (Format.asprintf "%a%s" Loc0.print loc s)
-    | _ -> None)
-
-let fatalf ?loc fmt =
-  Format.ksprintf (fun s ->
-    match loc with
-    | None -> raise (Fatal_error s)
-    | Some loc -> raise (Loc_error (loc, s))
-  ) fmt
 
 let protectx x ~f ~finally =
   match f x with
@@ -31,13 +12,6 @@ let protectx x ~f ~finally =
   | exception e -> finally x; raise e
 
 let protect ~f ~finally = protectx () ~f ~finally
-
-let code_error message vars =
-  Code_error
-    (List (Atom message
-           :: List.map vars ~f:(fun (name, value) ->
-             Sexp.List [Atom name; value])))
-  |> raise
 
 let pp_uncaught ~backtrace fmt exn =
   let s =
@@ -70,4 +44,4 @@ include
 let equal = (=)
 let hash = Dune_caml.Hashtbl.hash
 
-let to_dyn exn = Dyn0.String (Printexc.to_string exn)
+let to_dyn exn = Dyn.String (Printexc.to_string exn)

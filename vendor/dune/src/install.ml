@@ -19,17 +19,26 @@ module Section0 = struct
     | Misc
 
   let compare : t -> t -> Ordering.t = compare
+
+  let to_dyn _ = Dyn.opaque
 end
 
-(* The path after the man section mangling done by opam-installer.
-   This roughly follows [add_man_section_dir] in [src/format/opamFile.ml] in opam. *)
+(* The path after the man section mangling done by opam-installer. This roughly
+   follows [add_man_section_dir] in [src/format/opamFile.ml] in opam. *)
 module Dst : sig
   type t
 
   val to_string : t -> string
 
-  val to_install_file : t -> src_basename:string -> section:Section0.t -> string option
-  val of_install_file : string option -> src_basename:string -> section:Section0.t -> t
+  val to_install_file
+    :  t
+    -> src_basename:string
+    -> section:Section0.t
+    -> string option
+  val of_install_file
+    : string option
+    -> src_basename:string
+    -> section:Section0.t -> t
 
   val explicit : string -> t
   val compare : t -> t -> Ordering.t
@@ -79,7 +88,6 @@ end = struct
         None
       else
         Some s
-
 end
 
 module Section = struct
@@ -211,22 +219,23 @@ module Section = struct
       | Doc          -> t.doc
       | Stublibs     -> t.stublibs
       | Man          -> t.man
-      | Misc         -> Exn.code_error "Install.Paths.get" []
+      | Misc         -> Code_error.raise "Install.Paths.get" []
 
     let install_path t section p =
       Path.relative (get t section) (Dst.to_string p)
+
   end
 end
 
 module Entry = struct
   type t =
-    { src     : Path.t
+    { src     : Path.Build.t
     ; dst     : Dst.t
     ; section : Section.t
     }
 
   let compare x y =
-    let c = Path.compare x.src y.src in
+    let c = Path.Build.compare x.src y.src in
     if c <> Eq then c
     else
       let c = Dst.compare x.dst y.dst in
@@ -234,31 +243,61 @@ module Entry = struct
       else
         Section.compare x.section y.section
 
-  let make section ?dst src =
-    let dst =
-      if Sys.win32 then
-        let src_base = Path.basename src in
-        let dst' =
-          match dst with
-          | None -> src_base
-          | Some s -> s
-        in
-        match Filename.extension src_base with
-        | ".exe" | ".bc" ->
-          if Filename.extension dst' <> ".exe" then
-            Some (dst' ^ ".exe")
-          else
-            dst
-        | _ -> dst
+  let adjust_dst ~src ~dst ~section =
+    let error var =
+      User_error.raise ~loc:(String_with_vars.Var.loc var)
+        [ Pp.textf
+            "Because this file is installed in the 'bin' section, you \
+             cannot use the variable %s in its basename."
+            (String_with_vars.Var.describe var)
+        ]
+    in
+    let is_source_executable () =
+      let has_ext ext =
+        match String_with_vars.Partial.is_suffix ~suffix:ext src with
+        | Unknown var -> error var
+        | Yes ->
+          true
+        | No ->
+          false
+      in
+      has_ext ".exe" || has_ext ".bc"
+    in
+    let src_basename () =
+      match src with
+      | Expanded s -> Filename.basename s
+      | Unexpanded src ->
+        match String_with_vars.known_suffix src with
+        | Full s -> Filename.basename s
+        | Partial (var, suffix) ->
+          match String.rsplit2 ~on:'/' suffix with
+          | Some (_, basename) ->
+            basename
+          | None -> error var
+    in
+    match dst with
+    | Some dst' when Filename.extension dst' = ".exe" -> Dst.explicit dst'
+    | _ ->
+      let dst =
+        match dst with
+        | None ->
+          Dst.infer ~src_basename:(src_basename ()) section
+        | Some dst ->
+          Dst.explicit dst
+      in
+      let is_executable = is_source_executable () in
+      if Sys.win32
+         && is_executable
+         && Filename.extension (Dst.to_string dst) <> ".exe"
+      then
+        Dst.explicit (Dst.to_string dst ^ ".exe")
       else
         dst
-    in
-    let dst = match dst with
-      | None ->
-        Dst.infer ~src_basename:(Path.basename src) section
-      | Some s ->
-        Dst.explicit s
-    in
+  ;;
+
+  let make section ?dst src =
+    let dst =
+      adjust_dst ~src:(Expanded (Path.to_string (Path.build src))) ~dst ~section in
     { src
     ; dst
     ; section
@@ -267,9 +306,7 @@ module Entry = struct
   let set_src t src = { t with src }
 
   let relative_installed_path t ~paths =
-    let main_dir = Section.Paths.get paths t.section in
-    let dst = Dst.to_string t.dst in
-    Path.relative main_dir dst
+    Section.Paths.install_path paths t.section t.dst
 
   let add_install_prefix t ~paths ~prefix =
     let opam_will_install_in_this_dir = Section.Paths.get paths t.section in
@@ -285,14 +322,16 @@ module Entry = struct
   let of_install_file ~src ~dst ~section =
     { src;
       section;
-      dst = Dst.of_install_file ~section ~src_basename:(Path.basename src) dst;
+      dst = Dst.of_install_file ~section
+              ~src_basename:(Path.Build.basename src) dst;
     }
 
 end
 
 let files entries =
-  List.fold_left entries ~init:Path.Set.empty ~f:(fun acc (entry : Entry.t) ->
-    Path.Set.add acc entry.src)
+  List.fold_left entries ~init:Path.Set.empty
+    ~f:(fun acc (entry : Entry.t) ->
+      Path.Set.add acc (Path.build entry.src))
 
 let group entries =
   List.map entries ~f:(fun (entry : Entry.t) -> (entry.section, entry))
@@ -305,9 +344,10 @@ let gen_install_file entries =
     pr "%s: [" (Section.to_string section);
     List.sort ~compare:Entry.compare entries
     |> List.iter ~f:(fun (e : Entry.t) ->
-      let src = Path.to_string e.src in
+      let src = Path.to_string (Path.build e.src) in
       match
-        Dst.to_install_file ~src_basename:(Path.basename e.src) ~section:e.section e.dst
+        Dst.to_install_file ~src_basename:(Path.Build.basename e.src)
+          ~section:e.section e.dst
       with
       | None     -> pr "  %S"      src
       | Some dst -> pr "  %S {%S}" src dst);
@@ -331,7 +371,7 @@ let pos_of_opam_value : OpamParserTypes.value -> OpamParserTypes.pos = function
 let load_install_file path =
   let open OpamParserTypes in
   let file = Opam_file.load path in
-  let fail (fname, line, col) fmt =
+  let fail (fname, line, col) msg =
     let pos : Lexing.position =
       { pos_fname = fname
       ; pos_lnum = line
@@ -339,7 +379,8 @@ let load_install_file path =
       ; pos_cnum = col
       }
     in
-    Errors.fail { start =  pos; stop = pos } fmt
+    User_error.raise ~loc:{ start =  pos; stop = pos }
+      [ Pp.text msg ]
   in
   List.concat_map file.file_contents ~f:(function
     | Variable (pos, section, files) -> begin
@@ -350,11 +391,11 @@ let load_install_file path =
             | List (_, l) ->
               List.map l ~f:(function
                 | String (_, src) ->
-                  let src = Path.of_string src in
+                  let src = Path.as_in_build_dir_exn (Path.of_string src) in
                   Entry.of_install_file ~src ~dst:None ~section
                 | Option (_, String (_, src),
                           [String (_, dst)]) ->
-                  let src = Path.of_string src in
+                  let src = Path.as_in_build_dir_exn (Path.of_string src) in
                   Entry.of_install_file ~src ~dst:(Some dst) ~section
                 | v ->
                   fail (pos_of_opam_value v)

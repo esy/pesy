@@ -1,5 +1,7 @@
 open Stdune
 
+let header_ext = ".h"
+
 module Kind = struct
   type t =
     | C
@@ -16,26 +18,40 @@ module Kind = struct
     | Not_allowed_until of Syntax.Version.t
     | Recognized of string * t
 
+  let cxx_version_introduced ~obj ~dune_version ~version_introduced =
+    if dune_version >= version_introduced then
+      Recognized (obj, Cxx)
+    else
+      Not_allowed_until version_introduced
+
   let split_extension fn ~dune_version =
     match String.rsplit2 fn ~on:'.' with
     | Some (obj, "c") -> Recognized (obj, C)
     | Some (obj, "cpp") -> Recognized (obj, Cxx)
     | Some (obj, "cxx") ->
-      if dune_version >= (1, 8) then
-        Recognized (obj, Cxx)
-      else
-        Not_allowed_until (1, 8)
+      cxx_version_introduced ~obj ~dune_version ~version_introduced:(1, 8)
+    | Some (obj, "cc") ->
+      cxx_version_introduced ~obj ~dune_version ~version_introduced:(1, 10)
     | _ -> Unrecognized
 
-  let possible_fns t fn ~dune_version =
-    match t with
-    | C -> [fn ^ ".c"]
+  let possible_exts ~dune_version = function
+    | C -> [".c"]
     | Cxx ->
-      let cxx = [fn ^ ".cpp"] in
+      let exts = [".cpp"] in
+      let exts =
+        if dune_version >= (1, 10) then
+          ".cc" :: exts
+        else
+          exts
+      in
       if dune_version >= (1, 8) then
-        (fn ^ ".cxx") :: cxx
+        ".cxx" :: exts
       else
-        cxx
+        exts
+
+  let possible_fns t fn ~dune_version =
+    possible_exts t ~dune_version
+    |> List.map ~f:(fun ext -> fn ^ ext)
 
   module Dict = struct
     type 'a t =
@@ -86,12 +102,12 @@ end
 module Source = struct
   type t =
     { kind : Kind.t
-    ; path : Path.t
+    ; path : Path.Build.t
     }
 
   let kind t = t.kind
   let path t = t.path
-  let src_dir t = Path.parent_exn t.path
+  let src_dir t = Path.Build.parent_exn t.path
 
   let make ~kind ~path =
     { kind
@@ -104,7 +120,7 @@ module Sources = struct
 
   let objects (t : t) ~dir ~ext_obj =
     String.Map.keys t
-    |> List.map ~f:(fun c -> Path.relative dir (c ^ ext_obj))
+    |> List.map ~f:(fun c -> Path.Build.relative dir (c ^ ext_obj))
 
   let split_by_kind t =
     let (c, cxx) =
@@ -115,3 +131,11 @@ module Sources = struct
     in
     {Kind.Dict. c; cxx}
 end
+
+let all_possible_exts =
+  let exts = Kind.possible_exts ~dune_version:Stanza.latest_version in
+  header_ext :: exts C @ exts Cxx
+
+let c_cxx_or_header ~fn =
+  let ext = Filename.extension fn in
+  List.mem ~set:all_possible_exts ext

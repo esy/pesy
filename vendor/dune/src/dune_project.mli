@@ -16,42 +16,80 @@ module Name : sig
   *)
   type t = private
     | Named     of string
-    | Anonymous of Path.t
+    | Anonymous of Path.Source.t
 
+  val to_dyn : t -> Dyn.t
+
+  val equal : t -> t -> bool
   val compare : t -> t -> Ordering.t
 
   (** Convert to a string that is suitable for human readable messages *)
   val to_string_hum : t -> string
 
-  val to_sexp : t Sexp.Encoder.t
-
   (** Convert to/from an encoded string that is suitable to use in filenames *)
   val to_encoded_string : t -> string
   val of_encoded_string : string -> t
 
-  module Infix : Comparable.OPS with type t = t
+  module Infix : Comparator.OPS with type t = t
 
   module Map : Map.S with type key = t
 end
 
 module Project_file : sig
   type t
+  val to_dyn : t -> Dyn.t
+end
+
+module Source_kind : sig
+  type t =
+    | Github of string * string
+    | Url of string
+
+  val pp : t Fmt.t
+
+  val to_dyn : t -> Dyn.t
 end
 
 type t
 
+module File_key : sig
+  (** File_key encodes the project in a unique way to be used as part of file
+      path. *)
+  type t
+
+  val to_string : t -> string
+
+  val of_string : string -> t
+
+  module Map : Map.S with type key = t
+end
+
+val to_dyn : t -> Dyn.t
+
+val file_key : t -> File_key.t
+
 val packages : t -> Package.t Package.Name.Map.t
 val version : t -> string option
 val name : t -> Name.t
-val root : t -> Path.Local.t
+val root : t -> Path.Source.t
+val source: t -> Source_kind.t option
+val license : t -> string option
+val maintainers : t -> string list
+val bug_reports : t -> string option
+val documentation : t -> string option
+val homepage : t -> string option
+val authors : t -> string list
 val stanza_parser : t -> Stanza.t list Dune_lang.Decoder.t
 val allow_approx_merlin : t -> bool
+val generate_opam_files : t -> bool
+val dialects : t -> Dialect.DB.t
+val explicit_js_mode : t -> bool
 
 val equal : t -> t -> bool
 val hash : t -> int
 
 (** Return the path of the project file. *)
-val file : t -> Path.t
+val file : t -> Path.Source.t
 
 module Lang : sig
   (** [register id stanzas_parser] register a new language. Users will
@@ -78,7 +116,7 @@ module Extension : sig
     :  ?experimental:bool
     -> Syntax.t
     -> ('a * Stanza.Parser.t list) Dune_lang.Decoder.t
-    -> ('a -> Sexp.t)
+    -> ('a -> Dyn.t)
     -> 'a t
 
   (** A simple version where the arguments are not used through
@@ -92,10 +130,10 @@ end
 
 (** Load a project description from the following directory. [files]
     is the set of files in this directory. *)
-val load : dir:Path.t -> files:String.Set.t -> t option
-
-(** Read the [name] file from a dune-project file *)
-val read_name : Path.t -> (Loc.t * string) option
+val load
+  :  dir:Path.Source.t
+  -> files:String.Set.t
+  -> t option
 
 (** "dune-project" *)
 val filename : string
@@ -134,6 +172,4 @@ val implicit_transitive_deps : t -> bool
 
 val dune_version : t -> Syntax.Version.t
 
-val pp : t Fmt.t
-
-val in_source_root : t -> Path.t
+val wrapped_executables : t -> bool

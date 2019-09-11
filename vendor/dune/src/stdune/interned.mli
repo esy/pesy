@@ -21,6 +21,8 @@ module type S = sig
   module Set : sig
     include Set.S with type elt = t
 
+    val to_dyn : t -> Dyn.t
+
     val make : string list -> t
 
     val pp : t Fmt.t

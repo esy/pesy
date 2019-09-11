@@ -1,6 +1,8 @@
 open! Stdune
 open Import
 
+exception Already_reported
+
 type printer =
   { loc       : Loc.t option
   ; pp        : Format.formatter -> unit
@@ -15,56 +17,61 @@ let make_printer ?(backtrace=false) ?hint ?loc pp =
   ; backtrace
   }
 
-let set_loc p ~loc =
-  {p with loc = Some loc}
+let rec tag_handler ppf (style : User_message.Style.t) pp =
+  Format.pp_open_tag ppf
+    (User_message.Print_config.default style
+     |> Ansi_color.Style.escape_sequence) [@warning "-3"];
+  Pp.render ppf pp ~tag_handler;
+  Format.pp_close_tag ppf () [@warning "-3"]
 
-let set_hint p ~hint =
-  {p with hint = Some hint}
+let render ppf pp = Pp.render ppf pp ~tag_handler
 
-let builtin_printer = function
-  | Dune_lang.Decoder.Decoder (loc, msg, hint') ->
-    let pp ppf = Format.fprintf ppf "@{<error>Error@}: %s%s\n" msg
-                   (match hint' with
-                    | None -> ""
-                    | Some { Dune_lang.Decoder. on; candidates } ->
-                      hint on candidates)
+let rec get_printer = function
+  | Stanza.Decoder.Parens_no_longer_necessary (loc, exn) ->
+    let hint =
+      "dune files require fewer parentheses than jbuild files.\n\
+       If you just converted this file from a jbuild file, try removing these parentheses."
     in
-    Some (make_printer ~loc pp)
-  | Exn.Loc_error (loc, msg) ->
-    let pp ppf = Format.fprintf ppf "@{<error>Error@}: %s\n" msg in
-    Some (make_printer ~loc pp)
-  | Dune_lang.Parse_error e ->
-    let loc = Dune_lang.Parse_error.loc     e in
-    let msg = Dune_lang.Parse_error.message e in
-    let pp ppf = Format.fprintf ppf "@{<error>Error@}: %s\n" msg in
-    Some (make_printer ~loc pp)
-  | Exn.Fatal_error msg ->
-    let pp ppf =
-      if msg.[String.length msg - 1] = '\n' then
-        Format.fprintf ppf "%s" msg
-      else
-        Format.fprintf ppf "%s\n" (String.capitalize msg)
-    in
-    Some (make_printer pp)
-  | Stdune.Exn.Code_error sexp ->
+    let printer = get_printer exn in
+    { printer with
+      loc = Some loc
+    ; hint = Some hint
+    }
+  | User_error.E msg ->
+    { loc = msg.loc
+    ; backtrace = false
+    ; hint =
+        (match msg.hints with
+         | [] -> None
+         | hint :: _ ->
+           Some (Format.asprintf "@[%a@]" Pp.render_ignore_tags hint))
+    ; pp = fun ppf ->
+        render ppf
+          (User_message.pp { msg with loc = None; hints = [] })
+    }
+  | Code_error.E t ->
     let pp = fun ppf ->
-          Format.fprintf ppf "@{<error>Internal error, please report upstream \
-                              including the contents of _build/log.@}\n\
-                              Description:%a\n"
-            Sexp.pp sexp
+      Format.fprintf ppf "@{<error>Internal error, please report upstream \
+                          including the contents of _build/log.@}\n\
+                          Description:%a\n"
+        Pp.render_ignore_tags (Dyn.pp (Code_error.to_dyn t))
     in
-    Some (make_printer ~backtrace:true pp)
+    make_printer ~backtrace:true pp
   | Unix.Unix_error (err, func, fname) ->
     let pp ppf =
       Format.fprintf ppf "@{<error>Error@}: %s: %s: %s\n"
         func fname (Unix.error_message err)
     in
-    Some (make_printer pp)
-  | _ -> None
-
-let printers = ref [builtin_printer]
-
-let register f = printers := f :: !printers
+    make_printer pp
+  | exn ->
+    let pp ppf =
+      let s = Printexc.to_string exn in
+      if String.is_prefix s ~prefix:"File \"" then
+        Format.fprintf ppf "%s\n" s
+      else
+        Format.fprintf ppf "@{<error>Error@}: exception %s\n" s
+    in
+    make_printer ~backtrace:true pp
 
 let i_must_not_segfault =
   let x = lazy (at_exit (fun () ->
@@ -77,25 +84,6 @@ cases are handled there will be nothing.  Only I will remain."))
   in
   fun () -> Lazy.force x
 
-let find_printer exn =
-  List.find_map !printers ~f:(fun f -> f exn)
-
-let exn_printer exn =
-  let pp ppf =
-    let s = Printexc.to_string exn in
-    if String.is_prefix s ~prefix:"File \"" then
-      Format.fprintf ppf "%s\n" s
-    else
-      Format.fprintf ppf "@{<error>Error@}: exception %s\n" s
-  in
-  make_printer ~backtrace:true pp
-
-(* Firt return value is [true] if the backtrace was printed *)
-let report_with_backtrace exn =
-  match find_printer exn with
-  | Some p -> p
-  | None -> exn_printer exn
-
 let reported = ref Digest.Set.empty
 
 let clear_cache () =
@@ -103,27 +91,29 @@ let clear_cache () =
 
 let () = Hooks.End_of_build.always clear_cache
 
+let buf = Buffer.create 128
+let ppf = Format.formatter_of_buffer buf
+
 let report { Exn_with_backtrace. exn; backtrace } =
   let exn, dependency_path = Dep_path.unwrap_exn exn in
   match exn with
   | Already_reported -> ()
   | _ ->
-    let ppf = err_ppf in
-    let p = report_with_backtrace exn in
+    let p = get_printer exn in
     let loc =
       if Option.equal Loc.equal p.loc (Some Loc.none) then
         None
       else
         p.loc
     in
-    Option.iter loc ~f:(fun loc -> Errors.print ppf loc);
+    Option.iter loc ~f:(Loc.print ppf);
     p.pp ppf;
     Format.pp_print_flush ppf ();
-    let s = Buffer.contents err_buf in
+    let s = Buffer.contents buf in
     (* Hash to avoid keeping huge errors in memory *)
     let hash = Digest.string s in
     if Digest.Set.mem !reported hash then
-      Buffer.clear err_buf
+      Buffer.clear buf
     else begin
       reported := Digest.Set.add !reported hash;
       if p.backtrace || !Clflags.debug_backtraces then
@@ -150,12 +140,12 @@ let report { Exn_with_backtrace. exn; backtrace } =
               drop dependency_path
       in
       if dependency_path <> [] then
-        Format.fprintf ppf "%a@\n" Dep_path.Entries.pp
-          (List.rev dependency_path);
+        Format.fprintf ppf "%a@\n" render
+          (Dep_path.Entries.pp (List.rev dependency_path));
       Option.iter p.hint ~f:(fun s -> Format.fprintf ppf "Hint: %s\n" s);
       Format.pp_print_flush ppf ();
-      let s = Buffer.contents err_buf in
-      Buffer.clear err_buf;
-      print_to_console s;
+      let s = Buffer.contents buf in
+      Buffer.clear buf;
+      Console.print s;
       if p.backtrace then i_must_not_segfault ()
     end

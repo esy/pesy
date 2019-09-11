@@ -76,9 +76,11 @@ module Backend = struct
             let* lib = resolve x in
             match get ~loc lib with
             | None ->
-              Error (Errors.exnf loc "%S is not an %s"
-                       (Lib_name.to_string name)
-                       (desc ~plural:false))
+              Error (User_error.E
+                       (User_error.make ~loc
+                          [ Pp.textf "%S is not an %s"
+                              (Lib_name.to_string name)
+                              (desc ~plural:false) ]))
             | Some t -> Ok t)
       }
 
@@ -88,13 +90,13 @@ module Backend = struct
       let f x = Lib_name.encode (Lib.name x.lib) in
       ((1, 0),
        record_fields @@
-         [ field_l "runner_libraries" lib (Result.ok_exn t.runner_libraries)
-         ; field_i "flags" Ordered_set_lang.Unexpanded.encode_and_upgrade
-             t.info.flags
-         ; field_o "generate_runner" Action_dune_lang.encode_and_upgrade
-             (Option.map t.info.generate_runner ~f:snd)
-         ; field_l "extends" f (Result.ok_exn t.extends)
-         ])
+       [ field_l "runner_libraries" lib (Result.ok_exn t.runner_libraries)
+       ; field_i "flags" Ordered_set_lang.Unexpanded.encode_and_upgrade
+           t.info.flags
+       ; field_o "generate_runner" Action_dune_lang.encode_and_upgrade
+           (Option.map t.info.generate_runner ~f:snd)
+       ; field_l "extends" f (Result.ok_exn t.extends)
+       ])
   end
   include M
   include Sub_system.Register_backend(M)
@@ -104,12 +106,45 @@ include Sub_system.Register_end_point(
   struct
     module Backend = Backend
 
+    module Mode_conf = struct
+      module T = struct
+        type t =
+          | Byte
+          | Javascript
+          | Native
+          | Best
+        let compare (a : t) b = compare a b
+
+        let to_dyn _ = Dyn.opaque
+      end
+      include T
+      open Stanza.Decoder
+
+      let decode =
+        enum
+          [ "byte"  , Byte
+          ; "js"    , Javascript
+          ; "native", Native
+          ; "best"  , Best
+          ]
+      module O = Comparable.Make(T)
+      module Set = struct
+        include O.Set
+
+        let decode = list decode >>| of_list
+
+        let default = of_list [Best]
+      end
+    end
+
+
     module Info = struct
       let name = Sub_system_name.make "inline_tests"
 
       type t =
         { loc       : Loc.t
         ; deps      : Dep_conf.t list
+        ; modes     : Mode_conf.Set.t
         ; flags     : Ordered_set_lang.Unexpanded.t
         ; backend   : (Loc.t * Lib_name.t) option
         ; libraries : (Loc.t * Lib_name.t) list
@@ -122,6 +157,7 @@ include Sub_system.Register_end_point(
         ; deps      = []
         ; flags     = Ordered_set_lang.Unexpanded.standard
         ; backend   = None
+        ; modes     = Mode_conf.Set.default
         ; libraries = []
         }
 
@@ -142,12 +178,17 @@ include Sub_system.Register_end_point(
                 and+ flags = Ordered_set_lang.Unexpanded.field "flags"
                 and+ backend = field_o "backend" (located Lib_name.decode)
                 and+ libraries = field "libraries" (list (located Lib_name.decode)) ~default:[]
+                and+ modes = field "modes"
+                               (Syntax.since syntax (1, 11) >>>
+                                Mode_conf.Set.decode)
+                               ~default:Mode_conf.Set.default
                 in
                 { loc
                 ; deps
                 ; flags
                 ; backend
                 ; libraries
+                ; modes
                 }))
     end
 
@@ -164,29 +205,26 @@ include Sub_system.Register_end_point(
 
       let loc = lib.buildable.loc in
 
+      let lib_name = snd lib.name in
+
       let inline_test_name =
-        sprintf "%s.inline-tests" (Lib_name.Local.to_string (snd lib.name))
+        sprintf "%s.inline-tests" (Lib_name.Local.to_string lib_name)
       in
 
-      let inline_test_dir = Path.relative dir ("." ^ inline_test_name) in
+      let inline_test_dir = Path.Build.relative dir ("." ^ inline_test_name) in
 
       let obj_dir =
-        Obj_dir.make_exe ~dir:inline_test_dir ~name:inline_test_name in
+        Obj_dir.make_exe ~dir:inline_test_dir
+          ~name:inline_test_name in
 
       let name = "run" in
-      let main_module_filename = name ^ ".ml" in
-      let main_module_name = Module.Name.of_string name in
-      let modules =
-        Module.Name.Map.singleton main_module_name
-          (Module.make main_module_name
-             ~impl:{ path   = Path.relative inline_test_dir main_module_filename
-                   ; syntax = OCaml
-                   }
-             ~kind:Impl
-             ~visibility:Public
-             ~obj_name:name
-             ~obj_dir)
+      let main_module =
+        let name = Module.Name.of_string name in
+        let src_dir = Path.build inline_test_dir in
+        Module.generated ~src_dir name
       in
+
+      let modules = Modules.singleton_exe main_module in
 
       let bindings =
         Pform.Map.singleton "library-name"
@@ -202,23 +240,25 @@ include Sub_system.Register_end_point(
             ~f:(fun (backend : Backend.t) -> backend.runner_libraries)
         in
         let* lib =
-          Lib.DB.find_many ~loc
-            (Scope.libs scope) [Dune_file.Library.best_name lib]
+          Lib.DB.resolve
+            (Scope.libs scope) (loc, Dune_file.Library.best_name lib)
         in
         let* more_libs =
           Result.List.map info.libraries ~f:(Lib.DB.resolve (Scope.libs scope))
         in
-        Lib.closure ~linking:true (lib @ libs @ more_libs)
+        Lib.closure ~linking:true (lib :: libs @ more_libs)
       in
 
       (* Generate the runner file *)
       SC.add_rule sctx ~dir ~loc (
-        let target = Path.relative inline_test_dir main_module_filename in
-        let source_modules = Module.Name.Map.values source_modules in
+        let target =
+          Module.file main_module ~ml_kind:Impl
+          |> Option.value_exn
+          |> Path.as_in_build_dir_exn
+        in
         let files ml_kind =
           Pform.Var.Values (Value.L.paths (
-            List.filter_map source_modules ~f:(fun m ->
-              Module.file m ml_kind)))
+            List.filter_map source_modules ~f:(Module.file ~ml_kind)))
         in
         let bindings =
           Pform.Map.of_list_exn
@@ -237,9 +277,7 @@ include Sub_system.Register_end_point(
                  ~dep_kind:Required
                  ~targets:(Forbidden "inline test generators")
                  ~targets_dir:dir)))
-        >>^ (fun actions ->
-          Action.with_stdout_to target
-            (Action.progn actions))
+        >>^ (fun actions -> Action.with_stdout_to target (Action.progn actions))
         >>>
         Build.action_dyn ~targets:[target] ());
 
@@ -253,12 +291,30 @@ include Sub_system.Register_end_point(
           ~opaque:false
           ~requires_compile:runner_libs
           ~requires_link:(lazy runner_libs)
-          ~flags:(Ocaml_flags.of_list ["-w"; "-24"]);
+          ~flags:(Ocaml_flags.of_list ["-w"; "-24"; "-g"])
+          ~js_of_ocaml:(Some lib.buildable.js_of_ocaml)
+          ~dynlink:false
+          ~package:(Option.map lib.public ~f:(fun p -> p.package));
+      in
+      let linkages =
+        let modes =
+          if Mode_conf.Set.mem info.modes Javascript
+          then Mode_conf.Set.add info.modes Byte
+          else info.modes
+        in
+        List.map (Mode_conf.Set.to_list modes) ~f:(fun (mode : Mode_conf.t) ->
+          match mode with
+          | Native -> Exe.Linkage.native
+          | Best -> Exe.Linkage.native_or_custom (Super_context.context sctx)
+          | Byte -> Exe.Linkage.byte
+          | Javascript -> Exe.Linkage.js
+        )
       in
       Exe.build_and_link cctx
-        ~program:{ name; main_module_name ; loc }
-        ~linkages:[Exe.Linkage.native_or_custom (SC.context sctx)]
-        ~link_flags:(Build.return ["-linkall"]);
+        ~program:{ name; main_module_name = Module.name main_module ; loc }
+        ~linkages
+        ~link_flags:(Build.return ["-linkall"])
+        ~promote:None;
 
       let flags =
         let flags =
@@ -271,27 +327,44 @@ include Sub_system.Register_end_point(
         |> Build.all
         >>^ List.concat
       in
-
-      SC.add_alias_action sctx ~dir
-        ~loc:(Some info.loc)
-        (Alias.runtest ~dir)
-        ~stamp:("ppx-runner", name)
-        (let module A = Action in
-         let exe = Path.relative inline_test_dir (name ^ ".exe") in
-         Build.path exe >>>
-         Build.fanout
-           (Super_context.Deps.interpret sctx info.deps ~expander)
-           flags
-         >>^ fun (_deps, flags) ->
-         A.chdir dir
-           (A.progn
-              (A.run (Ok exe) flags ::
-               (Module.Name.Map.values source_modules
-                |> List.concat_map ~f:(fun m ->
-                  Module.sources m
-                  |> List.map ~f:(fun fn ->
-                    A.diff ~optional:true
-                      fn (Path.extend_basename fn ~suffix:".corrected")))))))
+      Mode_conf.Set.iter info.modes ~f:(fun (mode : Mode_conf.t) ->
+        let ext = match mode with
+          | Native | Best -> ".exe"
+          | Javascript -> ".bc.js"
+          | Byte -> ".bc"
+        in
+        let custom_runner = match mode with
+          | Native | Best | Byte -> None
+          | Javascript -> Some "node"
+        in
+        SC.add_alias_action sctx ~dir
+          ~loc:(Some info.loc)
+          (Alias.runtest ~dir)
+          ~stamp:("ppx-runner", name)
+          (let module A = Action in
+           let exe =
+             Path.Build.relative inline_test_dir (name ^ ext)
+             |> Path.build
+           in
+           Build.path exe >>>
+           Build.fanout
+             (Super_context.Deps.interpret sctx info.deps ~expander)
+             flags
+           >>^ fun (_deps, flags) ->
+           let exe, runner_args = match custom_runner with
+             | None -> Ok exe, []
+             | Some runner ->
+               Super_context.resolve_program ~dir sctx ~loc:(Some loc) runner
+             , [ Path.reach ~from:(Path.build dir) exe ]
+           in
+           A.chdir (Path.build dir)
+             (A.progn
+                (A.run exe (runner_args @ flags) ::
+                 (List.concat_map source_modules ~f:(fun m ->
+                    Module.sources m
+                    |> List.map ~f:(fun fn ->
+                      A.diff ~optional:true
+                        fn (Path.extend_basename fn ~suffix:".corrected"))))))))
   end)
 
 let linkme = ()

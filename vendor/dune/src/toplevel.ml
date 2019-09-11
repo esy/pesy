@@ -5,31 +5,25 @@ let toplevel_dir_prefix = ".toplevel."
 module Source = struct
   type t =
     { name : string
-    ; dir : Path.t
+    ; dir : Path.Build.t
     ; loc : Loc.t
     ; main : string
     }
 
-  let main_module_name t = Module.Name.of_string t.name
-  let main_module_filename t = t.name ^ ".ml"
-  let source_path t = Path.relative t.dir (main_module_filename t)
+  let main_module t =
+    let main_module_name = Module.Name.of_string t.name in
+    let src_dir = Path.build t.dir in
+    Module.generated ~src_dir main_module_name
+
+  let source_path t =
+    Module.file (main_module t) ~ml_kind:Impl
+    |> Option.value_exn
+    |> Path.as_in_build_dir_exn
 
   let obj_dir { dir; name ; _ } =
     Obj_dir.make_exe ~dir ~name
 
-  let modules t =
-    let obj_dir = obj_dir t in
-    let main_module_name = main_module_name t in
-    Module.Name.Map.singleton
-      main_module_name
-      (Module.make main_module_name
-         ~visibility:Public
-         ~impl:{ path   = source_path t
-               ; syntax = Module.Syntax.OCaml
-               }
-         ~obj_dir
-         ~kind:Module.Kind.Impl
-         ~obj_name:t.name)
+  let modules t = Modules.singleton_exe (main_module t)
 
   let make ~dir ~loc ~main ~name =
     { dir
@@ -39,19 +33,19 @@ module Source = struct
     }
 
   let of_stanza ~dir ~(toplevel : Dune_file.Toplevel.t) =
-    { dir = Path.relative dir (toplevel_dir_prefix ^ toplevel.name)
+    { dir = Path.Build.relative dir (toplevel_dir_prefix ^ toplevel.name)
     ; name = toplevel.name
     ; loc = toplevel.loc
     ; main = "Topmain.main ()"
     }
 
-  let stanza_dir t = Path.parent_exn t.dir
+  let stanza_dir t = Path.Build.parent_exn t.dir
 
   let program t =
     { Exe.Program.
       loc = t.loc
     ; name = t.name
-    ; main_module_name = main_module_name t
+    ; main_module_name = Module.name (main_module t)
     }
 
   let pp_ml fmt t ~include_dirs =
@@ -84,11 +78,7 @@ let setup_module_rules t =
     let open Build.O in
     Build.of_result_map requires_compile ~f:(fun libs ->
       Build.arr (fun () ->
-        let include_dirs =
-          let ctx = Super_context.context sctx in
-          Path.Set.to_list
-            (Lib.L.include_paths libs ~stdlib_dir:ctx.stdlib_dir)
-        in
+        let include_dirs = Path.Set.to_list (Lib.L.include_paths libs) in
         let b = Buffer.create 64 in
         let fmt = Format.formatter_of_buffer b in
         Source.pp_ml fmt t.source ~include_dirs;
@@ -105,12 +95,13 @@ let setup_rules t =
   Exe.build_and_link t.cctx
     ~program
     ~linkages:[linkage]
-    ~link_flags:(Build.return ["-linkall"; "-warn-error"; "-31"]);
+    ~link_flags:(Build.return ["-linkall"; "-warn-error"; "-31"])
+    ~promote:None;
   let src = Exe.exe_path t.cctx ~program ~linkage in
   let dir = Source.stanza_dir t.source in
-  let dst = Path.relative dir (Path.basename src) in
+  let dst = Path.Build.relative dir (Path.Build.basename src) in
   Super_context.add_rule sctx ~dir ~loc:t.source.loc
-    (Build.symlink ~src ~dst);
+    (Build.symlink ~src:(Path.build src) ~dst);
   setup_module_rules t
 
 module Stanza = struct
@@ -135,6 +126,13 @@ module Stanza = struct
     let requires_compile = Lib.Compile.direct_requires compile_info in
     let requires_link = Lib.Compile.requires_link compile_info in
     let obj_dir = Source.obj_dir source in
+    let flags =
+      let project = Scope.project scope in
+      let dune_version = Dune_project.dune_version project in
+      let profile = Super_context.profile sctx in
+      Ocaml_flags.append_common
+        (Ocaml_flags.default ~dune_version ~profile) ["-w"; "-24"]
+    in
     let cctx =
       Compilation_context.create ()
         ~super_context:sctx
@@ -145,9 +143,10 @@ module Stanza = struct
         ~opaque:false
         ~requires_compile
         ~requires_link
-        ~flags:(Ocaml_flags.append_common
-                  (Ocaml_flags.default ~profile:(Super_context.profile sctx))
-                  ["-w"; "-24"])
+        ~flags
+        ~js_of_ocaml:None
+        ~dynlink:false
+        ~package:None
     in
     let resolved = make ~cctx ~source in
     setup_rules resolved

@@ -35,20 +35,25 @@ let term =
     let open Fiber.O in
     let* setup = Import.Main.setup ~log common in
     let dir = Path.of_string dir in
-    Util.check_path setup.workspace.contexts dir;
+    let checked = Util.check_path setup.workspace.contexts dir in
     let request =
       Build.all (
-        match Path.extract_build_context dir with
-        | Some (ctx, _) ->
-          let sctx = String.Map.find_exn setup.scontexts ctx in
-          [dump sctx ~dir]
-        | None ->
+        match checked with
+        | In_build_dir (ctx, _) ->
+          let sctx = String.Map.find_exn setup.scontexts ctx.name in
+          [dump sctx ~dir:(Path.as_in_build_dir_exn dir)]
+        | In_source_dir dir ->
           String.Map.values setup.scontexts
           |> List.map ~f:(fun sctx ->
             let dir =
-              Path.append (Super_context.context sctx).build_dir dir
-            in
+              Path.Build.append_source (Super_context.build_dir sctx) dir in
             dump sctx ~dir)
+        | External _ ->
+          User_error.raise
+            [ Pp.text "Environment is not defined for external paths" ]
+        | In_install_dir _ ->
+          User_error.raise
+            [ Pp.text "Environment is not defined in install dirs" ]
       )
     in
     Build_system.do_build ~request

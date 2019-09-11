@@ -4,33 +4,48 @@ open! Stdune
 open Import
 
 module Preprocess : sig
-  type pps =
-    { loc   : Loc.t
-    ; pps   : (Loc.t * Lib_name.t) list
-    ; flags : string list
-    ; staged : bool
-    }
+  module Pps : sig
+    type t =
+      { loc   : Loc.t
+      ; pps   : (Loc.t * Lib_name.t) list
+      ; flags : String_with_vars.t list
+      ; staged : bool
+      }
+
+    val compare_no_locs : t -> t -> Ordering.t
+  end
 
   type t =
     | No_preprocessing
     | Action of Loc.t * Action_dune_lang.t
-    | Pps    of pps
+    | Pps    of Pps.t
     | Future_syntax of Loc.t
 
   module Without_future_syntax : sig
     type t =
       | No_preprocessing
       | Action of Loc.t * Action_dune_lang.t
-      | Pps    of pps
+      | Pps    of Pps.t
   end
 
-  val remove_future_syntax : t -> Ocaml_version.t -> Without_future_syntax.t
+  val loc : t -> Loc.t option
+
+  module Pp_flag_consumer : sig
+    type t =
+      | Compiler
+      | Merlin
+  end
+
+  val remove_future_syntax :
+    t -> for_:Pp_flag_consumer.t -> Ocaml_version.t -> Without_future_syntax.t
 end
 
 module Per_module : Per_item.S with type key = Module.Name.t
 
 module Preprocess_map : sig
   type t = Preprocess.t Per_module.t
+
+  val decode : t Dune_lang.Decoder.t
 
   val no_preprocessing : t
   val default : t
@@ -84,6 +99,7 @@ module Lib_deps : sig
   type t = Lib_dep.t list
   val of_pps : Lib_name.t list -> t
   val info : t -> kind:Lib_deps_info.Kind.t -> Lib_deps_info.t
+  val decode : t Dune_lang.Decoder.t
 end
 
 module Dep_conf : sig
@@ -100,13 +116,12 @@ module Dep_conf : sig
   val remove_locs : t -> t
 
   include Dune_lang.Conv with type t := t
-  val to_sexp : t Sexp.Encoder.t
+  val to_dyn : t Dyn.Encoder.t
 end
 
 module Auto_format : sig
   type language =
-    | Ocaml
-    | Reason
+    | Dialect of string
     | Dune
 
   type t
@@ -155,7 +170,7 @@ module Mode_conf : sig
 
   val decode : t Dune_lang.Decoder.t
   val compare : t -> t -> Ordering.t
-  val pp : Format.formatter -> t -> unit
+  val to_dyn : t -> Dyn.t
 
   module Set : sig
     include Set.S with type elt = t
@@ -166,6 +181,16 @@ module Mode_conf : sig
 
     val eval : t -> has_native:bool -> Mode.Dict.Set.t
   end
+end
+
+module External_variant : sig
+  type t =
+    { implementation : Lib_name.t
+    ; virtual_lib : Lib_name.t
+    ; variant : Variant.t
+    ; project : Dune_project.t
+    ; loc : Loc.t
+    }
 end
 
 module Library : sig
@@ -191,6 +216,24 @@ module Library : sig
       (** Module names that are hardcoded in the compiler and so
           cannot be wrapped *)
       }
+  end
+
+  module Special_builtin_support : sig
+    module Build_info : sig
+      type api_version =
+        | V1
+
+      type t =
+        { data_module : string
+        ; api_version : api_version
+        }
+    end
+
+    type t =
+      | Findlib_dynload
+      | Build_info of Build_info.t
+
+    include Dune_lang.Conv with type t := t
   end
 
   type t =
@@ -222,30 +265,26 @@ module Library : sig
     ; default_implementation   : (Loc.t * Lib_name.t) option
     ; private_modules          : Ordered_set_lang.t option
     ; stdlib                   : Stdlib.t option
+    ; special_builtin_support  : Special_builtin_support.t option
+    ; enabled_if               : Blang.t
     }
 
   val has_stubs : t -> bool
   val stubs_name : t -> string
-  val stubs : t -> dir:Path.t -> Path.t
-  val stubs_archive : t -> dir:Path.t -> ext_lib:string -> Path.t
-  val dll : t -> dir:Path.t -> ext_dll:string -> Path.t
-  val archive : t -> dir:Path.t -> ext:string -> Path.t
+  val stubs : t -> dir:Path.Build.t -> Path.Build.t
+  val stubs_archive : t -> dir:Path.Build.t -> ext_lib:string -> Path.Build.t
+  val dll : t -> dir:Path.Build.t -> ext_dll:string -> Path.Build.t
+  val archive : t -> dir:Path.Build.t -> ext:string -> Path.Build.t
   val best_name : t -> Lib_name.t
   val is_virtual : t -> bool
   val is_impl : t -> bool
-  val obj_dir : dir:Path.t -> t -> Obj_dir.t
+  val obj_dir : dir:Path.Build.t -> t -> Path.Build.t Obj_dir.t
 
   module Main_module_name : sig
     type t = Module.Name.t option Inherited.t
   end
 
   val main_module_name : t -> Main_module_name.t
-
-  (** Returns [true] is a special module, i.e. one whose compilation
-      unit name is hard-coded inside the compiler. It is not possible
-      to change the compilation unit name of such modules, so they
-      cannot be wrapped. *)
-  val special_compiler_module : t -> Module.t -> bool
 end
 
 module Install_conf : sig
@@ -253,6 +292,28 @@ module Install_conf : sig
     { section : Install.Section.t
     ; files   : 'file list
     ; package : Package.t
+    }
+end
+
+module Promote : sig
+  module Lifetime : sig
+    type t =
+      | Unlimited
+      (** The promoted file will be deleted by [dune clean] *)
+      | Until_clean
+  end
+
+  module Into : sig
+    type t =
+      { loc : Loc.t
+      ; dir : string
+      }
+  end
+
+  type t =
+    { lifetime : Lifetime.t
+    ; into : Into.t option
+    ; only : Predicate_lang.t option
     }
 end
 
@@ -271,10 +332,12 @@ module Executables : sig
     val shared_object : t
     val byte          : t
     val native        : t
+    val byte_exe      : t
+    val js            : t
 
     val compare : t -> t -> Ordering.t
 
-    val pp : t Fmt.t
+    val to_dyn : t -> Dyn.t
 
     module Set : Set.S with type elt = t
   end
@@ -286,46 +349,39 @@ module Executables : sig
     ; modes      : Link_mode.Set.t
     ; buildable  : Buildable.t
     ; variants   : (Loc.t * Variant.Set.t) option
+    ; package    : Package.t option
+    ; promote    : Promote.t option
     }
 end
 
 module Rule : sig
   module Targets : sig
+
+    module Multiplicity : sig
+      type t = One | Multiple
+    end
+
+    type static =
+      { targets : String_with_vars.t list; multiplicity : Multiplicity.t }
+
     type t =
-      | Static of String_with_vars.t list
+      | Static of static
       | Infer
   end
 
   module Mode : sig
-    module Promotion_lifetime : sig
-      type t =
-        | Unlimited
-        (** The promoted file will be deleted by [dune clean] *)
-        | Until_clean
-    end
-
-    module Into : sig
-      type t =
-        { loc : Loc.t
-        ; dir : string
-        }
-    end
-
     type t =
       | Standard
       (** Only use this rule if  the source files don't exist. *)
       | Fallback
-      (** Silently promote the targets to the source tree. If the argument is
-          [Some { dir ; _ }], promote them into [dir] rather than the current
-          directory. *)
-      | Promote of Promotion_lifetime.t * Into.t option
-      (** Same as [Standard] however this is not a rule stanza, so it
-          is not possible to add a [(fallback)] field to the rule. *)
-      | Not_a_rule_stanza
+      (** Silently promote the targets to the source tree. *)
+      | Promote of Promote.t
       (** Just ignore the source files entirely. This is for cases
           where the targets are promoted only in a specific context,
           such as for .install files. *)
       | Ignore_source_files
+
+    val decode : t Dune_lang.Decoder.t
   end
 
   type t =
@@ -361,13 +417,23 @@ module Coq : sig
     ; synopsis   : string option
     ; modules    : Ordered_set_lang.t
     ; flags      : Ordered_set_lang.Unexpanded.t
-    ; libraries  : Lib_dep.t list
+    ; libraries  : (Loc.t * Lib_name.t) list
     (** ocaml libraries *)
     ; loc        : Loc.t
     ; enabled_if : Blang.t
     }
 
   val best_name : t -> Lib_name.t
+
+  type Stanza.t += T of t
+end
+
+module Coqpp : sig
+
+  type t =
+    { modules    : string list
+    ; loc        : Loc.t
+    }
 
   type Stanza.t += T of t
 end
@@ -426,16 +492,17 @@ module Include_subdirs : sig
 end
 
 type Stanza.t +=
-  | Library         of Library.t
-  | Executables     of Executables.t
-  | Rule            of Rule.t
-  | Install         of File_binding.Unexpanded.t Install_conf.t
-  | Alias           of Alias_conf.t
-  | Copy_files      of Copy_files.t
-  | Documentation   of Documentation.t
-  | Tests           of Tests.t
-  | Include_subdirs of Loc.t * Include_subdirs.t
-  | Toplevel        of Toplevel.t
+  | Library                of Library.t
+  | Executables            of Executables.t
+  | Rule                   of Rule.t
+  | Install                of File_binding.Unexpanded.t Install_conf.t
+  | Alias                  of Alias_conf.t
+  | Copy_files             of Copy_files.t
+  | Documentation          of Documentation.t
+  | Tests                  of Tests.t
+  | Include_subdirs        of Loc.t * Include_subdirs.t
+  | Toplevel               of Toplevel.t
+  | External_variant       of External_variant.t
 
 val stanza_package : Stanza.t -> Package.t option
 
@@ -448,7 +515,7 @@ module Stanzas : sig
       decoding the [ast] according to the syntax given by [kind] in the context
       of the [project] *)
   val of_ast
-    :  kind:Dune_lang.Syntax.t
+    :  kind:Dune_lang.File_syntax.t
     -> Dune_project.t
     -> Dune_lang.Ast.t
     -> Stanza.t list
@@ -465,8 +532,8 @@ module Stanzas : sig
       depreciated jbuilder syntax or the version of dune syntax specified by the
       current [project]. *)
   val parse
-    :  file:Path.t
-    -> kind:Dune_lang.Syntax.t
+    :  file:Path.Source.t
+    -> kind:Dune_lang.File_syntax.t
     -> Dune_project.t
     -> Dune_lang.Ast.t list
     -> t

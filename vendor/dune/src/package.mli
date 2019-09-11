@@ -15,20 +15,81 @@ module Name : sig
 
   include Dune_lang.Conv with type t := t
 
-  module Infix : Comparable.OPS with type t = t
+  module Infix : Comparator.OPS with type t = t
+
+  val to_dyn : t -> Dyn.t
+end
+
+module Version_source : sig
+  (** Wether this version comes from the project wide version or the
+      package particular version *)
+  type t =
+    | Package
+    | Project
+end
+
+module Dependency : sig
+  module Op : sig
+    type t =
+      | Eq
+      | Gte
+      | Lte
+      | Gt
+      | Lt
+      | Neq
+  end
+
+  module Constraint : sig
+    module Var : sig
+      type t =
+        | QVar of string
+        | Var of string
+    end
+
+    type t =
+      | Bvar of Var.t
+      | Uop of Op.t * Var.t
+      | And of t list
+      | Or of t list
+  end
+
+  type t =
+    { name : Name.t
+    ; constraint_ : Constraint.t option
+    }
+
+  val opam_depend : t -> OpamParserTypes.value
+
+  val to_dyn : t -> Dyn.t
+
+  val decode : t Dune_lang.Decoder.t
+end
+
+module Kind : sig
+  type has_opam = bool
+  type t =
+    | Dune of has_opam
+    | Opam
 end
 
 type t =
   { name                   : Name.t
-  ; path                   : Path.t
-  ; version_from_opam_file : string option
+  ; loc                    : Loc.t
+  ; synopsis               : string option
+  ; description            : string option
+  ; depends                : Dependency.t list
+  ; conflicts              : Dependency.t list
+  ; depopts                : Dependency.t list
+  ; path                   : Path.Source.t
+  ; version                : (string * Version_source.t) option
+  ; kind                   : Kind.t
+  ; tags                   : string list
   }
 
-val pp : Format.formatter -> t -> unit
+val decode : dir:Path.Source.t -> t Dune_lang.Decoder.t
 
-val opam_file : t -> Path.t
-
-val meta_file : t -> Path.t
+val opam_file : t -> Path.Source.t
+val meta_file : t -> Path.Source.t
 
 val to_dyn : t -> Dyn.t
 

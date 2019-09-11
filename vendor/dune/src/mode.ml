@@ -12,21 +12,18 @@ let decode =
     ; "native" , Native
     ]
 
-let encode =
-  let open Dune_lang.Encoder in
-  function
-  | Byte -> string "byte"
-  | Native -> string "native"
-
-let pp fmt = function
-  | Byte -> Format.pp_print_string fmt "byte"
-  | Native -> Format.pp_print_string fmt "native"
-
 let choose byte native = function
   | Byte   -> byte
   | Native -> native
 
-let compiled_unit_ext = choose ".cmo" ".cmx"
+let to_string = choose "byte" "native"
+
+let encode t = Dune_lang.Encoder.string (to_string t)
+let to_dyn t =
+  let open Dyn.Encoder in
+  constr (to_string t) []
+
+let compiled_unit_ext = choose (Cm_kind.ext Cmo) (Cm_kind.ext Cmx)
 let compiled_lib_ext = choose ".cma" ".cmxa"
 let plugin_ext = choose ".cma" ".cmxs"
 
@@ -48,10 +45,11 @@ module Dict = struct
 
   let for_all { byte ; native } ~f = f byte && f native
 
-  let pp pp fmt { byte; native } =
-    Fmt.record fmt
-      [ "byte", Fmt.const pp byte
-      ; "native", Fmt.const pp native
+  let to_dyn to_dyn { byte; native } =
+    let open Dyn.Encoder in
+    record
+      [ "byte", to_dyn byte
+      ; "native", to_dyn native
       ]
 
   let get t = function
@@ -71,6 +69,11 @@ module Dict = struct
   let map t ~f =
     { byte = f t.byte
     ; native = f t.native
+    }
+
+  let mapi t ~f =
+    { byte = f Byte t.byte
+    ; native = f Native t.native
     }
 
   let make_both x =

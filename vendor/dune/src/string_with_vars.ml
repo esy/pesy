@@ -8,6 +8,11 @@ type t =
   ; syntax_version : Syntax.Version.t
   }
 
+let compare_no_loc t1 t2 =
+  match Syntax.Version.compare t1.syntax_version t2.syntax_version with
+  | Ordering.Lt | Gt as a -> a
+  | Eq -> Dune_lang.Template.compare_no_loc t1.template t2.template
+
 let make_syntax = (1, 0)
 
 let make ?(quoted=false) loc part =
@@ -115,19 +120,19 @@ let decode =
   let jbuild =
     raw >>| function
     | Template _ as t ->
-      Exn.code_error "Unexpected dune template from a jbuild file"
-        [ "t", Dune_lang.to_sexp (Dune_lang.Ast.remove_locs t)
+      Code_error.raise "Unexpected dune template from a jbuild file"
+        [ "t", Dune_lang.to_dyn (Dune_lang.Ast.remove_locs t)
         ]
     | Atom(loc, A s) -> Jbuild.parse s ~loc ~quoted:false
     | Quoted_string (loc, s) -> Jbuild.parse s ~loc ~quoted:true
-    | List (loc, _) -> Dune_lang.Decoder.of_sexp_error loc "Atom expected"
+    | List (loc, _) -> User_error.raise ~loc [ Pp.text "Atom expected" ]
   in
   let dune =
     raw >>| function
     | Template t -> t
     | Atom(loc, A s) -> literal ~quoted:false ~loc s
     | Quoted_string (loc, s) -> literal ~quoted:true ~loc s
-    | List (loc, _) -> Dune_lang.Decoder.of_sexp_error loc "Unexpected list"
+    | List (loc, _) -> User_error.raise ~loc [ Pp.text "Unexpected list" ]
   in
   let template_parser = Stanza.Decoder.switch_file_kind ~jbuild ~dune in
   let+ syntax_version = Syntax.get_exn Stanza.syntax
@@ -189,17 +194,13 @@ module Mode = struct
       | Single, _ -> None
 end
 
-module Partial = struct
-  type nonrec 'a t =
-    | Expanded of 'a
-    | Unexpanded of t
-end
-
 let invalid_multivalue (v : var) x =
-  Errors.fail v.loc "Variable %s expands to %d values, \
-                   however a single value is expected here. \
-                   Please quote this atom."
-    (string_of_var v) (List.length x)
+  User_error.raise
+    ~loc:v.loc
+    [ Pp.textf "Variable %s expands to %d values, however a single \
+                value is expected here. Please quote this atom."
+        (string_of_var v) (List.length x)
+    ]
 
 module Var = struct
   type t = var
@@ -217,7 +218,7 @@ module Var = struct
 
   let to_string = string_of_var
 
-  let to_sexp t = Sexp.Encoder.string (to_string t)
+  let to_dyn t = Dyn.Encoder.string (to_string t)
 
   let with_name t ~name =
     { t with name }
@@ -231,7 +232,91 @@ module Var = struct
        | Some _ -> { t with payload = Some ".." })
 end
 
+type known_suffix =
+  | Full of string
+  | Partial of (Var.t * string)
+
+let known_suffix =
+  let rec go t acc = match t with
+    | Text s :: rest -> go rest (s :: acc)
+    | [] -> Full (String.concat ~sep:"" acc)
+    | Var v :: _ -> Partial (v, String.concat ~sep:"" acc)
+  in
+  fun t -> go (List.rev t.template.parts) []
+
+type known_prefix =
+  | Full of string
+  | Partial of (string * Var.t)
+
+let known_prefix =
+  let rec go t acc = match t with
+    | Text s :: rest -> go rest (s :: acc)
+    | [] -> Full (String.concat ~sep:"" (List.rev acc))
+    | Var v :: _ -> Partial (String.concat ~sep:"" (List.rev acc), v)
+  in
+  fun t -> go t.template.parts []
+let fold_vars =
+  let rec loop parts acc f =
+    match parts with
+    | [] -> acc
+    | Text _ :: parts -> loop parts acc f
+    | Var v :: parts -> loop parts (f v acc) f
+  in
+  fun t ~init ~f ->
+    loop t.template.parts init f
+
 type 'a expander = Var.t -> Syntax.Version.t -> 'a
+
+type yes_no_unknown =
+  | Yes | No | Unknown of Var.t
+
+let is_suffix t ~suffix:want =
+  match known_suffix t with
+  | Full s -> if String.is_suffix ~suffix:want s then Yes else No
+  | Partial (v, have) ->
+    if String.is_suffix ~suffix:want have then Yes
+    else
+    if String.is_suffix ~suffix:have want then Unknown v
+    else
+      No
+
+let is_prefix t ~prefix:want =
+  match known_prefix t with
+  | Full s -> if String.is_prefix ~prefix:want s then Yes else No
+  | Partial (have, v) ->
+    if String.is_prefix ~prefix:want have then Yes
+    else
+    if String.is_prefix ~prefix:have want then Unknown v
+    else
+      No
+
+module Private = struct
+  module Partial = struct
+    type nonrec 'a t =
+      | Expanded of 'a
+      | Unexpanded of t
+
+    let map t ~f = match t with
+      | Expanded t -> Expanded (f t)
+      | Unexpanded t -> Unexpanded t
+
+    let is_suffix t ~suffix =
+      match t with
+      | Expanded s ->
+        if String.is_suffix ~suffix s then Yes else No
+      | Unexpanded t ->
+        is_suffix t ~suffix
+
+    let is_prefix t ~prefix =
+      match t with
+      | Expanded s ->
+        if String.is_prefix ~prefix s then Yes else No
+      | Unexpanded t ->
+        is_prefix t ~prefix
+
+  end
+end
+open Private
 
 let partial_expand
   : 'a.t
@@ -285,9 +370,11 @@ let expand t ~mode ~dir ~f =
         begin match var.syntax with
         | Percent ->
           if Var.is_macro var then
-            Errors.fail var.loc "Unknown macro %s" (Var.describe var)
+            User_error.raise ~loc:var.loc
+              [ Pp.textf "Unknown macro %s" (Var.describe var) ]
           else
-            Errors.fail var.loc "Unknown variable %S" (Var.name var)
+            User_error.raise ~loc:var.loc
+              [ Pp.textf "Unknown variable %S" (Var.name var) ]
         | Dollar_brace
         | Dollar_paren -> Some [Value.String (string_of_var var)]
         end
@@ -315,7 +402,7 @@ let encode t =
   | Some s -> Dune_lang.atom_or_quoted_string s
   | None -> Dune_lang.Template t.template
 
-let to_sexp t = Dune_lang.to_sexp (encode t)
+let to_dyn t = Dune_lang.to_dyn (encode t)
 
 let remove_locs t =
   { t with template = Dune_lang.Template.remove_locs t.template
@@ -415,8 +502,9 @@ let upgrade_to_dune t ~allow_first_dep_var =
           if v.name = "<" && allow_first_dep_var then
             Some v.name
           else
-            Errors.fail v.loc "%s is not supported in dune files.%s"
-              (Var.describe v) repl
+            User_error.raise ~loc:v.loc
+              [ Pp.textf "%s is not supported in dune files.%s"
+                  (Var.describe v) repl ]
         | Keep -> Some v.name
         | Renamed_to new_name ->
           Some new_name
@@ -434,3 +522,13 @@ let upgrade_to_dune t ~allow_first_dep_var =
         { t.template with parts = List.map t.template.parts ~f:map_part }
     }
   end
+
+module Partial = struct
+  include Private.Partial
+
+  let to_dyn f =
+    let open Dyn.Encoder in
+    function
+    | Expanded x -> constr "Expander" [f x]
+    | Unexpanded t -> constr "Unexpanded" [to_dyn t]
+end

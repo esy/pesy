@@ -52,11 +52,14 @@ let term =
       `Search prog
     | Relative_to_current_dir ->
       let prog = Common.prefix_target common prog in
-      `This_rel (Path.relative context.build_dir prog) in
+      `This_rel (Path.build (Path.Build.relative context.build_dir prog)) in
   let targets = lazy (
     (match prog_where with
      | `Search p ->
-       [Path.relative (Config.local_install_bin_dir ~context:context.name) p]
+       [Path.Build.relative
+          (Config.local_install_bin_dir ~context:context.name) p
+       |> Path.build
+       ]
      | `This_rel p when Sys.win32 ->
        [p; Path.extend_basename p ~suffix:Bin.exe]
      | `This_rel p ->
@@ -81,7 +84,9 @@ let term =
     end;
     match prog_where with
     | `Search prog ->
-      let path = Config.local_install_bin_dir ~context:context.name :: context.path in
+      let path =
+        Path.build (Config.local_install_bin_dir ~context:context.name)
+        :: context.path in
       Bin.which prog ~path
     | `This_rel prog
     | `This_abs prog ->
@@ -97,14 +102,16 @@ let term =
   | None, true ->
     begin match Lazy.force targets with
     | [] ->
-      die "@{<Error>Error@}: Program %S not found!" prog
+      User_error.raise
+        [ Pp.textf "Program %S not found!" prog ]
     | _::_ ->
-      die "@{<Error>Error@}: Program %S isn't built yet \
-           you need to build it first or remove the \
-           --no-build option." prog
+      User_error.raise
+        [ Pp.textf "Program %S isn't built yet. You need to build it \
+                    first or remove the --no-build option." prog
+        ]
     end
   | None, false ->
-    die "@{<Error>Error@}: Program %S not found!" prog
+    User_error.raise [ Pp.textf "Program %S not found!" prog ]
   | Some real_prog, _ ->
     let real_prog = Path.to_string real_prog     in
     let argv      = prog :: args in

@@ -6,7 +6,7 @@ open! Stdune
 
 type t
 
-val root : t -> Path.t
+val root : t -> Path.Build.t
 val name : t -> Dune_project.Name.t
 val project : t -> Dune_project.t
 
@@ -26,9 +26,11 @@ module DB : sig
     -> context:string
     -> installed_libs:Lib.DB.t
     -> lib_config:Lib_config.t
-    -> (Path.t * Dune_file.Library.t) list
+    -> (Path.Build.t * Dune_file.Library.t) list
+    -> Dune_file.External_variant.t list
     -> t * Lib.DB.t
 
-  val find_by_dir  : t -> Path.t              -> scope
-  val find_by_name : t -> Dune_project.Name.t -> scope
+  val find_by_dir     : t -> Path.Build.t        -> scope
+  val find_by_name    : t -> Dune_project.Name.t -> scope list
+  val find_by_project : t -> Dune_project.t      -> scope
 end with type scope := t

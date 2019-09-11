@@ -3,10 +3,12 @@ open! Stdune
 
     This library is internal to dune and guarantees no API stability.*)
 
+module File_syntax = File_syntax
+
 module Atom : sig
   type t = private A of string [@@unboxed]
 
-  val is_valid : t -> Syntax.t -> bool
+  val is_valid : t -> File_syntax.t -> bool
   val equal : t -> t -> bool
 
   val of_string : string -> t
@@ -18,18 +20,6 @@ module Atom : sig
   val of_int64 : Int64.t -> t
   val of_digest : Digest.t -> t
 end
-
-module Syntax : sig
-  type t = Jbuild | Dune
-
-  val hash : t -> int
-
-  val equal : t -> t -> bool
-
-  val of_basename : string -> t option
-end
-
-type syntax = Syntax.t = Jbuild | Dune
 
 module Template : sig
   type var_syntax = Dollar_brace | Dollar_paren | Percent
@@ -51,9 +41,11 @@ module Template : sig
     ; loc: Loc.t
     }
 
+  val compare_no_loc: t -> t -> Ordering.t
+
   val string_of_var : var -> string
 
-  val to_string : t -> syntax:syntax -> string
+  val to_string : t -> syntax:File_syntax.t -> string
 
   val remove_locs : t -> t
 end
@@ -74,23 +66,24 @@ val atom_or_quoted_string : string -> t
 val unsafe_atom_of_string : string -> t
 
 (** Serialize a S-expression *)
-val to_string : t -> syntax:syntax -> string
+val to_string : t -> syntax:File_syntax.t -> string
 
 (** Serialize a S-expression using indentation to improve readability *)
-val pp : syntax -> Format.formatter -> t -> unit
+val pp : File_syntax.t -> t -> _ Pp.t
 
-(** Serialization that never fails because it quotes atoms when necessary
-    TODO remove this once we have a proper sexp type *)
-val pp_quoted : Format.formatter -> t -> unit
+module Deprecated : sig
+  (** Serialize a S-expression using indentation to improve readability *)
+  val pp : File_syntax.t -> Format.formatter -> t -> unit
 
-(** Same as [pp ~syntax:Dune], but split long strings. The formatter
-    must have been prepared with [prepare_formatter]. *)
-val pp_split_strings : Format.formatter -> t -> unit
+  (** Same as [pp ~syntax:Dune], but split long strings. The formatter
+      must have been prepared with [prepare_formatter]. *)
+  val pp_split_strings : Format.formatter -> t -> unit
 
-(** Prepare a formatter for [pp_split_strings]. Additionaly the
-    formatter escape newlines when the tags "makefile-action" or
-    "makefile-stuff" are active. *)
-val prepare_formatter : Format.formatter -> unit
+  (** Prepare a formatter for [pp_split_strings]. Additionaly the
+      formatter escape newlines when the tags "makefile-action" or
+      "makefile-stuff" are active. *)
+  val prepare_formatter : Format.formatter -> unit
+end
 
 (** Abstract syntax tree *)
 module Ast : sig
@@ -152,6 +145,8 @@ module Cst : sig
 
   val concrete : Ast.t -> t
 
+  val to_dyn : t -> Dyn.t
+
   val to_sexp : t -> sexp option
 
   (** Return all the comments contained in a concrete syntax tree *)
@@ -161,16 +156,6 @@ end with type sexp := t
 (** Insert comments in a concrete syntax tree. Comments are inserted
     based on their location. *)
 val insert_comments : Cst.t list -> (Loc.t * Cst.Comment.t) list -> Cst.t list
-
-module Parse_error : sig
-  type t
-
-  val loc     : t -> Loc.t
-  val message : t -> string
-end
-
-(** Exception raised in case of a parsing error *)
-exception Parse_error of Parse_error.t
 
 module Lexer : sig
   module Token : sig
@@ -191,7 +176,7 @@ module Lexer : sig
   val token : t
   val jbuild_token : t
 
-  val of_syntax : syntax -> t
+  val of_syntax : File_syntax.t -> t
 end
 
 module Parser : sig
@@ -229,7 +214,7 @@ val parse_cst_string
 
 module Encoder : sig
   type sexp = t
-  include Sexp_intf.Combinators with type 'a t = 'a -> t
+  include Combinators.S with type 'a t = 'a -> t
 
   val sexp : sexp t
 
@@ -270,8 +255,6 @@ module Decoder : sig
     { on: string
     ; candidates: string list
     }
-
-  exception Decoder of Loc.t * string * hint option
 
   (** Monad producing a value of type ['a] by parsing an input
       composed of a sequence of S-expressions.
@@ -314,6 +297,8 @@ module Decoder : sig
   val (>>>) : (unit, 'k) parser -> ('a, 'k) parser -> ('a, 'k) parser
   val map : ('a, 'k) parser -> f:('a -> 'b) -> ('b, 'k) parser
   val try_ : ('a, 'k) parser -> (exn -> ('a, 'k) parser) -> ('a, 'k) parser
+  val traverse : 'a list -> f:('a -> ('b, 'k) parser) -> ('b list, 'k) parser
+  val all : ('a, 'k) parser list -> ('a list, 'k) parser
 
   (** Access to the context *)
   val get : 'a Univ_map.Key.t -> ('a option, _) parser
@@ -391,7 +376,7 @@ module Decoder : sig
   val record : 'a fields_parser -> 'a t
 
   (** Consume the next element of the input as a string, int, char, ... *)
-  include Sexp_intf.Combinators with type 'a t := 'a t
+  include Combinators.S with type 'a t := 'a t
 
   (** Unparsed next element of the input *)
   val raw : ast t
@@ -415,23 +400,6 @@ module Decoder : sig
 
   val fix : ('a t -> 'a t) -> 'a t
 
-  val of_sexp_error
-    :  ?hint:hint
-    -> Loc.t
-    -> string
-    -> _
-  val of_sexp_errorf
-    :  ?hint:hint
-    -> Loc.t
-    -> ('a, unit, string, 'b) format4
-    -> 'a
-
-  val no_templates
-    : ?hint:hint
-    -> Loc.t
-    -> ('a, unit, string, 'b) format4
-    -> 'a
-
   val located : ('a, 'k) parser -> (Loc.t * 'a, 'k) parser
 
   val enum : (string * 'a) list -> 'a t
@@ -446,7 +414,7 @@ module Decoder : sig
       error in case of failure. *)
   val map_validate
     :  'a fields_parser
-    -> f:('a -> ('b, string) Result.t)
+    -> f:('a -> ('b, User_message.t) Result.t)
     -> 'b fields_parser
 
   (** {3 Parsing record fields} *)
@@ -462,6 +430,11 @@ module Decoder : sig
     -> ?on_dup:(Univ_map.t -> string -> Ast.t list -> unit)
     -> 'a t
     -> 'a option fields_parser
+
+  val fields_mutually_exclusive
+    : ?on_dup:(Univ_map.t -> string -> Ast.t list -> unit)
+    -> (string * 'a t) list
+    -> 'a fields_parser
 
   val field_b
     :  ?check:(unit t)
@@ -498,7 +471,7 @@ module type Conv = sig
   val encode : t Encoder.t
 end
 
-val to_sexp : t Sexp.Encoder.t
+val to_dyn : t Dyn.Encoder.t
 
 module Io : sig
   val load : ?lexer:Lexer.t -> Path.t -> mode:'a Parser.Mode.t -> 'a

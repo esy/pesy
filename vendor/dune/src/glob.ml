@@ -10,7 +10,7 @@ let equal x y = String.equal x.repr y.repr
 
 let hash t = String.hash t.repr
 
-let to_sexp t = Sexp.Encoder.string t.repr
+let to_dyn t = Dyn.Encoder.string t.repr
 
 let of_string repr =
   Glob_lexer.parse_string repr
@@ -22,7 +22,8 @@ let of_string repr =
 let of_string_exn loc repr =
   match of_string repr with
   | Error (_, msg) ->
-    Errors.fail loc "invalid glob: :%s" msg
+    User_error.raise ~loc
+      [ Pp.textf "invalid glob: :%s" msg ]
   | Ok t -> t
 
 let decode =
@@ -40,5 +41,8 @@ let empty =
   }
 
 let to_pred t =
-  let id = lazy (Sexp.List [Atom "Glob"; Atom t.repr]) in
+  let id = lazy (
+    let open Dyn.Encoder in
+    constr "Glob" [string t.repr])
+  in
   Predicate.create ~id ~f:(test t)

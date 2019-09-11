@@ -61,8 +61,8 @@
     (concat (regexp-opt
              '("library" "executable" "executables" "rule" "toplevel"
                "ocamllex" "ocamlyacc" "menhir" "alias" "install"
-               "copy_files" "copy_files#" "include" "tests" "test"
-               "env" "ignored_subdirs" "include_subdirs")
+               "copy_files" "copy_files#" "include" "tests" "test" "dirs"
+               "env" "ignored_subdirs" "include_subdirs" "data_only_dirs")
              ) "\\(?:\\_>\\|[[:space:]]\\)"))
   "Stanzas in dune files.")
 
@@ -76,6 +76,10 @@
        "ocamlc_flags" "ocamlopt_flags" "library_flags" "c_flags"
        "cxx_flags" "c_library_flags" "self_build_stubs_archive"
        "modules_without_implementation" "private_modules"
+       ;; + special_builtin_support
+       "special_builtin_support" "build_info" "data_module" "api_version"
+       ;; +stdlib
+       "stdlib" "modules_before_stdlib" "exit_module" "internal_modules"
        ;; + virtual libraries
        "virtual_modules" "implements" "variant" "default_implementation"
        "allow_overlapping_dependencies"
@@ -113,7 +117,7 @@
                "extends"
                ;; Dependency specification
                "file" "alias" "alias_rec" "glob_files" "files_recursively_in"
-               "universe" "package")
+               "universe" "package" "source_tree" "env_var")
              t)
             "\\(?:\\_>\\|[[:space:]]\\)"))
   "Builtin sub-fields in dune.")
