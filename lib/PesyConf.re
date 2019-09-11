@@ -376,7 +376,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                      |> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x);
 
                    let exportedNamespace =
-                     if (findIndex(libraryAsPath, rootName) != (-1)) {
+                     if (findIndex(libraryAsPath, rootName) == 0) {
                        libraryAsPath
                        |> String.split_on_char('/')
                        |> List.map(upperCamelCasify)
