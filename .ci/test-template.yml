@@ -6,7 +6,7 @@ steps:
     inputs:
       artifactName: Release
       downloadPath: $(Pipeline.Workspace)
-  - script: npm -g install $(Pipeline.Workspace)/Release/_release/pesy-0.5.0-alpha.2.tgz
+  - script: npm -g install $(Pipeline.Workspace)/Release/_release/pesy-0.5.0-alpha.5.tgz
     displayName: Install pesy
   - script: mkdir $(Pipeline.Workspace)/hello-reason
     displayName: "Create project folder"
