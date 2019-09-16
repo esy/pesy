@@ -44,7 +44,7 @@ stages:
       steps:
         - template: .ci/cross-release.yml
 
-- stage: Test_tempalte
+- stage: Test_template
   dependsOn: [Release]
   jobs:
   - job: Linux
