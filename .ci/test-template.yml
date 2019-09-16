@@ -1,0 +1,18 @@
+steps:
+  - template: utils/use-node.yml
+  - template: utils/use-esy.yml
+  - task: DownloadBuildArtifacts@0
+    displayName: "Download Release Artifact"
+    inputs:
+      artifactName: Release
+      downloadPath: $(Pipeline.Workspace)
+  - script: npm -g install $(Pipeline.Workspace)/Release/_release/pesy-0.5.0-alpha.2.tgz
+    displayName: Install pesy
+  - script: mkdir $(Pipeline.Workspace)/hello-reason
+    displayName: "Create project folder"
+  - script: "pesy"
+    displayName: "Initialize pesy template"
+    workingDirectory: $(Pipeline.Workspace)/hello-reason
+  - script: "esy test"
+    displayName: "Run tests"
+    workingDirectory: $(Pipeline.Workspace)/hello-reason
