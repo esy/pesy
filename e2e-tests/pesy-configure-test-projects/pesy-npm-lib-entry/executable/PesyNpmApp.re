@@ -1,1 +1,1 @@
-Util.Util.foo();
+Util.foo();
