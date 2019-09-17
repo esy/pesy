@@ -408,7 +408,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                                } else {
                                  let stripRootName =
                                    Str.global_replace(
-                                     Str.regexp(Path.(rootName / "")),
+                                     Str.regexp(rootName ++ "/"),
                                      "",
                                    );
                                  let pathToRequirePkg =
@@ -422,6 +422,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                                      / importedNamespace
                                    )
                                    ++ ext;
+                                 print_endline("Looking for: " ++ pathToRequirePkg);
                                  acc || Sys.file_exists(pathToRequirePkg);
                                },
                              false,
