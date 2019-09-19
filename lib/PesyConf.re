@@ -400,47 +400,77 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                      };
 
                    PesyModule.Alias.create(
-                     ~alias=
-                       if (List.fold_left(
-                             (acc, ext) =>
-                               if (findIndex(libraryAsPath, rootName) != 0) {
-                                 false;
-                               } else {
-                                 let stripRootName =
-                                   Str.global_replace(
-                                     Str.regexp(rootName ++ "/"),
-                                     "",
-                                   );
-                                 let pathToRequirePkg =
-                                   Path.(
-                                     (
+                     ~alias={
+                       switch (
+                         List.fold_left(
+                           (accExt, ext) =>
+                             List.fold_left(
+                               (accEntry, entry) => {
+                                 switch (accEntry) {
+                                 | Some(x) => Some(x)
+                                 | None =>
+                                   if (findIndex(libraryAsPath, rootName) != 0) {
+                                     Some(
+                                       sprintf(
+                                         "module %s = %s;",
+                                         importedNamespace,
+                                         exportedNamespace,
+                                       ),
+                                     );
+                                   } else {
+                                     let stripRootName =
+                                       Str.global_replace(
+                                         Str.regexp(rootName ++ "/"),
+                                         "",
+                                       );
+                                     let basePathToRequirePkg =
                                        libraryAsPath
                                        |> stripRootName
                                        |> (x => Path.(projectPath / x))
-                                       |> resolveRelativePath
-                                     )
-                                     / importedNamespace
-                                   )
-                                   ++ ext;
-                                 print_endline("Looking for: " ++ pathToRequirePkg);
-                                 acc || Sys.file_exists(pathToRequirePkg);
+                                       |> resolveRelativePath;
+                                     if (Sys.file_exists(
+                                           Path.(basePathToRequirePkg / entry)
+                                           ++ ext,
+                                         )
+                                         || Sys.file_exists(
+                                              Path.(
+                                                basePathToRequirePkg
+                                                / String.lowercase_ascii(
+                                                    entry,
+                                                  )
+                                              )
+                                              ++ ext,
+                                            )) {
+                                       Some(
+                                         sprintf(
+                                           "module %s = %s.%s;",
+                                           importedNamespace,
+                                           exportedNamespace,
+                                           entry,
+                                         ),
+                                       );
+                                     } else {
+                                       None;
+                                     };
+                                   }
+                                 }
                                },
-                             false,
-                             [".re", ".ml"],
-                           )) {
-                         sprintf(
-                           "module %s = %s.%s;",
-                           importedNamespace,
-                           exportedNamespace,
-                           importedNamespace,
-                         );
-                       } else {
+                               accExt,
+                               ["Index", importedNamespace] /* If it finds, Index.re, it doesn't look for Bar.re */
+                             ),
+                           None,
+                           [".re", ".ml"],
+                         )
+                       ) {
+                       | Some(x) => x
+                       | None =>
                          sprintf(
                            "module %s = %s;",
                            importedNamespace,
                            exportedNamespace,
-                         );
-                       },
+                         )
+                       };
+                     },
                      ~library=pathToOCamlLibName(libraryAsPath),
                      ~originalNamespace=importedNamespace,
                    );
