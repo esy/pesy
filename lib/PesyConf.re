@@ -76,7 +76,9 @@ let resolveRelativePath = path => {
     };
   };
 
-  String.concat(separator, resolve(revParts, 0, []));
+  let dirSepChar = Filename.dir_sep.[0];
+  (path.[0] == dirSepChar ? Filename.dir_sep : "")
+  ++ String.concat(separator, resolve(revParts, 0, []));
 };
 
 /* let%expect_test _ = { */
@@ -398,12 +400,77 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                      };
 
                    PesyModule.Alias.create(
-                     ~alias=
-                       sprintf(
-                         "module %s = %s;",
-                         importedNamespace,
-                         exportedNamespace,
-                       ),
+                     ~alias={
+                       switch (
+                         List.fold_left(
+                           (accExt, ext) =>
+                             List.fold_left(
+                               (accEntry, entry) => {
+                                 switch (accEntry) {
+                                 | Some(x) => Some(x)
+                                 | None =>
+                                   if (findIndex(libraryAsPath, rootName) != 0) {
+                                     Some(
+                                       sprintf(
+                                         "module %s = %s;",
+                                         importedNamespace,
+                                         exportedNamespace,
+                                       ),
+                                     );
+                                   } else {
+                                     let stripRootName =
+                                       Str.global_replace(
+                                         Str.regexp(rootName ++ "/"),
+                                         "",
+                                       );
+                                     let basePathToRequirePkg =
+                                       libraryAsPath
+                                       |> stripRootName
+                                       |> (x => Path.(projectPath / x))
+                                       |> resolveRelativePath;
+                                     if (Sys.file_exists(
+                                           Path.(basePathToRequirePkg / entry)
+                                           ++ ext,
+                                         )
+                                         || Sys.file_exists(
+                                              Path.(
+                                                basePathToRequirePkg
+                                                / String.lowercase_ascii(
+                                                    entry,
+                                                  )
+                                              )
+                                              ++ ext,
+                                            )) {
+                                       Some(
+                                         sprintf(
+                                           "module %s = %s.%s;",
+                                           importedNamespace,
+                                           exportedNamespace,
+                                           entry,
+                                         ),
+                                       );
+                                     } else {
+                                       None;
+                                     };
+                                   }
+                                 }
+                               },
+                               accExt,
+                               ["Index", importedNamespace] /* If it finds, Index.re, it doesn't look for Bar.re */
+                             ),
+                           None,
+                           [".re", ".ml"],
+                         )
+                       ) {
+                       | Some(x) => x
+                       | None =>
+                         sprintf(
+                           "module %s = %s;",
+                           importedNamespace,
+                           exportedNamespace,
+                         )
+                       };
+                     },
                      ~library=pathToOCamlLibName(libraryAsPath),
                      ~originalNamespace=importedNamespace,
                    );
