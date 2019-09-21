@@ -165,10 +165,44 @@ npm), you can import it as follows
   }
 ```
 
-With the new NPM like conventions, pesy automatically handles the namespace for you so that we don't have to worry about the nuances of a package and a library during development. 
+With the new NPM like conventions, pesy automatically handles the
+namespace for you so that we don't have to worry about the nuances of
+a package and a library during development. 
+
+**2. External libraries
+How does one figure path for libraries not written in pesy? Libraries
+written using pesy are straightforward - for the package.json looking
+like this,
 
 
-**2. All sub-packages are considered to be libraries unless they have a `bin` property (much like NPM)**
+```json
+{
+  "name": "@scope/foo",
+  "buildDirs": {
+    "lib": {...}  
+  }
+}
+```
+
+it is `require('@scope/foo')`. What about packages not using pesy?
+Like [Reason
+Native](https://github.com/facebookexperimental/reason-native). Or
+those published to opam?
+Well, libraries like Sexplib and Yojson have dune public_name `sexplib` and
+`yojson` respectively. Ctypes, however, also export
+`ctypes.foreign`. Think of `.foreign` as a subpackage of ctypes and 
+therefore as exisiting in a path like `ctypes/foreign` (this doesn't
+have to be so in reality). Thus,
+
+Console (reason-native on npm): `require('console/lib')`
+Pastel (reason-native on npm): `require('pastel/lib')`
+Rely (reason-native on npm): `require('rely/lib')`
+Sexplib (opam): `require('sexplib')`
+Ctypes (opam): `require('ctypes')` and `require('ctypes/foreign')`
+
+
+
+**3. All sub-packages are considered to be libraries unless they have a `bin` property (much like NPM)**
 Any sub-package with `bin` property is considered to be an executable subpackage.
 
 ```json
