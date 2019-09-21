@@ -67,11 +67,11 @@ Pesy tries to achieve this by accepting package build configuration mentioned in
 ```json
  "buildDirs" {
     "lib": {
-      "require": [
-        "str",
-        "sexplib",
-        "yojson",
-        "my-project/utils"
+      "imports": [
+        "Str = require('str')",
+        "Sexplib = require('sexplib')",
+        "Yojson = require('yojson')",
+        "Utils = require('my-project/utils')"
       ]
     },
     ...
@@ -109,39 +109,73 @@ build tool.
 
 ### NPM like features (experimental)
 
+**1. Libraries are identified with a path, much like Javascript
+requires (`var curryN = require('lodash/fp/curryN');`)**
+
 Every library, as we know, exposes a namespace/module under which it's APIs are
-available. In order to ease consumption, pesy tries to guess this namespace for you,
-so that you can avoid configuring it yourself. It does so by assigning the library
-the upper camelcase of the directory the library/sub-package resides in. If you are
-not satisfied, you can override this by adding `namespace` property exactly like how
-you would with Dune.
+available. However, as package authors, it can hard to make sure one
+is not using a namespace already taken by another package (Otherwise
+it could lead to collisions). Pesy works around this by assigning the library
+the upper camelcase of the root package name and directory the
+library/sub-package resides in. 
 
-With the new NPM like conventions, pesy automatically handles the namespace for you so that we don't have to worry about the nuances of a package and a library during development. All that we need to know is, in a configuration like the one above,
-
-**1. Libraries are identified with a path, much like Javascript requires (`var curryN = require('lodash/fp/curryN');`)**
+Example: if a package.json looks like this 
 
 ```json
-"buildDirs": {
-  "library": {
-    "require": [ "foo/foolib" ]
+{
+  "name": "@myscope/foo",
+  "buildDirs": {
+    "library": { ... }
   }
 }
 ```
 
-You may look at [Creating and publishing libraries to NPM](#creating-and-publishing-libraries-and-tools-to-npm) for an example
+Then, subpackage `library` takes a namespace of
+`MyScopeFooLibrary`. As a user, however, you shouldn't have to worry
+much about yourself, since you can specify how you'd like to import
+subpackages (and packages). In the above example, another subpackage
+would consume it as follows
 
-**2. Namespaces are upper camel cased folder names**
+```json
+{
+  "name": "@myscope/foo",
+  "buildDirs": {
+    "library": { ... },
+    "anotherLibrary": {
+      "imports": [
+        "ThatOtherLibrary = require('@myscope/foo/library')"
+      ]
+    }
+  }
+}
+```
 
-Pesy chooses the capitalised folder name of the sub-package as the namespace of the package. This is to reduce the cognitive overhead of library v/s package differences.
+And if you were consuming this package (after having published to
+npm), you can import it as follows
 
-**3. All sub-packages are considered to be libraries unless they have a `bin` property (much like NPM)**
+```json
+{
+  "name": "bar",
+  "buildDirs": {
+    "library": {
+      "imports": [
+        "ThatFooLibrary = require('@myscope/foo/library')"
+      ]
+    }
+  }
+```
+
+With the new NPM like conventions, pesy automatically handles the namespace for you so that we don't have to worry about the nuances of a package and a library during development. 
+
+
+**2. All sub-packages are considered to be libraries unless they have a `bin` property (much like NPM)**
 Any sub-package with `bin` property is considered to be an executable subpackage.
 
 ```json
 "buildDirs": {
    "executable": {
-      "require": [
-        "foo/library"
+      "imports": [
+        "Library = require('foo/library')"
       ],
       "bin": {
         "FooApp.exe": "FooApp.re"
@@ -274,6 +308,42 @@ add support for more config fields, PRs are welcomed.
     }
   }
   ```
+  
+  Alternatively, with the new npm like require syntax, it can be
+  
+ ```json 
+  {
+    "name": "my-package",
+    "dependencies": {
+      "@opam/bos": "*"
+    },
+    "buildDirs": {
+      "exampleLib": {
+        "require": ["bos.top"]
+      }
+    }
+  }
+  ```
+  Without specifying the namespace or name. Pesy will automatically
+  assign it a name of `my-package.exampleLib` and a namespace
+  `MyPackageExampleLib`
+  
+  You can either import this package using these name/namespace or use
+  the convenient require syntax as explained in [NPM like features
+  (experimental)] (### NPM like features (experimental))
+
+  ```json
+  {
+     "name": "a-consuming-package",
+     "buildDirs": {
+       "lib": {
+         "imports": [
+           "Library = require('my-package/exampleLib')"
+         ]
+       }
+     }
+  }
+  ```
 
 - Then run:
   ```sh
@@ -286,11 +356,10 @@ add support for more config fields, PRs are welcomed.
 > which named libraries become available to you by adding the package
 > dependency.
 
-### Tradeoffs:
+### Ejecting:
 
-`esy-pesy` is good for rapidly making new small executables/libraries. Once they
-grow, you'll want to "eject out" of `esy-pesy` and begin customizing using a more
-advanced build system.
+It is always possible to eject out of pesy config by simply deleting
+`buildDirs` and managing the dune files by hand. (Coming soon: [`pesy eject`](https://github.com/esy/pesy/issues/52))
 
 ### Adding `pesy` to an existing project.
 
@@ -374,9 +443,9 @@ With the `buildDirs` section of the package.json looking like the following
 ```json
   "buildDirs": {
     "test": {
-      "require": [
-        "foo/library",
-        "rely.lib"
+      "imports": [
+        "Library = require('foo/library')",
+        "Rely = require('rely/lib')"
       ],
       "flags": [
         "-linkall",
@@ -384,8 +453,8 @@ With the `buildDirs` section of the package.json looking like the following
       ]
     },
     "testExe": {
-      "require": [
-        "foo/test"
+      "imports": [
+        "Test = require('foo/test')"
       ],
       "bin": {
         "RunFooTests.exe": "RunFooTests.re"
@@ -393,64 +462,14 @@ With the `buildDirs` section of the package.json looking like the following
     },
     "library": {},
     "executable": {
-      "require": [
-        "foo/library"
+      "imports": [
+        "Library = require('foo/library')"
       ],
       "bin": {
         "FooApp.exe": "FooApp.re"
       }
     }
   },
-```
-
-Given that pesy tries to unify packages and libraries, for a config mentioned above it has made `library` available under the namespace `Library`. So anytime `foo` is added as a dependency, a module `Library` becomes available in the codebase.
-
-Since `Library` is to generic to be useful, let's rename it to `FooLib` (i.e. make rename the package as foolib)
-
-```sh
-$ mv library foolib
-```
-
-And update the config
-
-```diff
-  "buildDirs": {
-    "test": {
-      "require": [
-        "foo/library",
-        "rely.lib"
-      ],
-      "flags": [
-        "-linkall",
-        "-g"
-      ]
-    },
-    "testExe": {
-      "require": [
-        "foo/test"
-      ],
-      "bin": {
-        "RunFooTests.exe": "RunFooTests.re"
-      }
-    },
--    "library": {},
-+    "foolib": {},
-    "executable": {
-      "require": [
-        "foo/library"
-      ],
-      "bin": {
-        "FooApp.exe": "FooApp.re"
-      }
-    }
-  },
-```
-
-Since config has changed, we run `esy pesy` and build the project
-
-```sh
-$ esy pesy
-$ esy build
 ```
 
 Let's edit the Utils.re too
@@ -482,9 +501,9 @@ We can now require `foo` (sort of like we did in Javascript)
 ```diff
   "buildDirs": {
     "test": {
-      "require": [
-        "bar/library",
-        "rely.lib"
+      "imports": [
+        "Library = require('bar/library')",
+        "Rely = require('rely.lib')"
       ],
       "flags": [
         "-linkall",
@@ -492,21 +511,21 @@ We can now require `foo` (sort of like we did in Javascript)
       ]
     },
     "testExe": {
-      "require": [
-        "bar/test"
+      "imports": [
+        "Test = require('bar/test')"
       ],
       "bin": {
         "RunBarTests.exe": "RunBarTests.re"
       }
     },
     "library": {
-      "require": [
-+        "foo/foolib"
+      "imports": [
++        "FooLib = require('foo/library')"
       ]
     },
     "executable": {
-      "require": [
-        "bar/library"
+      "imports": [
+        "Library = require('bar/library')"
       ],
       "bin": {
         "BarApp.exe": "BarApp.re"
@@ -519,7 +538,7 @@ And then edit Utils.re
 
 ```js
 let foo = () => {
-  Foolib.Util.foo();
+  FooLib.Util.foo();
   print_endline("This is from bar");
 };
 ```
@@ -532,30 +551,10 @@ Hello from foo!
 This is from bar
 ```
 
-Publishing and consuming Reason native packages from NPM is easy. We just need to keep in mind that the namespace exposed from our library depends on the name of the folder!
-
-### Example Project:
-
-The following example project already has an example config. You can base your
-project off of this one.
-
-```sh
-npm install -g esy@next
-git clone git@github.com:jordwalke/esy-peasy-starter.git
-
-esy install
-esy pesy    # Use pesy to configure build from package.json
-esy build
-```
-
-- Change the `name` of the package, and names of libraries in `buildDirs`
-  accordingly.
-- Then re-run:
-
-```sh
-esy pesy
-esy build
-```
+Publishing and consuming Reason native packages from NPM is easy. We
+just need to keep in mind that the namespace exposed from our library
+depends on the name of the package and name of the folder! It's best
+to stay out of trouble using using the new require syntax.
 
 ### Templates (experimental)
 
