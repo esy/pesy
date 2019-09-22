@@ -71,11 +71,11 @@
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
-    "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
-    "@opam/dune": "link:./vendor/dune/dune.opam",
-    "@opam/yojson": "link:./vendor/yojson/yojson.opam",
-    "@reason-native/pastel": "link:./vendor/reason-native/pastel.json",
+    "@opam/cmdliner": "link:./esy-pesy/vendor/cmdliner/cmdliner.opam",
+    "@opam/sexplib": "link:./esy-pesy/vendor/sexplib/sexplib.opam",
+    "@opam/dune": "link:./esy-pesy/vendor/dune/dune.opam",
+    "@opam/yojson": "link:./esy-pesy/vendor/yojson/yojson.opam",
+    "@reason-native/pastel": "link:./esy-pesy/vendor/reason-native/pastel.json",
     "ocaml": "4.7.1004"
   }
 }

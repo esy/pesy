@@ -47,7 +47,7 @@ let set_infos = (filename, infos) => {
   open Unix;
   utimes(filename, infos.st_atime, infos.st_mtime);
   chmod(filename, infos.st_perm);
-  try (chown(filename, infos.st_uid, infos.st_gid)) {
+  try(chown(filename, infos.st_uid, infos.st_gid)) {
   | Unix_error(EPERM, _, _) => ()
   };
 };
@@ -99,7 +99,7 @@ print_newline();
 rimraf(testDir);
 
 let pesyConfigureTestProjectsDir =
-  Path.(Sys.getcwd() / "e2e-tests" / testDirName);
+  Path.(Sys.getcwd() / "esy-pesy" / "e2e-tests" / testDirName);
 
 Printf.printf("Copying %s to %s", pesyConfigureTestProjectsDir, testDir);
 print_newline();
@@ -125,7 +125,7 @@ let testProjects =
   Sys.readdir(testDir)
   |> Array.to_list
   |> List.filter(dir =>
-       try (Sys.is_directory(Path.(testDir / dir))) {
+       try(Sys.is_directory(Path.(testDir / dir))) {
        | Sys_error(e) => false
        }
      )
@@ -155,7 +155,11 @@ List.iter(
 
     Printf.printf("Running `esy pesy`");
     print_newline();
-    let exitStatus = runCommandWithEnv(esyCommand, [|"#{pesy.root}/_build/default/bin/Pesy.exe"|]);
+    let exitStatus =
+      runCommandWithEnv(
+        esyCommand,
+        [|"#{pesy.root}/_build/default/esy-pesy/bin/Pesy.exe"|],
+      );
     if (exitStatus != 0) {
       Printf.fprintf(
         stderr,

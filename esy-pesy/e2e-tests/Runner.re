@@ -26,7 +26,7 @@ let run = (~env=?, c, args) => {
   };
 };
 
-chdir(Path.(cwd / "npm-cli"));
+chdir(Path.(cwd / "pesy"));
 print_endline("Installing pesy globally..");
 run(makeCommand("npm"), [|"run", "rollup"|]);
 run(makeCommand("npm"), [|"pack"|]);
