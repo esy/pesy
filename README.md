@@ -186,7 +186,7 @@ like this,
 
 it is `require('@scope/foo')`. 
 
-External libraries have dune public_names (eg. `sexplib` and
+Other external libraries have dune public_names (eg. `sexplib` and
 `yojson`). Some packages, eg. Ctypes, however, also export multiple libraries
 Eg. `ctypes` and `ctypes.foreign`. Think of `.foreign` as a subpackage of ctypes and 
 therefore as exisiting in a path like `ctypes/foreign` (this doesn't
