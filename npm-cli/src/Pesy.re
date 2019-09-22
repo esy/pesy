@@ -24,12 +24,8 @@ let substituteTemplateValues = s =>
        packageNameUpperCamelCase,
      );
 let stripTemplateExtension = s => {
-  s
-  |> Js.String.replace(
-       "-template",
-       "",
-     )
-}
+  s |> Js.String.replace("-template", "");
+};
 
 let substituteFileNames = s =>
   s
@@ -49,7 +45,9 @@ let template =
   ->Belt.Array.keep(Js.String.includes("--template"))
   ->Belt.Array.get(0)
   ->Belt.Option.map(Js.String.replace("--template=", ""))
-  ->Belt.Option.getWithDefault("github:esy/pesy-reason-template");
+  ->Belt.Option.getWithDefault(
+      "github:esy/pesy-reason-template#e0fccbe2244fcd20",
+    );
 
 let download_spinner =
   Spinner.start("\x1b[2mDownloading template\x1b[0m " ++ template);
@@ -72,7 +70,10 @@ download_git(
         file => {
           let () = readFile(file)->substituteTemplateValues |> write(file);
 
-          renameSync(file, file |> substituteFileNames |> stripTemplateExtension);
+          renameSync(
+            file,
+            file |> substituteFileNames |> stripTemplateExtension,
+          );
         },
       );
       Spinner.stop(setup_files_spinner);

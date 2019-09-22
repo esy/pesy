@@ -1,2 +1,2 @@
-(library (name Utils) (public_name pesy.utils)
+(library (name Utils) (public_name prometheansacrifice--esy-pesy.utils)
     (libraries unix str pastel.lib)) 

@@ -1,4 +1,5 @@
-(library (name Lib) (public_name pesy.lib)
-    (libraries str sexplib yojson findlib pesy.utils)) (rule (targets Lexer.ml) (deps Lexer.mll)
+(library (name Lib) (public_name prometheansacrifice--esy-pesy.lib)
+    (libraries str sexplib yojson findlib
+        prometheansacrifice--esy-pesy.utils)) (rule (targets Lexer.ml) (deps Lexer.mll)
     (action (run %{bin:ocamllex} -q -o %{targets} %{deps}))) (rule (targets Parser.ml Parser.mli) (deps Parser.mly)
     (action (run %{bin:ocamlyacc} %{deps}))) 

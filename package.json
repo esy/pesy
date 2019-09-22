@@ -1,14 +1,14 @@
 {
-  "name": "pesy",
-  "version": "0.5.0-alpha.5",
+  "name": "@prometheansacrifice/esy-pesy",
+  "version": "0.1.0-alpha.2",
   "description": "\"Esy Pesy\" - Your Esy Assistant.",
   "esy": {
     "buildsInSource": "_build",
     "build": [
-      "dune build -p #{self.name}"
+      "dune build -p prometheansacrifice--esy-pesy"
     ],
     "buildDev": [
-      "refmterr dune build -p #{self.name}"
+      "refmterr dune build -p prometheansacrifice--esy-pesy"
     ],
     "release": {
       "bin": [
@@ -25,8 +25,8 @@
         "pesy": "Pesy.re"
       },
       "require": [
-        "pesy/lib",
-        "pesy/utils",
+        "prometheansacrifice--esy-pesy/lib",
+        "prometheansacrifice--esy-pesy/utils",
         "cmdliner",
         "findlib"
       ]
@@ -37,7 +37,7 @@
         "sexplib",
         "yojson",
         "findlib",
-        "pesy/utils"
+        "prometheansacrifice--esy-pesy/utils"
       ],
       "rawBuildConfigFooter": [
         "(rule (targets Lexer.ml) (deps Lexer.mll) (action (run %{bin:ocamllex} -q -o %{targets} %{deps})))",
