@@ -170,6 +170,7 @@ namespace for you so that we don't have to worry about the nuances of
 a package and a library during development. 
 
 **2. External libraries**
+
 How does one figure path for libraries not written in pesy? Libraries
 written using pesy are straightforward - for the package.json looking
 like this,
@@ -203,6 +204,7 @@ have to be so in reality). Thus,
 
 
 **3. All sub-packages are considered to be libraries unless they have a `bin` property (much like NPM)**
+
 Any sub-package with `bin` property is considered to be an executable subpackage.
 
 ```json
@@ -273,7 +275,7 @@ public name of the library or executable.
     "name": "Tests.exe",
     "description": "Runs all the tests natively",
     "flags": ["-linkall"],
-    "require": ["console.lib", "packageNameMyLibrary""]
+    "imports": ["Console = require('console/lib')"]
   }
 }
 ```
@@ -287,9 +289,9 @@ add support for more config fields, PRs are welcomed.
 
 | Field   | Type           | Description                                                                                                                                                                                                                                                                                                                                            |
 | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `name`  | `string`       | The name of the binary **that must end with `.exe`**.                                                                                                                                                                                                                                                                                                  |
+| `name`  | `string`       | The name of the binary that usually ends with `.exe`.                                                                                                                                                                                                                                                                                                  |
 | `main`  | `string`       | The name of the module that serves as the main entrypoint of the binary.                                                                                                                                                                                                                                                                               |
-| `modes` | `list(string)` | [Advanced linking modes](https://jbuilder.readthedocs.io/en/latest/dune-files.html?highlight=modules_without_implementation#linking-modes). Each string should be of the form `"(<compilation-mode> <binary-kind>)"` where `<compilation-mode>` is one `byte`, `native` or `best` and `<binary-kind>` is one of `c`, `exe`, `object`, `shared_object`. |
+| `modes` | `list(string)` | [Advanced linking modes](https://dune.readthedocs.io/en/latest/dune-files.html?highlight=modules_without_implementation#linking-modes). Each string should be of the form `"(<compilation-mode> <binary-kind>)"` where `<compilation-mode>` is one `byte`, `native` or `best` and `<binary-kind>` is one of `c`, `exe`, `object`, `shared_object`. |
 
 **Libraries**
 
@@ -314,7 +316,7 @@ add support for more config fields, PRs are welcomed.
 | `jsooFlags`            | `list(string)`        | List of flags passed to `jsoo`                                                                                                                                                                                                                                        |
 | `preprocess`           | `list(string)`        | List of preprocess options to enable. Primarily used to enable PPX                                                                                                                                                                                                    |
 | `ignoredSubdirs`       | `list(string)`        | Subdirectory names to ignore (This feature is soon to be deprecated).                                                                                                                                                                                                 |
-| `includeSubdirs`       | `"no"\|"unqualified"` | Default is `"no"`, and changing to `"unqualified"` will compile modules at deeper directories than the place where the `dune` file is generated. See [Dune docs](https://jbuilder.readthedocs.io/en/latest/dune-files.html?highlight=include_subdirs#include-subdirs) |
+| `includeSubdirs`       | `"no"\|"unqualified"` | Default is `"no"`, and changing to `"unqualified"` will compile modules at deeper directories than the place where the `dune` file is generated. See [Dune docs](https://dune.readthedocs.io/en/latest/dune-files.html?highlight=include_subdirs#include-subdirs) |
 | `rawBuildConfig`       | `list(string)`        | Raw build config to be injected into the build config for _this_ target.                                                                                                                                                                                              |
 | `rawBuildConfigFooter` | `list(string)`        | Raw build config to be injected into the footer of the build config.                                                                                                                                                                                                  |
 
@@ -364,7 +366,7 @@ add support for more config fields, PRs are welcomed.
   
   You can either import this package using these name/namespace or use
   the convenient require syntax as explained in [NPM like features
-  (experimental)] (### NPM like features (experimental))
+  (experimental)](https://github.com/esy/pesy/tree/require-syntax-docs#npm-like-features-experimental)
 
   ```json
   {
