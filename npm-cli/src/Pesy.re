@@ -46,7 +46,7 @@ let template =
   ->Belt.Array.get(0)
   ->Belt.Option.map(Js.String.replace("--template=", ""))
   ->Belt.Option.getWithDefault(
-      "github:esy/pesy-reason-template#e0fccbe2244fcd20",
+      "github:esy/pesy-reason-template#86b37d16dcfe15",
     );
 
 let download_spinner =

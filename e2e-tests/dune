@@ -1,6 +1,6 @@
 (executables
 (names Runner TestBootstrapper TestPesyConfigure)
 (public_names Runner.exe TestBootstrapper.exe TestPesyConfigure.exe)
-(libraries unix prometheansacrifice--esy-pesy.lib))
+(libraries unix pesy--esy-pesy.lib))
 
 (data_only_dirs pesy-configure-test-projects)

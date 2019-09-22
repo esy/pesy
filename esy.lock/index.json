@@ -1,6 +1,6 @@
 {
   "checksum": "2ebe20f411cb3a24ea6f2939a0dd4b59",
-  "root": "prometheansacrifice--esy-pesy@link-dev:./package.json",
+  "root": "pesy--esy-pesy@link-dev:./package.json",
   "node": {
     "refmterr@3.2.2@d41d8cd9": {
       "id": "refmterr@3.2.2@d41d8cd9",
@@ -44,9 +44,9 @@
       ],
       "devDependencies": []
     },
-    "prometheansacrifice--esy-pesy@link-dev:./package.json": {
-      "id": "prometheansacrifice--esy-pesy@link-dev:./package.json",
-      "name": "prometheansacrifice--esy-pesy",
+    "pesy--esy-pesy@link-dev:./package.json": {
+      "id": "pesy--esy-pesy@link-dev:./package.json",
+      "name": "pesy--esy-pesy",
       "version": "link-dev:./package.json",
       "source": {
         "type": "link-dev",
