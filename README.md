@@ -169,10 +169,9 @@ With the new NPM like conventions, pesy automatically handles the
 namespace for you so that we don't have to worry about the nuances of
 a package and a library during development. 
 
-**2. External libraries**
+**2. External libraries that did not use pesy**
 
-How does one figure path for libraries not written in pesy? Libraries
-written using pesy are straightforward - for the package.json looking
+Libraries written using pesy are straightforward to consume - for the package.json looking
 like this,
 
 
@@ -185,13 +184,11 @@ like this,
 }
 ```
 
-it is `require('@scope/foo')`. What about packages not using pesy?
-Like [Reason
-Native](https://github.com/facebookexperimental/reason-native). Or
-those published to opam?
-Well, libraries like Sexplib and Yojson have dune public_name `sexplib` and
-`yojson` respectively. Ctypes, however, also export
-`ctypes.foreign`. Think of `.foreign` as a subpackage of ctypes and 
+it is `require('@scope/foo')`. 
+
+External libraries have dune public_names (eg. `sexplib` and
+`yojson`). Some packages, eg. Ctypes, however, also export multiple libraries
+Eg. `ctypes` and `ctypes.foreign`. Think of `.foreign` as a subpackage of ctypes and 
 therefore as exisiting in a path like `ctypes/foreign` (this doesn't
 have to be so in reality). Thus,
 
@@ -532,7 +529,7 @@ $ pesy
 $ esy add foo
 ```
 
-We can now require `foo` (sort of like we did in Javascript)
+We can now require `foo` (sort of like we do in Javascript)
 
 ```diff
   "buildDirs": {
