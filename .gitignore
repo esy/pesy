@@ -6,7 +6,7 @@ node_modules/
 _build
 _esy
 _release
-pesy.install
+prometheansacrifice--esy-pesy.install
 .DS_Store
 *.install
 *~

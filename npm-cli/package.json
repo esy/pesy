@@ -19,7 +19,6 @@
   "files": [
     "package.json",
     "pesy",
-    "share",
     "pesy.bundle.js"
   ],
   "license": "MIT",

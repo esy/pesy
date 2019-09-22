@@ -1,2 +1,2 @@
 (lang dune 1.6)
-(name pesy)
+(name prometheansacrifice--esy-pesy)
