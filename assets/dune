@@ -1,6 +1,6 @@
 (library
    (name PesyAssets)
-   (public_name pesy.assets)
+   (public_name prometheansacrifice--esy-pesy.assets)
 )
 
 (install
