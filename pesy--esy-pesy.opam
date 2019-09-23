@@ -2,7 +2,7 @@ opam-version: "2.0"
 name: "pesy"
 description: "Esy Pesy - Your Esy Assistant"
 synopsis: "Esy Pesy - Your Esy Assistant"
-version: "0.5.0-alpha.6"
+version: "0.5.0-alpha.7"
 maintainer: "Jordan Walke<jordojw@gmail.com>"
 authors: [
   "Jordan Walke<jordojw@gmail.com>"
