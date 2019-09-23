@@ -1,6 +1,6 @@
 {
   "name": "pesy",
-  "version": "0.5.0-alpha.5",
+  "version": "0.5.0-alpha.6",
   "bin": {
     "pesy": "pesy"
   },
@@ -19,7 +19,6 @@
   "files": [
     "package.json",
     "pesy",
-    "share",
     "pesy.bundle.js"
   ],
   "license": "MIT",

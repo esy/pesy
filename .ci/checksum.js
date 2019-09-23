@@ -8,7 +8,11 @@ let algorithm = "sha1",
 let cwd = process.cwd();
 let pkg = require(path.join(cwd, "package.json")),
   s = fs.ReadStream(
-    path.join(cwd, "_release", `${pkg.name}-${pkg.version}.tgz`)
+    path.join(
+      cwd,
+      "_release",
+      `${pkg.name.replace("@", "").replace("/", "-")}-${pkg.version}.tgz`
+    )
   );
 
 s.on("data", function(data) {
