@@ -226,7 +226,7 @@ let pesy_build = () =>
     )
   );
 
-let version = "0.5.0-alpha.6";
+let version = "0.5.0-alpha.7";
 
 let cmd = () => {
   open Cmdliner.Term;
