@@ -28,6 +28,7 @@
         "pesy--esy-pesy/lib",
         "pesy--esy-pesy/utils",
         "cmdliner",
+        "str",
         "findlib"
       ]
     },
