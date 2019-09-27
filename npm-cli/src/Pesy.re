@@ -49,77 +49,121 @@ let template =
       "github:esy/pesy-reason-template#86b37d16dcfe15",
     );
 
-let download_spinner =
-  Spinner.start("\x1b[2mDownloading template\x1b[0m " ++ template);
-download_git(
-  template,
-  projectPath,
-  error => {
-    Spinner.stop(download_spinner);
-    switch (error) {
-    | Some(e) => Js.log(e)
-    | None =>
-      let setup_files_spinner =
-        Spinner.start("\x1b[2mSetting up template\x1b[0m " ++ template);
-      let files =
-        walk_sync(projectPath)
-        ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
+let isDirectoryEmpty = path =>
+  Belt.Array.length(Node.Fs.readdirSync(path)) == 0;
 
-      Belt.Array.forEach(
-        files,
-        file => {
-          let () = readFile(file)->substituteTemplateValues |> write(file);
+let downloadTemplate = () => {
+  let spinner =
+    Spinner.start("\x1b[2mDownloading template\x1b[0m " ++ template);
+  download_git(
+    template,
+    projectPath,
+    error => {
+      Spinner.stop(spinner);
+      switch (error) {
+      | Some(e) => Js.log(e)
+      | None =>
+        let setup_files_spinner =
+          Spinner.start("\x1b[2mSetting up template\x1b[0m " ++ template);
+        let files =
+          walk_sync(projectPath)
+          ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
 
-          renameSync(
-            file,
-            file |> substituteFileNames |> stripTemplateExtension,
-          );
-        },
-      );
-      Spinner.stop(setup_files_spinner);
+        Belt.Array.forEach(
+          files,
+          file => {
+            let () = readFile(file)->substituteTemplateValues |> write(file);
 
-      let id = Spinner.start("\x1b[2mRunning\x1b[0m esy install");
-      exec("esy i", (e, stdout, stderr) => {
-        Spinner.stop(id);
-        if (Js.eqNullable(e, Js.Nullable.null)) {
-          let id =
-            Spinner.start(
-              "\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0m building project dependencies",
+            renameSync(
+              file,
+              file |> substituteFileNames |> stripTemplateExtension,
             );
-          exec("esy pesy", (e, stdout, stderr) => {
-            Spinner.stop(id);
-            if (Js.eqNullable(e, Js.Nullable.null)) {
-              let id = Spinner.start("\x1b[2mRunning\x1b[0m esy build");
-              exec("esy build", (e, stdout, stderr) => {
-                Spinner.stop(id);
-                if (Js.eqNullable(e, Js.Nullable.null)) {
-                  Printf.printf(
-                    "You may now run \x1b[32m'esy test'\x1b[0m\n",
-                  );
-                } else {
-                  Printf.printf(
-                    "'esy build' \x1b[31mfailed.\x1b[0m Could not build project.\nLogs can be found in pesy.stdout.log and pesy.stderr.log\n",
-                  );
-                  write("pesy.stdout.log", stdout);
-                  write("pesy.stderr.log", stderr);
-                };
-              });
-            } else {
-              Printf.printf(
-                "'esy pesy' \x1b[31mfailed.\x1b[0m Dune files could not be created.\n Logs can be found in pesy.stdout.log and pesy.stderr.log\n",
+          },
+        );
+        Spinner.stop(setup_files_spinner);
+
+        let id = Spinner.start("\x1b[2mRunning\x1b[0m esy install");
+        exec("esy i", (e, stdout, stderr) => {
+          Spinner.stop(id);
+          if (Js.eqNullable(e, Js.Nullable.null)) {
+            let id =
+              Spinner.start(
+                "\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0m building project dependencies",
               );
-              write("pesy.stdout.log", stdout);
-              write("pesy.stderr.log", stderr);
-            };
-          });
-        } else {
-          Printf.printf(
-            "'esy install' \x1b[31mfailed.\x1b[0m Dependencies could not be installed.\nLogs can be found in pesy.stdout.log and pesy.stderr.log\n",
-          );
-          write("pesy.stdout.log", stdout);
-          write("pesy.stderr.log", stderr);
-        };
+            exec("esy pesy", (e, stdout, stderr) => {
+              Spinner.stop(id);
+              if (Js.eqNullable(e, Js.Nullable.null)) {
+                let id = Spinner.start("\x1b[2mRunning\x1b[0m esy build");
+                exec("esy build", (e, stdout, stderr) => {
+                  Spinner.stop(id);
+                  if (Js.eqNullable(e, Js.Nullable.null)) {
+                    Printf.printf(
+                      "You may now run \x1b[32m'esy test'\x1b[0m\n",
+                    );
+                  } else {
+                    Printf.printf(
+                      "'esy build' \x1b[31mfailed.\x1b[0m Could not build project.\nLogs can be found in pesy.stdout.log and pesy.stderr.log\n",
+                    );
+                    write("pesy.stdout.log", stdout);
+                    write("pesy.stderr.log", stderr);
+                  };
+                });
+              } else {
+                Printf.printf(
+                  "'esy pesy' \x1b[31mfailed.\x1b[0m Dune files could not be created.\n Logs can be found in pesy.stdout.log and pesy.stderr.log\n",
+                );
+                write("pesy.stdout.log", stdout);
+                write("pesy.stderr.log", stderr);
+              };
+            });
+          } else {
+            Printf.printf(
+              "'esy install' \x1b[31mfailed.\x1b[0m Dependencies could not be installed.\nLogs can be found in pesy.stdout.log and pesy.stderr.log\n",
+            );
+            write("pesy.stdout.log", stdout);
+            write("pesy.stderr.log", stderr);
+          };
+        });
+      };
+    },
+  );
+};
+
+let rec askYesNoQuestion =
+        (~rl: Readline.rlType, ~question, ~onYes, ~onNo=() => (), ()) => {
+  rl##question(
+    question ++ " [y/n] ",
+    input => {
+      let response = input->Js.String.trim->Js.String.toLowerCase;
+      switch (response) {
+      | "y"
+      | "yes" =>
+        onYes();
+        rl##close();
+      | "n"
+      | "no" =>
+        onNo();
+        rl##close();
+      | _ => askYesNoQuestion(~rl, ~question, ~onYes, ~onNo, ())
+      };
+    },
+  );
+};
+
+isDirectoryEmpty(projectPath)
+  ? {
+    downloadTemplate();
+  }
+  : {
+    let rl =
+      Readline.createInterface({
+        "input": [%raw "process.stdin"],
+        "output": [%raw "process.stdout"],
       });
-    };
-  },
-);
+    askYesNoQuestion(
+      ~rl,
+      ~question="Current directory is not empty. Are you sure to continue?",
+      ~onYes=downloadTemplate,
+      (),
+    );
+  };
