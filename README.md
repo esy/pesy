@@ -198,6 +198,18 @@ have to be so in reality). Thus,
 * Sexplib (opam): `require('sexplib')`
 * Ctypes (opam): `require('ctypes')` and `require('ctypes/foreign')`
 
+You can try looking up the correct require path using `esy pesy ls-libs`
+
+```bash
+$ esy pesy ls-libs
+├── require('lwt')                    
+├── require('lwt/unix')                           
+├── require('lwt_ppx')                         
+├── require('merlin')                          
+├── require('@pesy/esy-pesy')                  
+├── require('@pesy/esy-pesy/lib')              
+└── require('@pesy/esy-pesy/utils')   
+```
 
 
 **3. All sub-packages are considered to be libraries unless they have a `bin` property (much like NPM)**
