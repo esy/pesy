@@ -6,6 +6,7 @@ rule read = parse
 [' ' '\t']   { read lexbuf }     (* skip blanks *)
 | ['(']      { LPAREN }
 | [')']      { RPAREN }
+| [';']      { SEMICOLON }
 | ['=']      { ASSN }
 | "require"  { REQUIRE }
 | ['\'']      { SQUOTE }
