@@ -2,12 +2,11 @@
 'use strict';
 
 var Fs = require("fs");
+var Path = require("path");
 var Block = require("bs-platform/lib/js/block.js");
-var Curry = require("bs-platform/lib/js/curry.js");
 var Printf = require("bs-platform/lib/js/printf.js");
 var Process = require("process");
 var Caml_obj = require("bs-platform/lib/js/caml_obj.js");
-var Filename = require("bs-platform/lib/js/filename.js");
 var WalkSync = require("walk-sync");
 var Belt_Array = require("bs-platform/lib/js/belt_Array.js");
 var Belt_Option = require("bs-platform/lib/js/belt_Option.js");
@@ -19,7 +18,7 @@ var Spinner$PesyBootstrapper = require("./Spinner.bs.js");
 
 var projectPath = Process.cwd();
 
-var packageNameKebab = Utils$PesyBootstrapper.kebab(Curry._1(Filename.basename, projectPath));
+var packageNameKebab = Utils$PesyBootstrapper.kebab(Path.basename(projectPath));
 
 var packageNameKebabSansScope = Utils$PesyBootstrapper.removeScope(packageNameKebab);
 

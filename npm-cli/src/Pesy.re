@@ -2,7 +2,7 @@ open Bindings;
 open Utils;
 
 let projectPath = cwd();
-let packageNameKebab = kebab(Filename.basename(projectPath));
+let packageNameKebab = kebab(basename(projectPath));
 let packageNameKebabSansScope = removeScope(packageNameKebab);
 let packageNameUpperCamelCase = upperCamelCasify(packageNameKebabSansScope);
 let version = "0.0.0";
