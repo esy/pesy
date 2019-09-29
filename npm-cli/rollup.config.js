@@ -14,5 +14,5 @@ export default {
       ignore: ["child_process"]
     })
   ],
-  external: ["child_process", "fs", "process", "walk-sync", "download-git-repo"]
+  external: ["child_process", "fs", "process", "walk-sync", "download-git-repo", "path"]
 };

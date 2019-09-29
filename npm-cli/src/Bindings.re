@@ -1,3 +1,4 @@
+[@bs.val] [@bs.module "path"] external basename: string => string = "basename";
 [@bs.val] [@bs.module "fs"] external makedirSync: string => unit = "mkdirSync";
 [@bs.val] [@bs.module "fs"]
 external renameSync: (string, string) => unit = "renameSync";
