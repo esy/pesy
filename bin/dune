@@ -1,3 +1,2 @@
 (executable (name Pesy) (public_name pesy)
-    (libraries pesy--esy-pesy.lib
-        pesy--esy-pesy.utils cmdliner findlib)) 
+    (libraries pesy--esy-pesy.lib pesy--esy-pesy.utils cmdliner str findlib)) 

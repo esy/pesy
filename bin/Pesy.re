@@ -5,6 +5,7 @@ open EsyCommand;
 open Cmdliner;
 
 exception BootstrappingError(string);
+exception LsLibsError(string);
 
 let reconcile = projectRoot => {
   /* use readFileOpt to read previously computed directory path */
@@ -226,6 +227,33 @@ let pesy_build = () =>
     )
   );
 
+let pesyLsLibs = () => {
+  let scopedIfDoubleKebabified = str =>
+    switch (Str.split(Str.regexp("\\-\\-"), str)) {
+    | [pkgName] => pkgName
+    | [scope, pkgName] => "@" ++ scope ++ "/" ++ pkgName
+    | _ =>
+      raise(
+        LsLibsError("findlib name of the library was had more than one --"),
+      )
+    };
+
+  Findlib.init();
+  let pkgs = Findlib.list_packages'();
+  List.iteri(
+    (i, x) => {
+      x
+      |> Str.global_replace(Str.regexp("\\."), "/")
+      |> scopedIfDoubleKebabified
+      |> sprintf(
+           "\x1b[2m%s──\x1b[0m require('\x1b[1m%s\x1b[0m')",
+           i < List.length(pkgs) - 1 ? "├" : "└",
+         )
+      |> print_endline
+    },
+    pkgs,
+  );
+};
 let version = "0.5.0-alpha.7";
 
 let cmd = () => {
@@ -248,4 +276,14 @@ let build = () => {
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
-Term.exit @@ Term.eval_choice(cmd(), [build()]);
+let lsLibs = () => {
+  open Cmdliner.Term;
+  let cmd = "ls-libs";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "pesy-ls-libs - lists installed packages";
+  let build_t = Term.(const(pesyLsLibs) $ const());
+  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
+Term.exit @@ Term.eval_choice(cmd(), [build(), lsLibs()]);
