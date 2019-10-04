@@ -9,17 +9,19 @@ var Js_exn = require("bs-platform/lib/js/js_exn.js");
 var Printf = require("bs-platform/lib/js/printf.js");
 var Process = require("process");
 var Caml_obj = require("bs-platform/lib/js/caml_obj.js");
+var Cmdliner = require("@elliottcable/bs-cmdliner/src/cmdliner.bs.js");
 var Readline = require("readline");
 var WalkSync = require("walk-sync");
 var Belt_Array = require("bs-platform/lib/js/belt_Array.js");
 var Pervasives = require("bs-platform/lib/js/pervasives.js");
-var Belt_Option = require("bs-platform/lib/js/belt_Option.js");
 var Caml_option = require("bs-platform/lib/js/caml_option.js");
 var Child_process = require("child_process");
 var DownloadGitRepo = require("download-git-repo");
 var Caml_js_exceptions = require("bs-platform/lib/js/caml_js_exceptions.js");
 var Utils$PesyBootstrapper = require("./Utils.bs.js");
 var Spinner$PesyBootstrapper = require("./Spinner.bs.js");
+
+((process.argv.shift()));
 
 var projectPath = Process.cwd();
 
@@ -29,14 +31,14 @@ var packageNameKebabSansScope = Utils$PesyBootstrapper.removeScope(packageNameKe
 
 var packageNameUpperCamelCase = Utils$PesyBootstrapper.upperCamelCasify(packageNameKebabSansScope);
 
-var version = "0.0.0";
+var templateVersion = "0.0.0";
 
 var packageLibName = packageNameKebabSansScope + "/library";
 
 var packageTestName = packageNameKebabSansScope + "/test";
 
 function substituteTemplateValues(s) {
-  return s.replace((/<PACKAGE_NAME_FULL>/g), packageNameKebab).replace((/<VERSION>/g), version).replace((/<PUBLIC_LIB_NAME>/g), packageLibName).replace((/<TEST_LIB_NAME>/g), packageTestName).replace((/<PACKAGE_NAME>/g), packageNameKebab).replace((/<PACKAGE_NAME_UPPER_CAMEL>/g), packageNameUpperCamelCase);
+  return s.replace((/<PACKAGE_NAME_FULL>/g), packageNameKebab).replace((/<VERSION>/g), templateVersion).replace((/<PUBLIC_LIB_NAME>/g), packageLibName).replace((/<TEST_LIB_NAME>/g), packageTestName).replace((/<PACKAGE_NAME>/g), packageNameKebab).replace((/<PACKAGE_NAME_UPPER_CAMEL>/g), packageNameUpperCamelCase);
 }
 
 function stripTemplateExtension(s) {
@@ -47,17 +49,11 @@ function substituteFileNames(s) {
   return s.replace((/__PACKAGE_NAME_FULL__/g), packageNameKebab).replace((/__PACKAGE_NAME__/g), packageNameKebab).replace((/__PACKAGE_NAME_UPPER_CAMEL__/g), packageNameUpperCamelCase);
 }
 
-var template = Belt_Option.getWithDefault(Belt_Option.map(Belt_Array.get(Belt_Array.keep(Process.argv, (function (param) {
-                    return param.includes("--template");
-                  })), 0), (function (param) {
-            return param.replace("--template=", "");
-          })), "github:esy/pesy-reason-template#86b37d16dcfe15");
-
 function isDirectoryEmpty(path) {
   return Fs.readdirSync(path).length === 0;
 }
 
-function downloadTemplate(param) {
+function downloadTemplate(template) {
   var spinner = Spinner$PesyBootstrapper.start("\x1b[2mDownloading template\x1b[0m " + template);
   DownloadGitRepo(template, projectPath, (function (error) {
           Spinner$PesyBootstrapper.stop(spinner);
@@ -177,30 +173,72 @@ function askYesNoQuestion(rl, question, onYes, $staropt$star, param) {
               }));
 }
 
-var match = isDirectoryEmpty(projectPath);
-
-if (match) {
-  downloadTemplate(/* () */0);
-} else {
-  var rl = Readline.createInterface({
-        input: (process.stdin),
-        output: (process.stdout)
-      });
-  askYesNoQuestion(rl, "Current directory is not empty. Are you sure to continue?", downloadTemplate, undefined, /* () */0);
+function main(template) {
+  if (isDirectoryEmpty(projectPath)) {
+    return downloadTemplate(template);
+  } else {
+    var rl = Readline.createInterface({
+          input: (process.stdin),
+          output: (process.stdout)
+        });
+    return askYesNoQuestion(rl, "Current directory is not empty. Are you sure to continue?", (function (param) {
+                  return downloadTemplate(template);
+                }), undefined, /* () */0);
+  }
 }
+
+var version = "0.5.0-alpha.8";
+
+var partial_arg = Cmdliner.Arg[/* string */32];
+
+var partial_arg$1 = Cmdliner.Arg[/* opt */14];
+
+var template = Cmdliner.Arg[/* & */9](Cmdliner.Arg[/* value */20], Cmdliner.Arg[/* & */9]((function (param) {
+            return partial_arg$1(undefined, partial_arg, "github:esy/pesy-reason-template#86b37d16dcfe15", param);
+          }), Cmdliner.Arg[/* info */8](undefined, "TEMPLATE_URL", "Specify URL of the remote template. This can be of hthe form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28", undefined, /* :: */[
+              "t",
+              /* :: */[
+                "template",
+                /* [] */0
+              ]
+            ])));
+
+var cmdT = Cmdliner.Term[/* $ */3](Cmdliner.Term[/* const */0](main), template);
+
+var cmd_001 = Curry.app(Cmdliner.Term[/* info */14], [
+      undefined,
+      undefined,
+      /* [] */0,
+      /* [] */0,
+      undefined,
+      undefined,
+      "Your Esy Assistant.",
+      version,
+      "pesy"
+    ]);
+
+var cmd = /* tuple */[
+  cmdT,
+  cmd_001
+];
+
+Cmdliner.Term[/* eval */16](undefined, undefined, undefined, undefined, undefined, cmd);
 
 exports.projectPath = projectPath;
 exports.packageNameKebab = packageNameKebab;
 exports.packageNameKebabSansScope = packageNameKebabSansScope;
 exports.packageNameUpperCamelCase = packageNameUpperCamelCase;
-exports.version = version;
+exports.templateVersion = templateVersion;
 exports.packageLibName = packageLibName;
 exports.packageTestName = packageTestName;
 exports.substituteTemplateValues = substituteTemplateValues;
 exports.stripTemplateExtension = stripTemplateExtension;
 exports.substituteFileNames = substituteFileNames;
-exports.template = template;
 exports.isDirectoryEmpty = isDirectoryEmpty;
 exports.downloadTemplate = downloadTemplate;
 exports.askYesNoQuestion = askYesNoQuestion;
-/* projectPath Not a pure module */
+exports.main = main;
+exports.version = version;
+exports.template = template;
+exports.cmd = cmd;
+/*  Not a pure module */

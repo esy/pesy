@@ -1,3 +1,6 @@
+open Cmdliner;
+[%raw "process.argv.shift()"];
+
 open Bindings;
 open Utils;
 
@@ -5,7 +8,7 @@ let projectPath = cwd();
 let packageNameKebab = kebab(basename(projectPath));
 let packageNameKebabSansScope = removeScope(packageNameKebab);
 let packageNameUpperCamelCase = upperCamelCasify(packageNameKebabSansScope);
-let version = "0.0.0";
+let templateVersion = "0.0.0";
 let packageLibName = packageNameKebabSansScope ++ "/library";
 let packageTestName = packageNameKebabSansScope ++ "/test";
 
@@ -15,7 +18,7 @@ let substituteTemplateValues = s =>
        [%bs.re "/<PACKAGE_NAME_FULL>/g"],
        packageNameKebab,
      )
-  |> Js.String.replaceByRe([%bs.re "/<VERSION>/g"], version)
+  |> Js.String.replaceByRe([%bs.re "/<VERSION>/g"], templateVersion)
   |> Js.String.replaceByRe([%bs.re "/<PUBLIC_LIB_NAME>/g"], packageLibName)
   |> Js.String.replaceByRe([%bs.re "/<TEST_LIB_NAME>/g"], packageTestName)
   |> Js.String.replaceByRe([%bs.re "/<PACKAGE_NAME>/g"], packageNameKebab)
@@ -39,20 +42,10 @@ let substituteFileNames = s =>
        packageNameUpperCamelCase,
      );
 
-// TODO: Move the template to the esy or esy-ocaml org
-let template =
-  argv
-  ->Belt.Array.keep(Js.String.includes("--template"))
-  ->Belt.Array.get(0)
-  ->Belt.Option.map(Js.String.replace("--template=", ""))
-  ->Belt.Option.getWithDefault(
-      "github:esy/pesy-reason-template#86b37d16dcfe15",
-    );
-
 let isDirectoryEmpty = path =>
   Belt.Array.length(Node.Fs.readdirSync(path)) == 0;
 
-let downloadTemplate = () => {
+let downloadTemplate = template => {
   let spinner =
     Spinner.start("\x1b[2mDownloading template\x1b[0m " ++ template);
   download_git(
@@ -167,11 +160,10 @@ let rec askYesNoQuestion =
   );
 };
 
-isDirectoryEmpty(projectPath)
-  ? {
-    downloadTemplate();
-  }
-  : {
+let main = template =>
+  if (isDirectoryEmpty(projectPath)) {
+    downloadTemplate(template);
+  } else {
     let rl =
       Readline.createInterface({
         "input": [%raw "process.stdin"],
@@ -180,7 +172,30 @@ isDirectoryEmpty(projectPath)
     askYesNoQuestion(
       ~rl,
       ~question="Current directory is not empty. Are you sure to continue?",
-      ~onYes=downloadTemplate,
+      ~onYes=() => downloadTemplate(template),
       (),
     );
   };
+
+let version = "0.5.0-alpha.8";
+
+let template = {
+  let doc = "Specify URL of the remote template. This can be of hthe form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
+  Arg.(
+    value
+    & opt(string, "github:esy/pesy-reason-template#86b37d16dcfe15")
+    & info(["t", "template"], ~docv="TEMPLATE_URL", ~doc)
+  );
+};
+
+let cmd = {
+  open Cmdliner.Term;
+  let cmd = "pesy";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "Your Esy Assistant.";
+  let cmdT = Term.(const(main) $ template);
+  (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
+Term.eval(cmd);

@@ -28,18 +28,6 @@ jobs:
         displayName: "esy build"
       - script: "esy npm-release"
         displayName: "esy npm-release"
-      - script: "npm install"
-        displayName: "npm install"
-        workingDirectory: "npm-cli"
-      - script: "npm build"
-        displayName: "Building pesy npm cli (bsb)"
-        workingDirectory: "npm-cli"
-      - ${{ if eq(parameters.platform, 'Windows') }}:
-          - script: "npm i -g esy-bash"
-            displayName: 'Install esy-bash (for e2e)'
-      - script: "npm run rollup"
-        displayName: "Building pesy npm cli (bundling)"
-        workingDirectory: "npm-cli"
       - ${{ if eq(parameters.platform, 'Windows') }}:
           - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
             displayName: 'Creating temporary workspace for tests'
