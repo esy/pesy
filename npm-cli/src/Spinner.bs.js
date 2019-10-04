@@ -42,6 +42,13 @@ function start(msg) {
 }
 
 function stop(spinnerIntervalID) {
+  Printf.printf(/* Format */[
+        /* String_literal */Block.__(11, [
+            "                                                                                       \r",
+            /* End_of_format */0
+          ]),
+        "                                                                                       \r"
+      ]);
   var intervalID = spinnerIntervalID;
   return Js_null_undefined.iter(intervalID, (function (intervalId) {
                 clearInterval(intervalId);
