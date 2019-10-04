@@ -65,22 +65,39 @@ let downloadTemplate = () => {
       | None =>
         let setup_files_spinner =
           Spinner.start("\x1b[2mSetting up template\x1b[0m " ++ template);
-        let files =
-          walk_sync(projectPath)
-          ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
 
-        Belt.Array.forEach(
-          files,
-          file => {
-            let () = readFile(file)->substituteTemplateValues |> write(file);
+        try({
+          let files =
+            walk_sync(projectPath)
+            ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
 
-            renameSync(
-              file,
-              file |> substituteFileNames |> stripTemplateExtension,
-            );
-          },
-        );
-        Spinner.stop(setup_files_spinner);
+          Belt.Array.forEach(
+            files,
+            file => {
+              let () =
+                readFile(file)->substituteTemplateValues |> write(file);
+
+              renameSync(
+                file,
+                file |> substituteFileNames |> stripTemplateExtension,
+              );
+            },
+          );
+          Spinner.stop(setup_files_spinner);
+        }) {
+        | Js.Exn.Error(e) =>
+          Spinner.stop(setup_files_spinner);
+          switch (Js.Exn.stack(e)) {
+          | Some(trace) =>
+            Js.log({j|\x1b[31mPesy encountered an error\x1b[0m|j});
+            Js.log(trace);
+          | None =>
+            Js.log(
+              {j|\x1b[31mPesy encountered an unknown error as it was trying to setup templates\x1b[0m|j},
+            )
+          };
+          exit(-1);
+        };
 
         let id = Spinner.start("\x1b[2mRunning\x1b[0m esy install");
         exec("esy i", (e, stdout, stderr) => {

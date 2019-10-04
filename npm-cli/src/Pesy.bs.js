@@ -5,16 +5,19 @@ var Fs = require("fs");
 var Path = require("path");
 var Block = require("bs-platform/lib/js/block.js");
 var Curry = require("bs-platform/lib/js/curry.js");
+var Js_exn = require("bs-platform/lib/js/js_exn.js");
 var Printf = require("bs-platform/lib/js/printf.js");
 var Process = require("process");
 var Caml_obj = require("bs-platform/lib/js/caml_obj.js");
 var Readline = require("readline");
 var WalkSync = require("walk-sync");
 var Belt_Array = require("bs-platform/lib/js/belt_Array.js");
+var Pervasives = require("bs-platform/lib/js/pervasives.js");
 var Belt_Option = require("bs-platform/lib/js/belt_Option.js");
 var Caml_option = require("bs-platform/lib/js/caml_option.js");
 var Child_process = require("child_process");
 var DownloadGitRepo = require("download-git-repo");
+var Caml_js_exceptions = require("bs-platform/lib/js/caml_js_exceptions.js");
 var Utils$PesyBootstrapper = require("./Utils.bs.js");
 var Spinner$PesyBootstrapper = require("./Spinner.bs.js");
 
@@ -63,15 +66,33 @@ function downloadTemplate(param) {
             return /* () */0;
           } else {
             var setup_files_spinner = Spinner$PesyBootstrapper.start("\x1b[2mSetting up template\x1b[0m " + template);
-            var files = Belt_Array.keep(WalkSync(projectPath), (function (file_or_dir) {
-                    return Fs.statSync(file_or_dir).isFile();
-                  }));
-            Belt_Array.forEach(files, (function (file) {
-                    Utils$PesyBootstrapper.write(file, substituteTemplateValues(Utils$PesyBootstrapper.readFile(file)));
-                    Fs.renameSync(file, substituteFileNames(file).replace("-template", ""));
-                    return /* () */0;
-                  }));
-            Spinner$PesyBootstrapper.stop(setup_files_spinner);
+            try {
+              var files = Belt_Array.keep(WalkSync(projectPath), (function (file_or_dir) {
+                      return Fs.statSync(file_or_dir).isFile();
+                    }));
+              Belt_Array.forEach(files, (function (file) {
+                      Utils$PesyBootstrapper.write(file, substituteTemplateValues(Utils$PesyBootstrapper.readFile(file)));
+                      Fs.renameSync(file, substituteFileNames(file).replace("-template", ""));
+                      return /* () */0;
+                    }));
+              Spinner$PesyBootstrapper.stop(setup_files_spinner);
+            }
+            catch (raw_exn){
+              var exn = Caml_js_exceptions.internalToOCamlException(raw_exn);
+              if (exn[0] === Js_exn.$$Error) {
+                Spinner$PesyBootstrapper.stop(setup_files_spinner);
+                var match = exn[1].stack;
+                if (match !== undefined) {
+                  console.log("\x1b[31mPesy encountered an error\x1b[0m");
+                  console.log(match);
+                } else {
+                  console.log("\x1b[31mPesy encountered an unknown error as it was trying to setup templates\x1b[0m");
+                }
+                Pervasives.exit(-1);
+              } else {
+                throw exn;
+              }
+            }
             var id = Spinner$PesyBootstrapper.start("\x1b[2mRunning\x1b[0m esy install");
             Child_process.exec("esy i", (function (e, stdout, stderr) {
                     Spinner$PesyBootstrapper.stop(id);
