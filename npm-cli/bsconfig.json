@@ -10,7 +10,11 @@
     "in-source": true
   },
   "suffix": ".bs.js",
-  "bs-dependencies": ["tablecloth-bucklescript", "bs-node"],
+  "bs-dependencies": [
+    "tablecloth-bucklescript",
+    "bs-node",
+    "@elliottcable/bs-cmdliner"
+  ],
   "warnings": {
     "error": "+101"
   },

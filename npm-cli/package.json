@@ -31,6 +31,7 @@
     "tablecloth-bucklescript": "0.0.6"
   },
   "dependencies": {
+    "@elliottcable/bs-cmdliner": "^10.2.1",
     "download-git-repo": "^2.0.0",
     "walk-sync": "^2.0.2"
   }
