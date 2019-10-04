@@ -258,7 +258,7 @@ let version = "0.1.0-alpha.3";
 
 let cmd = () => {
   open Cmdliner.Term;
-  let cmd = "pesy";
+  let cmd = "esy-pesy";
   let envs: list(env_info) = [];
   let exits: list(exit_info) = [];
   let doc = "Esy Pesy - Your Esy Assistant.";
@@ -271,7 +271,7 @@ let build = () => {
   let cmd = "build";
   let envs: list(env_info) = [];
   let exits: list(exit_info) = [];
-  let doc = "pesy-build - builds your pesy managed project";
+  let doc = "build - builds your pesy managed project";
   let build_t = Term.(const(pesy_build) $ const());
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
@@ -281,7 +281,7 @@ let lsLibs = () => {
   let cmd = "ls-libs";
   let envs: list(env_info) = [];
   let exits: list(exit_info) = [];
-  let doc = "pesy-ls-libs - lists installed packages";
+  let doc = "ls-libs - lists installed packages";
   let build_t = Term.(const(pesyLsLibs) $ const());
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
