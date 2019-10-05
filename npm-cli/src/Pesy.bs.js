@@ -187,7 +187,7 @@ function main(template) {
   }
 }
 
-var version = "0.5.0-alpha.8";
+var version = "0.5.0-alpha.9";
 
 var partial_arg = Cmdliner.Arg[/* string */32];
 
