@@ -173,8 +173,8 @@ function askYesNoQuestion(rl, question, onYes, $staropt$star, param) {
               }));
 }
 
-function main(template) {
-  if (isDirectoryEmpty(projectPath)) {
+function main(template, usedefaultOptions) {
+  if (isDirectoryEmpty(projectPath) || usedefaultOptions) {
     return downloadTemplate(template);
   } else {
     var rl = Readline.createInterface({
@@ -203,7 +203,15 @@ var template = Cmdliner.Arg[/* & */9](Cmdliner.Arg[/* value */20], Cmdliner.Arg[
               ]
             ])));
 
-var cmdT = Cmdliner.Term[/* $ */3](Cmdliner.Term[/* const */0](main), template);
+var useDefaultOptions = Cmdliner.Arg[/* & */9](Cmdliner.Arg[/* value */20], Cmdliner.Arg[/* & */9](Cmdliner.Arg[/* flag */10], Cmdliner.Arg[/* info */8](undefined, undefined, "Use default options", undefined, /* :: */[
+              "y",
+              /* :: */[
+                "yes",
+                /* [] */0
+              ]
+            ])));
+
+var cmdT = Cmdliner.Term[/* $ */3](Cmdliner.Term[/* $ */3](Cmdliner.Term[/* const */0](main), template), useDefaultOptions);
 
 var cmd_001 = Curry.app(Cmdliner.Term[/* info */14], [
       undefined,
@@ -240,5 +248,6 @@ exports.askYesNoQuestion = askYesNoQuestion;
 exports.main = main;
 exports.version = version;
 exports.template = template;
+exports.useDefaultOptions = useDefaultOptions;
 exports.cmd = cmd;
 /*  Not a pure module */

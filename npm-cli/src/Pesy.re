@@ -59,25 +59,27 @@ let downloadTemplate = template => {
         let setup_files_spinner =
           Spinner.start("\x1b[2mSetting up template\x1b[0m " ++ template);
 
-        try({
-          let files =
-            walk_sync(projectPath)
-            ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
+        try (
+          {
+            let files =
+              walk_sync(projectPath)
+              ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
 
-          Belt.Array.forEach(
-            files,
-            file => {
-              let () =
-                readFile(file)->substituteTemplateValues |> write(file);
+            Belt.Array.forEach(
+              files,
+              file => {
+                let () =
+                  readFile(file)->substituteTemplateValues |> write(file);
 
-              renameSync(
-                file,
-                file |> substituteFileNames |> stripTemplateExtension,
-              );
-            },
-          );
-          Spinner.stop(setup_files_spinner);
-        }) {
+                renameSync(
+                  file,
+                  file |> substituteFileNames |> stripTemplateExtension,
+                );
+              },
+            );
+            Spinner.stop(setup_files_spinner);
+          }
+        ) {
         | Js.Exn.Error(e) =>
           Spinner.stop(setup_files_spinner);
           switch (Js.Exn.stack(e)) {
@@ -160,8 +162,8 @@ let rec askYesNoQuestion =
   );
 };
 
-let main = template =>
-  if (isDirectoryEmpty(projectPath)) {
+let main = (template, usedefaultOptions) =>
+  if (isDirectoryEmpty(projectPath) || usedefaultOptions) {
     downloadTemplate(template);
   } else {
     let rl =
@@ -188,13 +190,18 @@ let template = {
   );
 };
 
+let useDefaultOptions = {
+  let doc = "Use default options";
+  Arg.(value & flag & info(["y", "yes"], ~doc));
+};
+
 let cmd = {
   open Cmdliner.Term;
   let cmd = "pesy";
   let envs: list(env_info) = [];
   let exits: list(exit_info) = [];
   let doc = "Your Esy Assistant.";
-  let cmdT = Term.(const(main) $ template);
+  let cmdT = Term.(const(main) $ template $ useDefaultOptions);
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
