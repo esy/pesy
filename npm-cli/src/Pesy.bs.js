@@ -173,8 +173,8 @@ function askYesNoQuestion(rl, question, onYes, $staropt$star, param) {
               }));
 }
 
-function main(template, usedefaultOptions) {
-  if (isDirectoryEmpty(projectPath) || usedefaultOptions) {
+function main(template, useDefaultOptions) {
+  if (isDirectoryEmpty(projectPath) || useDefaultOptions) {
     return downloadTemplate(template);
   } else {
     var rl = Readline.createInterface({

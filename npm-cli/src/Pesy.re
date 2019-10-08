@@ -162,8 +162,8 @@ let rec askYesNoQuestion =
   );
 };
 
-let main = (template, usedefaultOptions) =>
-  if (isDirectoryEmpty(projectPath) || usedefaultOptions) {
+let main = (template, useDefaultOptions) =>
+  if (isDirectoryEmpty(projectPath) || useDefaultOptions) {
     downloadTemplate(template);
   } else {
     let rl =
