@@ -180,7 +180,7 @@ let main = template =>
 let version = "0.5.0-alpha.9";
 
 let template = {
-  let doc = "Specify URL of the remote template. This can be of hthe form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
+  let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
   Arg.(
     value
     & opt(string, "github:esy/pesy-reason-template#86b37d16dcfe15")
