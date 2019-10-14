@@ -56,7 +56,7 @@ let readFile = file => {
   let ic = open_in(file);
   while (! breakOut^) {
     let line =
-      try (input_line(ic)) {
+      try(input_line(ic)) {
       | End_of_file =>
         breakOut := true;
         "";
@@ -125,7 +125,7 @@ let mkdir = (~perms=?, p) =>
 
 let rec mkdirp = p => {
   let directory_created =
-    try (Sys.is_directory(p)) {
+    try(Sys.is_directory(p)) {
     | Sys_error(_) => false
     };
   if (!directory_created) {
@@ -207,6 +207,35 @@ let readFileOpt = f =>
 /*   let get = (cache: CacheInternal.t, key: string) => {}; */
 /* }; */
 
+let commandOutput = (command, args) => {
+  open Unix;
+  let cmd =
+    String.concat(" ", Array.to_list(Array.append([|command|], args)));
+  let (cout, cin, cerr) = open_process_full(cmd, Unix.environment());
+  let repeat = ref(true);
+  let stdout = ref("");
+  let stderr = ref("");
+  while (repeat^) {
+    ignore(
+      try(stdout := stdout^ ++ input_line(cout)) {
+      | End_of_file => repeat := false
+      },
+    );
+  };
+  while (repeat^) {
+    ignore(
+      try(stderr := stderr^ ++ input_line(cerr)) {
+      | End_of_file => repeat := false
+      },
+    );
+  };
+  switch (close_process_full((cout, cin, cerr))) {
+  | WEXITED(c) => (stdout^, stderr^)
+  | WSIGNALED(c) => (stdout^, stderr^)
+  | WSTOPPED(c) => (stdout^, stderr^)
+  };
+};
+
 let runCommandWithEnv = (command, args) => {
   /* let attach = */
   /*   Unix.create_process_env( */
@@ -228,24 +257,20 @@ let runCommandWithEnv = (command, args) => {
   let repeat = ref(true);
   while (repeat^) {
     ignore(
-      try (
-        {
-          let line = input_line(cerr);
-          print_endline(Pastel.(<Pastel dim=true> line </Pastel>));
-        }
-      ) {
+      try({
+        let line = input_line(cerr);
+        print_endline(Pastel.(<Pastel dim=true> line </Pastel>));
+      }) {
       | End_of_file => repeat := false
       },
     );
   };
   while (repeat^) {
     ignore(
-      try (
-        {
-          let line = input_line(cout);
-          print_endline(Pastel.(<Pastel dim=true> line </Pastel>));
-        }
-      ) {
+      try({
+        let line = input_line(cout);
+        print_endline(Pastel.(<Pastel dim=true> line </Pastel>));
+      }) {
       | End_of_file => repeat := false
       },
     );
@@ -283,3 +308,5 @@ let filterNone = l => {
      /*      123 */
      /*    |}; */
 /* }; */
+module JSON = JSON;
+module FieldTypes = FieldTypes;

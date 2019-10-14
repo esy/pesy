@@ -9,8 +9,15 @@ exception LsLibsError(string);
 
 let reconcile = projectRoot => {
   /* use readFileOpt to read previously computed directory path */
-  let packageJSONPath = Path.(projectRoot / "package.json");
-  let operations = Lib.PesyConf.gen(projectRoot, packageJSONPath);
+  let manifestFile = {
+    let (o, _) = commandOutput("esy", [|"status"|]);
+    o
+    |> JSON.ofString
+    |> (x => JSON.member(x, "rootPackageConfigPath"))
+    |> JSON.toValue
+    |> FieldTypes.toString;
+  };
+  let operations = Lib.PesyConf.gen(projectRoot, manifestFile);
 
   switch (operations) {
   | [] => ()
