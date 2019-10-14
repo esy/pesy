@@ -9,14 +9,12 @@ exception LsLibsError(string);
 
 let reconcile = projectRoot => {
   /* use readFileOpt to read previously computed directory path */
-  let manifestFile = {
-    let (o, _) = commandOutput("esy", [|"status"|]);
-    o
-    |> JSON.ofString
-    |> (x => JSON.member(x, "rootPackageConfigPath"))
-    |> JSON.toValue
-    |> FieldTypes.toString;
-  };
+  let manifestFile =
+    switch (Sys.getenv_opt("ESY__ROOT_PACKAGE_CONFIG_PATH")) {
+    | Some(x) => x
+    | None => Path.(projectRoot / "package.json")
+    };
+
   let operations = Lib.PesyConf.gen(projectRoot, manifestFile);
 
   switch (operations) {
