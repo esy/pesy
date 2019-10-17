@@ -4,6 +4,26 @@
   "bin": {
     "pesy": "pesy"
   },
+  "esy": {
+    "install": [
+      "mkdir #{self.install / 'bin' / 'azure-ci-template'}",
+      "cp #{self.root / 'v0.4.4' / 'azure-ci-template' / 'azure-pipelines.yml'} #{self.install / 'bin' / 'azure-ci-template/' / 'azure-pipelines.yml'}",
+      "cp #{self.root / 'v0.4.4' / 'azure-ci-template' / 'esy-build-steps.template.yml'} #{self.install / 'bin' / 'azure-ci-template/' / 'esy-build-steps.template.yml'}",
+      "cp #{self.root / 'v0.4.4' / 'azure-ci-template' / 'publish-build-cache.yml'} #{self.install / 'bin' / 'azure-ci-template/' / 'publish-build-cache.yml'}",
+      "cp #{self.root / 'v0.4.4' / 'azure-ci-template' / 'restore-build-cache.yml'} #{self.install / 'bin' / 'azure-ci-template/' / 'restore-build-cache.yml'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy'} #{self.install / 'bin' / 'pesy'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-header.sh'} #{self.install / 'bin' / 'pesy-header.sh'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-footer.template.sh'} #{self.install / 'bin' / 'pesy-footer.template.sh'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-genBin.template.sh'} #{self.install / 'bin' / 'pesy-genBin.template.sh'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-genLib.template.sh'} #{self.install / 'bin' / 'pesy-genLib.template.sh'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-JSON.sh'} #{self.install / 'bin' / 'pesy-JSON.sh'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-create.sh'} #{self.install / 'bin' / 'pesy-create.sh'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-name-utils.sh'} #{self.install / 'bin' / 'pesy-name-utils.sh'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-gitignore.template'} #{self.install / 'bin' / 'pesy-gitignore.template'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-package.template.json'} #{self.install / 'bin' / 'pesy-package.template.json'}",
+      "cp #{self.root / 'v0.4.4' / 'pesy-README.template.md'} #{self.install / 'bin' / 'pesy-README.template.md'}"
+    ]
+  },
   "scripts": {
     "build": "bsb -make-world",
     "start": "bsb -make-world -w",
@@ -19,7 +39,8 @@
   "files": [
     "package.json",
     "pesy",
-    "pesy.bundle.js"
+    "pesy.bundle.js",
+    "v0.4.4/"
   ],
   "license": "MIT",
   "devDependencies": {
@@ -30,6 +51,10 @@
     "rollup-plugin-node-resolve": "^5.0.4",
     "tablecloth-bucklescript": "0.0.6"
   },
+  "bugs": {
+    "url": "https://github.com/esy/pesy/issues"
+  },
+  "homepage": "https://github.com/esy/pesy#readme",
   "dependencies": {
     "@elliottcable/bs-cmdliner": "^10.2.1",
     "download-git-repo": "^2.0.0",

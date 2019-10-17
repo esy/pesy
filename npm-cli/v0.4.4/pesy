@@ -1,0 +1,663 @@
+#!/bin/bash
+
+set -e
+
+# pesy-JSON.sh prints out all the fields in the form of:
+# ["key"] value
+# where value may be an array.
+# pipe the output of that to
+#
+# cat package.json | ./pesy-JSON.sh | sed -n 's;\["peasyLibs"\][[:space:]]*\(.*\);\1;p'
+#
+# Where (in that case) you would be extracting the value for `peasyLibs` field.
+# use [[:space:]] character class to ensure mac/linux compat.
+#
+# You can extract deeper fields by searching for fields like ["esy","build"].
+
+# Need to avoid spinning up node every build command.
+# MD5_OF_PACKAGE
+# $cur__target_dir has some problems right now.
+# $fixed_cur__target_dir="$cur__original_root"
+
+# We can build out of source, then simply copy over the .merlin files because
+# those are whitelisted! We can also prepare them.
+
+# The two modes:
+# update: Update the jbuild files based on package.json
+# build:  Perform the build from files updated in update mode.
+# Only way to determine that we are part of actual build vs. command line
+# update mode is by looking for noprofile.
+
+
+UNDER_ON=`tput smul` || UNDER_ON=''
+UNDER_OFF=`tput rmul` || UNDER_OFF=''
+BOLD=`tput bold`  || BOLD=''   # Select bold mode
+REV=`tput rev` || REV=''      # Select bold mode
+BLACK=`tput setaf 0` || BLACK=''
+RED=`tput setaf 1` || RED=''
+GREEN=`tput setaf 2` || GREEN=''
+YELLOW=`tput setaf 3` || YELLOW=''
+BLUE=`tput setaf 4` || BLUE=''
+MAGENTA=`tput setaf 5` || MAGENTA=''
+CYAN=`tput setaf 6` || CYAN=''
+WHITE=`tput setaf 7` || WHITE=''
+RESET=`tput sgr0` || RESET=''
+
+if [[ "$1" == "help" ]]; then
+  SHOW_HELP="true"
+else
+  if [[ "$1" == "--help" ]]; then
+    SHOW_HELP="true"
+  fi
+fi
+
+if [[ "$SHOW_HELP" == "true" ]]; then
+  printf "\\n%spesy%s%s: Your simple esy assistant.%s" "${BOLD}${GREEN}" "${RESET}" "${BOLD}" "${RESET}"
+  printf "\\n"
+  printf "\\n  %spesy --help%s " "$BOLD" "$RESET"
+  printf "\\n    Show this help screen."
+  printf "\\n"
+  printf "\\n  %spesy%s " "$BOLD" "$RESET"
+  printf "\\n    Running pesy in a fresh directory will help you set up an esy project."
+  printf "\\n"
+  printf "\\n  %sesy pesy%s (in a project that uses esy)" "$BOLD" "$RESET"
+  printf "\\n    Once you have an esy project, 'esy pesy' will keep your project up to date."
+  printf "\\n    (make sure pesy is listed as a devDependency)."
+  printf "\\n\\n\\n"
+  exit 0
+fi
+
+printf "%s\\n  Hey, you are on an older unmaintained version of pesy. Please use @pesy/esy-pesy, in the devDependencies. See https://github.com/esy/pesy\\n %s" "${YELLOW}${BOLD}" "$RESET"
+
+# It can be expensive to find the pesy implementation dir.
+# If -z then we aren't in any sort of esy build or esy cmd environment. We're
+# running naked on the command line. This implies pesy create or help.  In that
+# case, we need to compute the pesy dir, but we have nowhere to record it yet.
+if [ -z "${cur__target_dir}" ]; then
+  # Create mode
+  RECOMPUTE_PESY_DIR="true"
+  RECORD_PESY_DIR="false"
+else
+  # Build/update mode (must have the cur__target_dir available).
+  mkdir -p "${cur__target_dir}"
+  PESY_DIR_CACHE="${cur__target_dir}/pesyDirCache.txt"
+  if [ -f  "${PESY_DIR_CACHE}" ]; then
+    RECOMPUTE_PESY_DIR="false"
+    RECORD_PESY_DIR="false"
+  else
+    # Else compute and record it.
+    RECOMPUTE_PESY_DIR="true"
+    RECORD_PESY_DIR="true"
+  fi
+fi
+
+if [ "${RECOMPUTE_PESY_DIR}" == "true" ]; then
+  SOURCE="${BASH_SOURCE[0]}"
+  while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+    PESY_DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$PESY_DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+  done
+  PESY_DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null && pwd )"
+else
+  PESY_DIR=$(cat "${PESY_DIR_CACHE}")
+fi
+
+if [ -z "${cur__name}" ]; then
+  # Will set PACKAGE_NAME and VERSION
+  source "${PESY_DIR}/pesy-create.sh"
+  esy install
+  # Dynamically access the *current* version of instead of the one installed
+  # as a dependency. Not always a great idea.
+  # Uncomment while debugging pesy itself.
+  # esy sh "${PESY_DIR}/pesy"
+  esy pesy
+  exit 0
+else
+  PACKAGE_NAME_FULL="${cur__name}"
+  VERSION="${cur__version}"
+  # Strip off any scope like @esy-ocaml/foo-package.
+  PACKAGE_NAME="${PACKAGE_NAME_FULL##*/}"
+fi
+
+
+if [ "${RECORD_PESY_DIR}" == "true" ]; then
+  echo "${PESY_DIR}" >  "${PESY_DIR_CACHE}"
+fi
+
+set -u
+
+echo ""
+echo "${BOLD}${PACKAGE_NAME_FULL}@${VERSION}${RESET}"
+
+# The genEverything script is the one that actually does all the
+# checking/updating of build config. We generate that from pesy, then run it.
+# But it's really expensive to generate, so we only regenerate it if
+# package.json has changed.
+GEN_EVERYTHING="${cur__target_dir}/genEverything.sh"
+PESY_DIR_CACHE="${cur__target_dir}/pesyDirCache.txt"
+GEN_MD5="${cur__target_dir}/packageJson.md5"
+
+if [ -x "$(command -v md5)" ]; then
+  CUR_MD5=$(md5 "${cur__root}/package.json")
+else
+  if [ -x "$(command -v md5sum)" ]; then
+    CUR_MD5=$(md5sum "${cur__root}/package.json")
+  else
+    echo "Aborting build because no checksum utilities are found (md5/md5sum)"
+    exit 1
+  fi
+fi
+
+if [ -f  "${GEN_MD5}" ]; then
+  PREV_MD5=$(cat "${GEN_MD5}")
+else
+  PREV_MD5=""
+fi
+
+if [[ "$CUR_MD5" == "$PREV_MD5" ]]; then
+  "${GEN_EVERYTHING}"
+  exit 0
+else
+  printf "%s" "${CUR_MD5}" > "${GEN_MD5}"
+fi
+
+####### OKAY NOW EVERYTHING GENERATES THE BUILD SCRIPT "genEverything" #########
+
+echo "" > "${GEN_EVERYTHING}"
+chmod 777 "${GEN_EVERYTHING}"
+
+# Gnu uppercasing extensions to sed don't exist on mac.
+source "${PESY_DIR}/pesy-name-utils.sh"
+PACKAGE_NAME_UPPER_CAMEL=$(upperCamelCasify "${PACKAGE_NAME}")
+NAMESPACE="${PACKAGE_NAME_UPPER_CAMEL}"
+PUBLIC_LIB_NAME="${PACKAGE_NAME}.lib"
+
+
+
+cat "${PESY_DIR}/pesy-header.sh" >> "${GEN_EVERYTHING}"
+
+cat <<EOT >> "${GEN_EVERYTHING}"
+PACKAGE_NAME="${PACKAGE_NAME}"
+PACKAGE_NAME_UPPER_CAMEL="${PACKAGE_NAME_UPPER_CAMEL}"
+NAMESPACE="${NAMESPACE}"
+PUBLIC_LIB_NAME="${PUBLIC_LIB_NAME}"
+EOT
+
+function genLib() {
+  DIR="$1"
+  LIB_NAME="$2"
+  ORIG_DIR="$3"
+  sed  -e "s;<ORIG_DIR>;${ORIG_DIR};g; s;<DIR>;${DIR};g; s;<LIB_NAME>;${LIB_NAME};g" "${PESY_DIR}/pesy-genLib.template.sh"  >> "${GEN_EVERYTHING}"
+}
+
+
+# Generate the config updater per bin directory.
+function genBin() {
+  DIR="$1"
+  EXE_NAME="$2"
+  ORIG_DIR="$3"
+  sed  -e "s;<ORIG_DIR>;${ORIG_DIR};g; s;<DIR>;${DIR};g; s;<EXE_NAME>;${EXE_NAME};g" "${PESY_DIR}/pesy-genBin.template.sh"  >> "${GEN_EVERYTHING}"
+}
+
+
+# Hacky, but fast and v8-less parsing of the important field in json file.
+# Spit out some variable names that are of the form <DIR>_FEATURE.
+# Then that secondary script can access those variables in generated code.
+
+OIFS=$IFS;
+
+
+# Initial pass through all names to set some defaults.
+# NOTICE THE QUOTE AROUND THE (.*) - that's because this should be a string.
+PARSED=$("${PESY_DIR}/pesy-JSON.sh" < "${cur__root}/package.json")
+ALL_DIR_TO_NAME=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","name"\][[:space:]]*"\([^"]*\)";\1=\2;p')
+ALL_DIR_TO_NAME=$(printf "%s" "$ALL_DIR_TO_NAME" | tr -s '\n' '|')
+if [ -z "${ALL_DIR_TO_NAME}" ]; then
+  # By default, bin and lib
+  ALL_DIR_TO_NAME="executable=${PACKAGE_NAME_UPPER_CAMEL}.exe|library=${PACKAGE_NAME}.lib|"
+fi
+IFS="|";
+ALL_DIR_TO_NAME_ARR=($ALL_DIR_TO_NAME);
+# Set deafults for each package before then overriding them.
+SEEN_A_LIB="false"
+for ((i=0; i<${#ALL_DIR_TO_NAME_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_NAME="${ALL_DIR_TO_NAME_ARR[$i]}"
+  DIR_AND_NAME_ARR=($DIR_AND_NAME);
+  ORIG_DIR=${DIR_AND_NAME_ARR[0]}
+  DIR=$(upperCamelCasify "${DIR_AND_NAME_ARR[0]}")
+  NAME=${DIR_AND_NAME_ARR[1]}
+  if [[ "${NAME}" == *.lib ]]; then
+    # We will let a single library default to the namespace of the package.
+    if [[ "${SEEN_A_LIB}" == "false" ]]; then
+      echo "#Default Namespace" >> "${GEN_EVERYTHING}"
+      echo "${DIR}_NAMESPACE=\"${PACKAGE_NAME_UPPER_CAMEL}\"" >> "${GEN_EVERYTHING}"
+    else
+      # Else if there's more than one lib each must set their namespace.
+      echo "#Default Namespace, When More Than One Library Present" >> "${GEN_EVERYTHING}"
+      echo "${DIR}_NAMESPACE=\"\"" >> "${GEN_EVERYTHING}"
+    fi
+    SEEN_A_LIB="true"
+  else
+    echo "${DIR}_NAMESPACE=\"HEY! You Need To Specify a nameSpace: field for ${ORIG_DIR}\"" >> "${GEN_EVERYTHING}"
+  fi
+  echo "${DIR}_INCLUDESUBDIRS=\"\"" >> "${GEN_EVERYTHING}"
+  echo "#Default Requires" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_REQUIRE=\"\"" >> "${GEN_EVERYTHING}"
+  echo "#Default Flags" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_FLAGS=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_IGNOREDSUBDIRS=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_OCAMLC_FLAGS=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_OCAMLOPT_FLAGS=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_PREPROCESS=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_C_NAMES=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_JSOO_FLAGS=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_JSOO_FILES=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_IMPLEMENTS=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_VIRTUALMODULES=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_RAWBUILDCONFIG=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_RAWBUILDCONFIGFOOTER=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_MODES=\"\"" >> "${GEN_EVERYTHING}"
+  echo "${DIR}_WRAPPED=\"\"" >> "${GEN_EVERYTHING}"
+done
+
+
+ALL_DIR_TO_INCLUDESUBDIRS=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","includeSubdirs"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_INCLUDESUBDIRS=$(printf "%s" "$ALL_DIR_TO_INCLUDESUBDIRS" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_INCLUDESUBDIRS_ARR=($ALL_DIR_TO_INCLUDESUBDIRS);
+for ((i=0; i<${#ALL_DIR_TO_INCLUDESUBDIRS_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_INCLUDESUBDIRS="${ALL_DIR_TO_INCLUDESUBDIRS_ARR[$i]}"
+  DIR_AND_INCLUDESUBDIRS_ARR=($DIR_AND_INCLUDESUBDIRS);
+  ORIG_DIR=${DIR_AND_INCLUDESUBDIRS_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  INCLUDESUBDIRS=${DIR_AND_INCLUDESUBDIRS_ARR[1]}
+  echo "${DIR}_INCLUDESUBDIRS=\"${INCLUDESUBDIRS}\"" >> "${GEN_EVERYTHING}"
+done
+
+# NOTICE THE QUOTE AROUND THE (.*) - that's because this should be a string.
+ALL_DIR_TO_NAMESPACE=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","namespace"\][[:space:]]*"\(.*\)";\1=\2;p')
+ALL_DIR_TO_NAMESPACE=$(printf "%s" "$ALL_DIR_TO_NAMESPACE" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_NAMESPACE_ARR=($ALL_DIR_TO_NAMESPACE);
+for ((i=0; i<${#ALL_DIR_TO_NAMESPACE_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_NAMESPACE="${ALL_DIR_TO_NAMESPACE_ARR[$i]}"
+  DIR_AND_NAMESPACE_ARR=($DIR_AND_NAMESPACE);
+  ORIG_DIR=${DIR_AND_NAMESPACE_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  NAMESPACE=${DIR_AND_NAMESPACE_ARR[1]}
+  echo "${DIR}_NAMESPACE=\"${NAMESPACE}\"" >> "${GEN_EVERYTHING}"
+done
+
+# NOTICE THE LACK OF QUOTE AROUND THE (.*) - that's because this should be a boolean.
+ALL_DIR_TO_WRAPPED=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","wrapped"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_WRAPPED=$(printf "%s" "$ALL_DIR_TO_WRAPPED" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_WRAPPED_ARR=($ALL_DIR_TO_WRAPPED);
+for ((i=0; i<${#ALL_DIR_TO_WRAPPED_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_WRAPPED="${ALL_DIR_TO_WRAPPED_ARR[$i]}"
+  DIR_AND_WRAPPED_ARR=($DIR_AND_WRAPPED);
+  ORIG_DIR=${DIR_AND_WRAPPED_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  WRAPPED=${DIR_AND_WRAPPED_ARR[1]}
+  echo "${DIR}_WRAPPED=\"${WRAPPED}\"" >> "${GEN_EVERYTHING}"
+done
+
+# NOTICE THE QUOTE AROUND THE (.*) - that's because this should be a string.
+ALL_DIR_TO_MAIN=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","main"\][[:space:]]*"\(.*\)";\1=\2;p')
+ALL_DIR_TO_MAIN=$(printf "%s" "$ALL_DIR_TO_MAIN" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_MAIN_ARR=($ALL_DIR_TO_MAIN);
+for ((i=0; i<${#ALL_DIR_TO_MAIN_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_MAIN="${ALL_DIR_TO_MAIN_ARR[$i]}"
+  DIR_AND_MAIN_ARR=($DIR_AND_MAIN);
+  ORIG_DIR=${DIR_AND_MAIN_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  MAIN=${DIR_AND_MAIN_ARR[1]}
+  echo "${DIR}_MAIN_MODULE=\"${MAIN}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_REQUIRE=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","require"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_REQUIRE=$(printf "$ALL_DIR_TO_REQUIRE" | tr -s '["],' ' ')
+ALL_DIR_TO_REQUIRE=$(printf "%s" "$ALL_DIR_TO_REQUIRE" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_REQUIRE_ARR=($ALL_DIR_TO_REQUIRE);
+for ((i=0; i<${#ALL_DIR_TO_REQUIRE_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_REQUIRE="${ALL_DIR_TO_REQUIRE_ARR[$i]}"
+  DIR_AND_REQUIRE_ARR=($DIR_AND_REQUIRE);
+  ORIG_DIR=${DIR_AND_REQUIRE_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  REQUIRE=${DIR_AND_REQUIRE_ARR[1]}
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_REQUIRE=\"${REQUIRE}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_FLAGS=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","flags"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_FLAGS=$(printf "$ALL_DIR_TO_FLAGS" | tr -s '["],' ' ')
+ALL_DIR_TO_FLAGS=$(printf "%s" "$ALL_DIR_TO_FLAGS" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_FLAGS_ARR=($ALL_DIR_TO_FLAGS);
+for ((i=0; i<${#ALL_DIR_TO_FLAGS_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_FLAGS="${ALL_DIR_TO_FLAGS_ARR[$i]}"
+  DIR_AND_FLAGS_ARR=($DIR_AND_FLAGS);
+  ORIG_DIR=${DIR_AND_FLAGS_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  FLAGS=${DIR_AND_FLAGS_ARR[1]}
+  # Escape any dollar signs
+  FLAGS="${FLAGS//\\[^n\"]/\\\\}"
+  FLAGS="${FLAGS//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_FLAGS=\"${FLAGS}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_IGNOREDSUBDIRS=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","ignoredSubdirs"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_IGNOREDSUBDIRS=$(printf "$ALL_DIR_TO_IGNOREDSUBDIRS" | tr -s '["],' ' ')
+ALL_DIR_TO_IGNOREDSUBDIRS=$(printf "%s" "$ALL_DIR_TO_IGNOREDSUBDIRS" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_IGNOREDSUBDIRS_ARR=($ALL_DIR_TO_IGNOREDSUBDIRS);
+for ((i=0; i<${#ALL_DIR_TO_IGNOREDSUBDIRS_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_IGNOREDSUBDIRS="${ALL_DIR_TO_IGNOREDSUBDIRS_ARR[$i]}"
+  DIR_AND_IGNOREDSUBDIRS_ARR=($DIR_AND_IGNOREDSUBDIRS);
+  ORIG_DIR=${DIR_AND_IGNOREDSUBDIRS_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  IGNOREDSUBDIRS=${DIR_AND_IGNOREDSUBDIRS_ARR[1]}
+  # This one is an array so we take an extra ignoreSubdirs to strip out [ ] and ""
+  echo "${DIR}_IGNOREDSUBDIRS=\"${IGNOREDSUBDIRS}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_IMPLEMENTS=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","implements"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_IMPLEMENTS=$(printf "$ALL_DIR_TO_IMPLEMENTS" | tr -s '["],' ' ')
+ALL_DIR_TO_IMPLEMENTS=$(printf "%s" "$ALL_DIR_TO_IMPLEMENTS" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_IMPLEMENTS_ARR=($ALL_DIR_TO_IMPLEMENTS);
+for ((i=0; i<${#ALL_DIR_TO_IMPLEMENTS_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_IMPLEMENTS="${ALL_DIR_TO_IMPLEMENTS_ARR[$i]}"
+  DIR_AND_IMPLEMENTS_ARR=($DIR_AND_IMPLEMENTS);
+  ORIG_DIR=${DIR_AND_IMPLEMENTS_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  IMPLEMENTS=${DIR_AND_IMPLEMENTS_ARR[1]}
+  # Escape any dollar signs
+  IMPLEMENTS="${IMPLEMENTS//\\[^n\"]/\\\\}"
+  IMPLEMENTS="${IMPLEMENTS//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_IMPLEMENTS=\"${IMPLEMENTS}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_VIRTUALMODULES=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","virtualModules"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_VIRTUALMODULES=$(printf "$ALL_DIR_TO_VIRTUALMODULES" | tr -s '["],' ' ')
+ALL_DIR_TO_VIRTUALMODULES=$(printf "%s" "$ALL_DIR_TO_VIRTUALMODULES" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_VIRTUALMODULES_ARR=($ALL_DIR_TO_VIRTUALMODULES);
+for ((i=0; i<${#ALL_DIR_TO_VIRTUALMODULES_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_VIRTUALMODULES="${ALL_DIR_TO_VIRTUALMODULES_ARR[$i]}"
+  DIR_AND_VIRTUALMODULES_ARR=($DIR_AND_VIRTUALMODULES);
+  ORIG_DIR=${DIR_AND_VIRTUALMODULES_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  VIRTUALMODULES=${DIR_AND_VIRTUALMODULES_ARR[1]}
+  # Escape any dollar signs
+  VIRTUALMODULES="${VIRTUALMODULES//\\[^n\"]/\\\\}"
+  VIRTUALMODULES="${VIRTUALMODULES//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_VIRTUALMODULES=\"${VIRTUALMODULES}\"" >> "${GEN_EVERYTHING}"
+done
+
+# Raw build config for this target
+# NOTE: This is how you implement config that is an array of strings, that become one line per array entry!
+ALL_DIR_TO_RAWBUILDCONFIG=$(printf "%s" "${PARSED}" | sed -n 's;\["buildDirs","\([^"]*\)","rawBuildConfig",.*\][[:space:]]"*\(.*\)";\1=\2;p')
+# Note we DON'T want to remove the quotes. They are inside the strings perhaps.
+# ALL_DIR_TO_RAWBUILDCONFIG=$(printf "$ALL_DIR_TO_RAWBUILDCONFIG" | tr -s '["],' ' ')
+ALL_DIR_TO_RAWBUILDCONFIG=$(printf "%s" "$ALL_DIR_TO_RAWBUILDCONFIG" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_RAWBUILDCONFIG_ARR=($ALL_DIR_TO_RAWBUILDCONFIG);
+for ((i=0; i<${#ALL_DIR_TO_RAWBUILDCONFIG_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_RAWBUILDCONFIG="${ALL_DIR_TO_RAWBUILDCONFIG_ARR[$i]}"
+  DIR_AND_RAWBUILDCONFIG_ARR=($DIR_AND_RAWBUILDCONFIG);
+  ORIG_DIR=${DIR_AND_RAWBUILDCONFIG_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  RAWBUILDCONFIG=${DIR_AND_RAWBUILDCONFIG_ARR[1]}
+  # Escape any dollar signs
+  # Note we DON'T want to remove the quotes. They are inside the strings perhaps.
+  # RAWBUILDCONFIG="${RAWBUILDCONFIG//\\[^n\"]/\\\\}"
+  RAWBUILDCONFIG="${RAWBUILDCONFIG//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_RAWBUILDCONFIG=\$(printf \"%s\\\\n %s\" \"\$${DIR}_RAWBUILDCONFIG\" \"${RAWBUILDCONFIG}\")" >> "${GEN_EVERYTHING}"
+done
+
+# Raw build config for this dune file
+# NOTE: This is how you implement config that is an array of strings, that become one line per array entry!
+ALL_DIR_TO_RAWBUILDCONFIGFOOTER=$(printf "%s" "${PARSED}" | sed -n 's;\["buildDirs","\([^"]*\)","rawBuildConfigFooter",.*\][[:space:]]"*\(.*\)";\1=\2;p')
+# Note we DON'T want to remove the quotes. They are inside the strings perhaps.
+# ALL_DIR_TO_RAWBUILDCONFIGFOOTER=$(printf "$ALL_DIR_TO_RAWBUILDCONFIGFOOTER" | tr -s '["],' ' ')
+ALL_DIR_TO_RAWBUILDCONFIGFOOTER=$(printf "%s" "$ALL_DIR_TO_RAWBUILDCONFIGFOOTER" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_RAWBUILDCONFIGFOOTER_ARR=($ALL_DIR_TO_RAWBUILDCONFIGFOOTER);
+for ((i=0; i<${#ALL_DIR_TO_RAWBUILDCONFIGFOOTER_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_RAWBUILDCONFIGFOOTER="${ALL_DIR_TO_RAWBUILDCONFIGFOOTER_ARR[$i]}"
+  DIR_AND_RAWBUILDCONFIGFOOTER_ARR=($DIR_AND_RAWBUILDCONFIGFOOTER);
+  ORIG_DIR=${DIR_AND_RAWBUILDCONFIGFOOTER_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  RAWBUILDCONFIGFOOTER=${DIR_AND_RAWBUILDCONFIGFOOTER_ARR[1]}
+  # Escape any dollar signs
+  # Note we DON'T want to remove the quotes. They are inside the strings perhaps.
+  # RAWBUILDCONFIGFOOTER="${RAWBUILDCONFIGFOOTER//\\[^n\"]/\\\\}"
+  RAWBUILDCONFIGFOOTER="${RAWBUILDCONFIGFOOTER//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_RAWBUILDCONFIGFOOTER=\$(printf \"%s\\\\n %s\" \"\$${DIR}_RAWBUILDCONFIGFOOTER\" \"${RAWBUILDCONFIGFOOTER}\")" >> "${GEN_EVERYTHING}"
+done
+
+# Raw build config for the footer of this targets Dune file.
+ALL_DIR_TO_MODES=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","modes"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_MODES=$(printf "$ALL_DIR_TO_MODES" | tr -s '["],' ' ')
+ALL_DIR_TO_MODES=$(printf "%s" "$ALL_DIR_TO_MODES" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_MODES_ARR=($ALL_DIR_TO_MODES);
+for ((i=0; i<${#ALL_DIR_TO_MODES_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_MODES="${ALL_DIR_TO_MODES_ARR[$i]}"
+  DIR_AND_MODES_ARR=($DIR_AND_MODES);
+  ORIG_DIR=${DIR_AND_MODES_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  MODES=${DIR_AND_MODES_ARR[1]}
+  # Escape any dollar signs
+  MODES="${MODES//\\[^n\"]/\\\\}"
+  MODES="${MODES//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_MODES=\"${MODES}\"" >> "${GEN_EVERYTHING}"
+done
+
+
+ALL_DIR_TO_OCAMLC_FLAGS=$(printf "${PARSED}" | sed -n 's;\["buildDirs","\([^"]*\)","ocamlcFlags"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_OCAMLC_FLAGS=$(printf "$ALL_DIR_TO_OCAMLC_FLAGS" | tr -s '["],' ' ')
+ALL_DIR_TO_OCAMLC_FLAGS=$(printf "%s" "$ALL_DIR_TO_OCAMLC_FLAGS" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_OCAMLC_FLAGS_ARR=($ALL_DIR_TO_OCAMLC_FLAGS);
+for ((i=0; i<${#ALL_DIR_TO_OCAMLC_FLAGS_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_OCAMLC_FLAGS="${ALL_DIR_TO_OCAMLC_FLAGS_ARR[$i]}"
+  DIR_AND_OCAMLC_FLAGS_ARR=($DIR_AND_OCAMLC_FLAGS);
+  ORIG_DIR=${DIR_AND_OCAMLC_FLAGS_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  FLAGS=${DIR_AND_OCAMLC_FLAGS_ARR[1]}
+  # Escape any dollar signs
+  FLAGS="${FLAGS//\\[^n\"]/\\\\}"
+  FLAGS="${FLAGS//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_OCAMLC_FLAGS=\"${FLAGS}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_OCAMLOPT_FLAGS=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","ocamloptFlags"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_OCAMLOPT_FLAGS=$(printf "$ALL_DIR_TO_OCAMLOPT_FLAGS" | tr -s '["],' ' ')
+ALL_DIR_TO_OCAMLOPT_FLAGS=$(printf "%s" "$ALL_DIR_TO_OCAMLOPT_FLAGS" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_OCAMLOPT_FLAGS_ARR=($ALL_DIR_TO_OCAMLOPT_FLAGS);
+for ((i=0; i<${#ALL_DIR_TO_OCAMLOPT_FLAGS_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_OCAMLOPT_FLAGS="${ALL_DIR_TO_OCAMLOPT_FLAGS_ARR[$i]}"
+  DIR_AND_OCAMLOPT_FLAGS_ARR=($DIR_AND_OCAMLOPT_FLAGS);
+  ORIG_DIR=${DIR_AND_OCAMLOPT_FLAGS_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  FLAGS=${DIR_AND_OCAMLOPT_FLAGS_ARR[1]}
+  # Escape any dollar signs
+  FLAGS="${FLAGS//\\[^n\"]/\\\\}"
+  FLAGS="${FLAGS//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_OCAMLOPT_FLAGS=\"${FLAGS}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_PREPROCESS=$(printf "${PARSED}" | sed -n 's;\["buildDirs","\([^"]*\)","preprocess"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_PREPROCESS=$(printf "$ALL_DIR_TO_PREPROCESS" | tr -s '["],' ' ')
+ALL_DIR_TO_PREPROCESS=$(printf "%s" "$ALL_DIR_TO_PREPROCESS" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_PREPROCESS_ARR=($ALL_DIR_TO_PREPROCESS);
+for ((i=0; i<${#ALL_DIR_TO_PREPROCESS_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_PREPROCESS="${ALL_DIR_TO_PREPROCESS_ARR[$i]}"
+  DIR_AND_PREPROCESS_ARR=($DIR_AND_PREPROCESS);
+  ORIG_DIR=${DIR_AND_PREPROCESS_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  FLAGS=${DIR_AND_PREPROCESS_ARR[1]}
+  # Escape any dollar signs
+  FLAGS="${FLAGS//\\[^n\"]/\\\\}"
+  FLAGS="${FLAGS//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_PREPROCESS=\"${FLAGS}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_C_NAMES=$(printf "%s" "${PARSED}" | sed -n 's;\["buildDirs","\([^"]*\)","cNames"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_C_NAMES=$(printf "$ALL_DIR_TO_C_NAMES" | tr -s '["],' ' ')
+ALL_DIR_TO_C_NAMES=$(printf "%s" "$ALL_DIR_TO_C_NAMES" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_C_NAMES_ARR=($ALL_DIR_TO_C_NAMES);
+for ((i=0; i<${#ALL_DIR_TO_C_NAMES_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_C_NAMES="${ALL_DIR_TO_C_NAMES_ARR[$i]}"
+  DIR_AND_C_NAMES_ARR=($DIR_AND_C_NAMES);
+  ORIG_DIR=${DIR_AND_C_NAMES_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  FLAGS=${DIR_AND_C_NAMES_ARR[1]}
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_C_NAMES=\"${FLAGS}\"" >> "${GEN_EVERYTHING}"
+done
+
+
+# TODO: If not moving to native, we should make all the other list parsers use
+# this approach instead.
+# Need to achieve the following:
+# ...
+# (public_name console.lib)
+#  (js_of_ocaml (flags (:standard --pretty))
+#              (javascript_files nativeChannels.js))
+#                                                                                                                                                                  ["                "]                          "," (not escpaed quote)       Remaining quotes?
+# OSX doen't have extended or pattern regexes. Need multiple pipes.
+# Two parallel arrays with the same length
+ALL_DIRS_JSOO_FLAGS=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","jsooFlags"\][[:space:]]*\(.*\);\2;p' | sed 's;\[";;g' | sed 's;\([^\\]\)"\];\1;g' | sed 's;\([^\\]\)",";\1 ;g')
+ALL_DIRS_WITH_JSOO_FLAGS=$(printf "%s" "${PARSED}" |  sed -n 's;\["buildDirs","\([^"]*\)","jsooFlags"\][[:space:]]*\(.*\);\1;p')
+IFS=$'\n'
+ALL_DIRS_JSOO_FLAGS_ARR=($ALL_DIRS_JSOO_FLAGS);
+ALL_DIRS_WITH_JSOO_FLAGS_ARR=($ALL_DIRS_WITH_JSOO_FLAGS);
+for ((i=0; i<${#ALL_DIRS_WITH_JSOO_FLAGS_ARR[@]}; ++i)); do
+  ORIG_DIR="${ALL_DIRS_WITH_JSOO_FLAGS_ARR[$i]}"
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  FLAGS="${ALL_DIRS_JSOO_FLAGS_ARR[$i]}"
+  # Escape any dollar signs
+  FLAGS="${FLAGS//\\[^n\"]/\\\\}"
+  FLAGS="${FLAGS//\$/\\\$}"
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_JSOO_FLAGS=\"${FLAGS}\"" >> "${GEN_EVERYTHING}"
+done
+
+ALL_DIR_TO_JSOO_FILES=$(printf "%s" "${PARSED}" | sed -n 's;\["buildDirs","\([^"]*\)","jsooFiles"\][[:space:]]*\(.*\);\1=\2;p')
+ALL_DIR_TO_JSOO_FILES=$(printf "$ALL_DIR_TO_JSOO_FILES" | tr -s '["],' ' ')
+ALL_DIR_TO_JSOO_FILES=$(printf "%s" "$ALL_DIR_TO_JSOO_FILES" | tr -s '\n' '|')
+IFS="|";
+ALL_DIR_TO_JSOO_FILES_ARR=($ALL_DIR_TO_JSOO_FILES);
+for ((i=0; i<${#ALL_DIR_TO_JSOO_FILES_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_JSOO_FILES="${ALL_DIR_TO_JSOO_FILES_ARR[$i]}"
+  DIR_AND_JSOO_FILES_ARR=($DIR_AND_JSOO_FILES);
+  ORIG_DIR=${DIR_AND_JSOO_FILES_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  FLAGS=${DIR_AND_JSOO_FILES_ARR[1]}
+  # This one is an array so we take an extra step to strip out [ ] and ""
+  echo "${DIR}_JSOO_FILES=\"${FLAGS}\"" >> "${GEN_EVERYTHING}"
+done
+
+# Print a summary of each named target.
+for ((i=0; i<${#ALL_DIR_TO_NAME_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_NAME="${ALL_DIR_TO_NAME_ARR[$i]}"
+  DIR_AND_NAME_ARR=($DIR_AND_NAME);
+  ORIG_DIR=${DIR_AND_NAME_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  NAME=${DIR_AND_NAME_ARR[1]}
+  if [[ "$i" == $(expr "${#ALL_DIR_TO_NAME_ARR[@]}" - "1") ]]; then
+    IS_LAST="last"
+  else
+    IS_LAST="not-last"
+  fi
+
+  # We won't print the directories if running in build mode, just to make the
+  # output cleaner for the most common builds, and to save a few milliseconds.
+  # Since MODE is set at actual runtime (not in this script) we have to defer
+  # evaluation of MODE.
+  if [[ "${NAME}" == *.exe ]]; then
+    # Lazy evaluation of mode - it's not yet known.
+    echo '[ "${MODE}" != "build" ] && ' >> "$GEN_EVERYTHING"
+    echo "printDirectory \"$ORIG_DIR\" \"name:    $NAME\" \"main:    \${${DIR}_MAIN_MODULE:-\$DEFAULT_MAIN_MODULE_NAME}\" \"require:\$${DIR}_REQUIRE\"" "$IS_LAST" >> "$GEN_EVERYTHING"
+  else
+    if [[ "${NAME}" == "${PACKAGE_NAME}"\.* ]]; then
+      echo '[ "${MODE}" != "build" ] && ' >> "$GEN_EVERYTHING"
+      echo "printDirectory \"$ORIG_DIR\" \"library name: $NAME\" \"namespace:    \$${DIR}_NAMESPACE\" \"require:     \$${DIR}_REQUIRE\"" "$IS_LAST" >> "$GEN_EVERYTHING"
+    else
+      # Errors will be caught later
+      true
+    fi
+  fi
+done
+
+# Perform the updates/refresh per target or build.
+for ((i=0; i<${#ALL_DIR_TO_NAME_ARR[@]}; ++i)); do
+  IFS="=";
+  DIR_AND_NAME="${ALL_DIR_TO_NAME_ARR[$i]}"
+  DIR_AND_NAME_ARR=($DIR_AND_NAME);
+  ORIG_DIR=${DIR_AND_NAME_ARR[0]}
+  DIR=$(upperCamelCasify "${ORIG_DIR}")
+  NAME=${DIR_AND_NAME_ARR[1]}
+
+  if [[ "${NAME}" == "" ]]; then
+    printf "\\n%sMisconfigured package.json:%s" "${RED}${BOLD}" "${RESET}"
+    printf "\\n  - Missing/empty name for buildDirs/%s\\n\\n" "${ORIG_DIR}"
+    exit 1
+  fi
+  if [[ "${NAME}" == *.exe ]]; then
+    genBin "$DIR" "$NAME" "$ORIG_DIR"
+  else
+    if [[ "${NAME}" == "${PACKAGE_NAME}"\.* ]]; then
+      genLib "$DIR" "$NAME" "$ORIG_DIR"
+    else
+      printf "\\n%sMisconfigured package.json:%s" "${RED}${BOLD}" "${RESET}"
+      printf "\\n"
+      printf "\\n  buildDirs.%s.name (\"%s\")\\n" "${ORIG_DIR}" "${NAME}"
+      printf "\\n  %s- Name should be any-name.exe to build a binary or%s" "${YELLOW}${BOLD}" "$RESET"
+      printf "\\n  %s- Name should be %s.suffix to build a library, where 'suffix' is anything but 'exe'%s\\n\\n" "${YELLOW}${BOLD}" "${PACKAGE_NAME}" "$RESET"
+      exit 1
+    fi
+  fi
+done
+IFS=$OIFS;
+
+cat "${PESY_DIR}/pesy-footer.template.sh" >> "${GEN_EVERYTHING}"
+
+"${GEN_EVERYTHING}"
