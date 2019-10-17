@@ -1,0 +1,151 @@
+#!/bin/bash
+
+set -e
+set -u
+
+echo ""
+echo "esy-peasy low-config build"
+echo "--------------------------"
+echo "Building at: $cur__root"
+
+# Need to avoid spinning up node every build command.
+# MD5_OF_PACKAGE
+
+# We can build out of source, then simply copy over the .merlin files because
+# those are whitelisted! We can also prepare them.
+PACKAGE_NAME="${cur__name}"
+PACKAGE_NAME_CAMEL=$(echo "${PACKAGE_NAME}" | perl -pe 's/([a-z0-9])-([a-zA-Z0-9])/$1\U$2/g')
+PACKAGE_NAME_CAMEL_UC=$(tr '[:lower:]' '[:upper:]' <<< "${PACKAGE_NAME_CAMEL:0:1}")${PACKAGE_NAME_CAMEL:1}
+
+LIB_DIR="${cur__root}/lib"
+BIN_DIR="${cur__root}/bin"
+LIB_JBUILD_FILE="${LIB_DIR}/jbuild"
+BIN_JBUILD_FILE="${BIN_DIR}/jbuild"
+
+# Hacky, but fast and v8-less parsing of the important field in json file.
+# Some of these command might fail if there's no field in the package.json so
+# we fall back to empty string on failure.
+DEPENDENCY_LIBRARIES_WITH=$(tr -d '[:",\n' < package.json | grep -E -o 'peasyLibs .*?\]') || DEPENDENCY_LIBRARIES_WITH=""
+DEPENDENCY_LIBRARIES="${DEPENDENCY_LIBRARIES_WITH:9}" || DEPENDENCY_LIBRARIES=""
+# Trim off the final dangling ]
+DEPENDENCY_LIBRARIES=${DEPENDENCY_LIBRARIES::${#DEPENDENCY_LIBRARIES}-1} || DEPENDENCY_LIBRARIES=""
+
+
+if [ -f  "${cur__root}/bin/${PACKAGE_NAME_CAMEL_UC}.re" ]; then
+  MAIN_MODULE="${PACKAGE_NAME_CAMEL_UC}"
+else
+  if [ -f  "${cur__root}/bin/Index.re" ]; then
+    MAIN_MODULE="Index"
+  else
+    echo ""
+    echo "ERROR: You must include either bin/Index.re or bin/${PACKAGE_NAME_CAMEL_UC}.re"
+    echo ""
+    exit 1
+  fi
+fi
+
+echo "Building Executable Named $PACKAGE_NAME_CAMEL_UC"
+
+
+if [ -d "${LIB_DIR}" ]; then
+  echo "Building Library Named $cur__name"
+  echo "(jbuild_version 1)" > "${LIB_JBUILD_FILE}"
+  echo "(library" >> "${LIB_JBUILD_FILE}"
+  echo "((name ${PACKAGE_NAME_CAMEL_UC}Lib)" >> "${LIB_JBUILD_FILE}"
+  echo "  (flags (-w -40 -w +26))" >> "${LIB_JBUILD_FILE}"
+  echo "  (public_name ${cur__name})" >> "${LIB_JBUILD_FILE}"
+  echo "  (libraries (${DEPENDENCY_LIBRARIES}))))" >> "${LIB_JBUILD_FILE}"
+  DEPENDENCY_LIBRARIES="${DEPENDENCY_LIBRARIES} ${PACKAGE_NAME_CAMEL_UC}Lib"
+fi
+
+if [ -d "${BIN_DIR}" ]; then
+  echo "(jbuild_version 1)" > "${BIN_JBUILD_FILE}"
+  echo "(executable" >> "${BIN_JBUILD_FILE}"
+  echo " ((name ${MAIN_MODULE})" >> "${BIN_JBUILD_FILE}"
+  echo " (public_name ${PACKAGE_NAME_CAMEL_UC})" >> "${BIN_JBUILD_FILE}"
+  echo " (libraries (${DEPENDENCY_LIBRARIES}))))" >> "${BIN_JBUILD_FILE}"
+else
+  echo "Your reason-script is missing a ./bin directory."
+  echo "  Your reason-script must include a bin directory with a file named Index.re or ${PACKAGE_NAME_CAMEL_UC}.re"
+fi
+
+
+
+if [ -f  "${cur__root}/${cur__name}.opam" ]; then
+  # They already have an opam so apparently they know what they're
+  # doing.
+  DID_CREATE_OPAM="false"
+else
+  DID_CREATE_OPAM="true"
+  echo "(*tmp*)" > "${cur__root}/${cur__name}.opam" 
+fi
+
+if [ -f  "${cur__root}/jbuild-ignore" ]; then
+  # They already have a jbuild-ignore so apparently they know what
+  # they're doing.
+  DID_CREATE_JBUILD_IGNORE="false"
+else
+  DID_CREATE_JBUILD_IGNORE="true"
+  echo "temporarily_generated_by_reason_script" > "${cur__root}/jbuild-ignore" 
+  echo "node_modules" >> "${cur__root}/jbuild-ignore" 
+fi
+
+# If you list a refmterr as a dev dependency, we'll use it!
+BUILD_FAILED=""
+if hash refmterr 2>/dev/null; then
+  refmterr jbuilder build || BUILD_FAILED="true"
+else
+  jbuilder build || BUILD_FAILED="true"
+fi
+
+# Cleaning up automatically created opam/jbuild files is only something we'd
+# need to do if we weren't doing buildsInSource:true
+# if [ "${DID_CREATE_OPAM}" == "true" ]; then
+#   rm "${cur__root}/${cur__name}.opam"
+# else
+#   if [ -f  "${cur__root}/${cur__name}.opam" ]; then
+#     if [ "$(cat \"${cur__root}/${cur__name}.opam\")" == "(*tmp*)" ]; then
+#       # Then this is left over from another failed run. Delete it.
+#       rm "${cur__root}/${cur__name}.opam"
+#     fi
+#   fi
+# fi
+
+# if [ "${DID_CREATE_JBUILD_IGNORE}" == "true" ]; then
+#   rm "${cur__root}/jbuild-ignore"
+# else
+#   if [ -f "${cur__root}/jbuild-ignore" ]; then
+#     if grep -q "temporarily_generated_by_reason_script" "${cur__root}/jbuild-ignore"; then
+#       # Then this is left over from another failed run. Delete it.
+#       rm "${cur__root}/jbuild-ignore"
+#     fi
+#   fi
+# fi
+
+# Copy over generated .merlin files - even if the build failed.
+if [ -d "${BIN_DIR}" ]; then
+  if [ -f "${BIN_DIR}/.merlin" ]; then
+    # Did you know sed allows you to use any separator such as ; and not just /
+    # Really useful when the substitutions contain variables that have slashes
+    # (paths)
+    sed  "s;\\.\\.\\/_build;${cur__target_dir}\\/_build;" > "${cur__original_root}/bin/.merlin" "${BIN_DIR}/.merlin"
+  fi
+fi
+
+if [ -d "${LIB_DIR}" ]; then
+  if [ -f "${LIB_DIR}/.merlin" ]; then
+    sed "s;\\.\\.\\/_build;${cur__target_dir}\\/_build;" > "${cur__original_root}/lib/.merlin" "${LIB_DIR}/.merlin" 
+  fi
+fi
+
+if [ -f "${cur__root}/.merlin" ]; then
+  cp "${cur__root}/.merlin" "${cur__original_root}/.merlin"
+fi
+
+if [ -z "$BUILD_FAILED" ]; then
+  true
+else
+  echo "esy-peasy BUILD FAILED!"
+  echo ""
+  exit 1
+fi
