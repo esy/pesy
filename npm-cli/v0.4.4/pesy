@@ -67,7 +67,7 @@ if [[ "$SHOW_HELP" == "true" ]]; then
   exit 0
 fi
 
-printf "%sHey, you are on an older unmaintained version of pesy. Please use @pesy/esy-pesy, in the devDependencies. See https://github.com/esy/pesy %s" "${YELLOW}${BOLD}" "$RESET"
+printf "%s\\n  Hey, you are on an older unmaintained version of pesy. Please use @pesy/esy-pesy, in the devDependencies. See https://github.com/esy/pesy\\n %s" "${YELLOW}${BOLD}" "$RESET"
 
 # It can be expensive to find the pesy implementation dir.
 # If -z then we aren't in any sort of esy build or esy cmd environment. We're
