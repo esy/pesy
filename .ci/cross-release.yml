@@ -27,7 +27,7 @@ steps:
     displayName: "npm pack"
     workingDirectory: "_release"
 
-  - bash: "node .ci/checksum.js _release/pesy-0.1.0-alpha.3.tgz"
+  - bash: "node .ci/checksum.js _release/pesy-0.1.0-alpha.4.tgz"
     displayName: "Calculating sha1"
 
   - task: PublishBuildArtifacts@1
