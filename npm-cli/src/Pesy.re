@@ -59,27 +59,25 @@ let downloadTemplate = template => {
         let setup_files_spinner =
           Spinner.start("\x1b[2mSetting up template\x1b[0m " ++ template);
 
-        try (
-          {
-            let files =
-              walk_sync(projectPath)
-              ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
+        try({
+          let files =
+            walk_sync(projectPath)
+            ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
 
-            Belt.Array.forEach(
-              files,
-              file => {
-                let () =
-                  readFile(file)->substituteTemplateValues |> write(file);
+          Belt.Array.forEach(
+            files,
+            file => {
+              let () =
+                readFile(file)->substituteTemplateValues |> write(file);
 
-                renameSync(
-                  file,
-                  file |> substituteFileNames |> stripTemplateExtension,
-                );
-              },
-            );
-            Spinner.stop(setup_files_spinner);
-          }
-        ) {
+              renameSync(
+                file,
+                file |> substituteFileNames |> stripTemplateExtension,
+              );
+            },
+          );
+          Spinner.stop(setup_files_spinner);
+        }) {
         | Js.Exn.Error(e) =>
           Spinner.stop(setup_files_spinner);
           switch (Js.Exn.stack(e)) {
@@ -179,7 +177,7 @@ let main = (template, useDefaultOptions) =>
     );
   };
 
-let version = "0.5.0-alpha.9";
+let version = "0.5.0-alpha.10";
 
 let template = {
   let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";

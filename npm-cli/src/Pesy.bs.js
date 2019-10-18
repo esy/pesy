@@ -187,7 +187,7 @@ function main(template, useDefaultOptions) {
   }
 }
 
-var version = "0.5.0-alpha.9";
+var version = "0.5.0-alpha.10";
 
 var partial_arg = Cmdliner.Arg[/* string */32];
 
@@ -195,7 +195,7 @@ var partial_arg$1 = Cmdliner.Arg[/* opt */14];
 
 var template = Cmdliner.Arg[/* & */9](Cmdliner.Arg[/* value */20], Cmdliner.Arg[/* & */9]((function (param) {
             return partial_arg$1(undefined, partial_arg, "github:esy/pesy-reason-template#86b37d16dcfe15", param);
-          }), Cmdliner.Arg[/* info */8](undefined, "TEMPLATE_URL", "Specify URL of the remote template. This can be of hthe form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28", undefined, /* :: */[
+          }), Cmdliner.Arg[/* info */8](undefined, "TEMPLATE_URL", "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28", undefined, /* :: */[
               "t",
               /* :: */[
                 "template",
