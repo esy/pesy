@@ -51,7 +51,18 @@ let generateAliasModuleStanza = pesyModules =>
   | None => None
   };
 
-let generateLibraryStanza = pesyModules =>
+let generateLibraryStanza = (preprocess, pesyModules) => {
+  let preprocessStanza =
+    switch (preprocess) {
+    | None => []
+    | Some(l) => [
+        Stanza.createExpression([
+          Stanza.createAtom("preprocess"),
+          Stanza.createExpression(List.map(f => Stanza.createAtom(f), l)),
+        ]),
+      ]
+    };
+
   switch (pesyModules) {
   | Some(x) =>
     Some(
@@ -80,7 +91,9 @@ let generateLibraryStanza = pesyModules =>
                |> List.map(Alias.transform(~f=Stanza.createAtom));
              },
         ]),
+        ...preprocessStanza,
       ]),
     )
   | None => None
   };
+};
