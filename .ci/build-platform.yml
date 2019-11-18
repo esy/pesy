@@ -19,6 +19,7 @@ jobs:
       ESY__CACHE_SOURCE_TARBALL_PATH: ${{ parameters.ESY__CACHE_SOURCE_TARBALL_PATH }}
 
     steps:
+      - template: .ci/use-calc-esy-install-path.yml
       - template: utils/use-node.yml
       - template: utils/use-esy.yml
       - template: utils/restore-build-cache.yml
