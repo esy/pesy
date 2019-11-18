@@ -209,7 +209,7 @@ let toDuneStanzas = c => {
     | Some(l) => Some(l |> List.map(Stanza.ofString))
     },
     /* pesy modules */
-    PesyModule.generateLibraryStanza(pesyModules),
+    PesyModule.generateLibraryStanza(preprocess, pesyModules),
     PesyModule.generateAliasModuleStanza(pesyModules),
   );
 };
