@@ -1,0 +1,32 @@
+language: c
+os: linux
+env:
+  - OCAML_VERSION=4.03.0
+  - OCAML_VERSION=4.04.2
+  - OCAML_VERSION=4.05.0
+  - OCAML_VERSION=4.06.1
+  - OCAML_VERSION=4.07.0
+install:
+  - echo "yes" | sudo add-apt-repository ppa:avsm/ppa
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq opam
+  - export OPAMYES=1
+  - opam init --compiler=${OCAML_VERSION}
+  - opam install ocamlfind camlp4 menhir
+script:
+  - eval `opam config env`
+  # First, run our own testsuite. Do this *before* any ocamlbuild is installed globally,
+  # to check that we don't have a spurious dependency on a global ocamlbuild.
+  - VERBOSE=1 make test
+  # Second, bootstrap ourselves using the freshly built binaries, as a more complex
+  # exercise than the testsuite alone.
+  - OCAMLBUILD=$(pwd)/ocamlbuild.native make -C bootstrap
+  # Third, verify that installation works, and a variety of downstream opam packages
+  # still install.
+  - make distclean
+  - opam pin add -n -k path ocamlbuild .
+  - opam install -v ocamlbuild
+  - opam install -v mtime.1.0.0 # this tests topkg, with stub libraries
+  - opam install -v inotify.2.3 # this tests oasis, with stub libraries
+  - opam install -v cpuid.0.1.1 # this tests the ocb-stubblr plugin
+  - opam install -v shcaml.0.2.1 # this tests the cppo plugin

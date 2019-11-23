@@ -1,0 +1,2 @@
+(library (name PesyVirtualBar) (public_name pesy-virtual.bar)
+    (implements PesyVirtualFoo)) 

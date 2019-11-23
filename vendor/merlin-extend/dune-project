@@ -1,0 +1,4 @@
+(lang dune 1.0)
+
+(name merlin-extend)
+(version b6b4290)
