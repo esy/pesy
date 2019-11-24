@@ -67,12 +67,26 @@
     "ocaml": "4.7.x"
   },
   "devDependencies": {
-    "pesy-self": "esy/pesy#75d62cfc",
+    "pesy-self": "*",
     "refmterr": "*",
     "@opam/merlin": "*"
   },
   "resolutions": {
+    "pesy-self": "link:./vendor/pesy",
     "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
+    "@reason-native/console": "link:./vendor/reason-native/console.json",
+    "@opam/sexplib0": "link:./vendor/sexplib0/sexplib0.opam",
+    "@opam/result": "link:./vendor/result/result.opam",
+    "@opam/re": "link:./vendor/re/re.opam",
+    "@opam/ppx_derivers": "link:./vendor/ppx_derivers/ppx_derivers.opam",
+    "@opam/parsexp": "link:./vendor/parsexp/parsexp.opam",
+    "@opam/base": "link:./vendor/base/base.opam",
+    "@opam/easy-format": "link:./vendor/easy-format/easy-format.opam",
+    "@opam/merlin-extend": "link:./vendor/merlin-extend",
+    "@opam/menhir": "link:./vendor/menhir/menhir.opam",
+    "@opam/ocaml-migrate-parsetree": "link:./vendor/ocaml-migrate-parsetree/ocaml-migrate-parsetree.opam",
+    "@opam/num": "link:./vendor/num",
+    "@opam/jbuilder": "link:./vendor/jbuilder-transition/opam",
     "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
     "@opam/dune": "link:./vendor/dune/dune.opam",
     "@opam/yojson": "link:./vendor/yojson/yojson.opam",

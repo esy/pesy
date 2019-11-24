@@ -1,0 +1,16 @@
+opam-version: "2.0"
+name: "pesy"
+description: "Esy Pesy - Your Esy Assistant"
+synopsis: "Esy Pesy - Your Esy Assistant"
+version: "0.5.0-alpha.1"
+maintainer: "Jordan Walke<jordojw@gmail.com>"
+authors: [
+  "Jordan Walke<jordojw@gmail.com>"
+  "Manas Jayanth <prometheansacrifice@gmail.com>"
+]
+homepage: "https://github.com/esy/pesy"
+bug-reports: "https://github.com/esy/pesy/issues"
+license: "MIT"
+dev-repo: "git+https://github.com/esy/pesy.git"
+build: []
+depends: []

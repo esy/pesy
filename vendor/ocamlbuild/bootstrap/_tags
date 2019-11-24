@@ -1,0 +1,27 @@
+#########################################################################
+#                                                                       #
+#                                 OCaml                                 #
+#                                                                       #
+#         Nicolas Pouillard, projet Gallium, INRIA Rocquencourt         #
+#                                                                       #
+#   Copyright 2007 Institut National de Recherche en Informatique et    #
+#   en Automatique.  All rights reserved.  This file is distributed     #
+#  under the terms of the GNU Library General Public License, with      #
+#  the special exception on linking described in file ../LICENSE.       #
+#                                                                       #
+#########################################################################
+
+# OCamlbuild tags file
+true: debug
+"src": include
+<**/*.ml> or <**/*.mli>: warn_L, warn_R, warn_Z, annot
+"src/discard_printf.ml": rectypes
+"ocamlbuildlib.cma" or "ocamlbuildlightlib.cma": linkall
+<**/*.byte> or <**/*.native> or <**/*.top>: use_unix
+"ocamlbuildlight.byte": -use_unix, nopervasives
+<**/*.cmx>: for-pack(Ocamlbuild_pack)
+<**/{ocamlbuild_{pack,unix_plugin,plugin,executor},ppcache}{,.p}.cmx>: -for-pack(Ocamlbuild_pack)
+
+# we have several build stages using different build directories,
+# so each build must ignore each other's build dir.
+<_build*>: -traverse

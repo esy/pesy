@@ -1,0 +1,212 @@
+= How to release a new OCamlbuild version =
+
+The steps below describe what needs to be done to release a new
+OCamlbuild version. The process should be simple and fast, so that we
+can release often.
+
+== Preparing the release ==
+
+The steps can be done a few days in advance, and coordinated among
+several people. External contributors can do it, and you can use pull
+requests to get reviews and feedback.
+
+[[synch-opam-files]]
+=== Synchronizing the local and remote opam files ===
+
+One of the last release steps is to <<opam-repo,update the public opam
+repository>>, and this will require an 'opam' file describing the
+installation-related metadata. There are two sources of inspiration
+for these opam files:
+
+- there is a local 'opam' file at the root of the ocamlbuild
+  repository, that is used for pinning the development version.
+
+- there are the 'opam' files for previous OCamlbuild releases in the
+  public opam repository:
+  https://github.com/ocaml/opam-repository/tree/master/packages/ocamlbuild/
+
+In theory the two should be in synch: the 'opam' file we send to the
+public opam repository is derived from the local 'opam' file. However,
+upstream opam repository curators may have made changes to the public
+opam files, to reflect new packaging best practices and policies. You
+should check for any change to the latest version's 'opam' file; if
+there is any, it should probably be reproduced into our local 'opam'
+file.
+
+Note that the local file may have changed during the release lifetime
+to reflect new dependencies or changes in packaging policies. These
+changes should be preserved.
+
+You can use +opam lint+ in the package repository to check that the
+current opam file satisfies best practices.
+
+=== Changes and annoucement ===
+
+The 'Changes' file at the root of our repository serves as a user- and
+contributors-facing memory of the project evolution. The section
+concerning the current development version is marked NEXT_RELEASE.
+
+==== Changes entries ====
+
+Check the detailed changelog to make sure that no important feature is
+missing, that compatibility-breaking changes are probably marked,
+and that existing change entries are descriptive enough.
+
+Changes entries should:
+
+- Describe the change in a way that end-users can understand
+
+- Explicitly say whether it breaks compatibility, and in particular use
+  "* " as an entry bullet point in this case.
+
+- Link to the relevant online discussions of the change by giving PR
+  or issue numbers when relevant.
+
+- Credit the contributors involved in this change. The name of the
+  people that wrote the patch should be included, as well as other
+  contributors having made significant non-coding contributions (code
+  review, testing, etc.).
+
+[[change-summary]]
+==== Release change summary ====
+
+Write a full-text summary of the changes in the release, less detailed
+than the full change entries. This text should be a between one
+sentence and a couple paragraphs long, and will be included in the
+Github description of the release and email announcements.
+
+The release change summary should go in the section of the release,
+above the list of change entries.
+
+=== Picking a version number ===
+
+Choose the next version number. You should try to respect
+http://semver.org/[Semantic Versioning] whenever possible: point
+releases should have bugfixes and tweaks only, and minor releases
+should not break backward compatibility.
+
+=== Update sources with new version number ===
+
+During development we use +NEXT_RELEASE+ as a placeholder for the next
+release number, so any occurence of +NEXT_RELEASE+ in the development
+repository should be replaced by this version number. There is at
+least one such occurence in the 'Changes' file.
+
+Furthermore, the version coded is hardcoded in some parts of the
+codebase and needs to be updated:
+
+- the 'VERSION' file contains the current version number, with no
+  ending newline
+
+- the 'META' file contains the current version number to inform ocamlfind
+
+You can use +git grep+ to look for all occurrences of +NEXT_RELEASE+
+and a given version number, from the root of the repository:
+
+----
+git grep NEXT_RELEASE
+git grep -F "0.9"
+----
+
+== Doing the release ==
+
+These steps should be performed by someone with push access to the
+central git repository.
+
+=== Marking the release day in Changes ===
+
+Mark the current release day in the Changes file.
+
+=== Performing the release through github ===
+
+Github's interface allows to create a release tag and publish
+a release. From the https://github.com/ocaml/ocamlbuild[github project
+page] you can go to the
+https://github.com/ocaml/ocamlbuild/releases[release tab] which lists
+the current tags and has
+a https://github.com/ocaml/ocamlbuild/releases/new[draft a new
+release] button. Clicking this button (or the latter link in the
+previous sentence) will let you pick a tag name, release title, and
+description.
+
+The tag name should be just the release version number. See +git
+tag --list+ to see existing tags from a command-line. The release name
+should be just +Release <version-number>+. The description should be
+the Changes section corresponding to the release (release summary and
+detailed list of entries).
+
+==== Releasing from the command-line instead ====
+
+If you prefer, you can also perform the same steps using the
+command-line:
+
+----
+git tag <VERSION> -a
+----
+
+This command should start an editor to ask for a tag message. You can
+use the <<change-summary,release change summary>> as the tag message.
+
+==== Post-release changes ====
+
+Create an empty Changes section for the next release,
+
+```
+NEXT_RELEASE:
+-------------
+```
+
+Also put NEXT_RELEASE in your VERSION and META file. This will prevent
+you from forgetting to update them at the next release time.
+
+== Making the release visible to our users ==
+
+=== push it upstream ===
+----
+git push
+git push --tags
+----
+
+
+[[opam-repo]]
+=== opam-repository update ===
+
+You should create a new opam package for the new version. For this,
+clone the opam-repository
+https://github.com/ocaml/opam-repository/[upstream repository], go to
+https://github.com/ocaml/opam-repository/tree/master/packages/ocamlbuild/['packages/ocamlbuild']
+and create a new repository 'ocamlbuild.<VERSION>'; you need three
+files in this repository:
+
+- 'descr', a full-text description of the package: just copy the
+  previous version's file.
+
+- 'url', which tells opam how to download an archive; you can copy the
+  previous version's file, and you need to update the two fields. It
+  looks like this:
++
+----
+archive: "https://github.com/ocaml/ocamlbuild/archive/0.9.0.tar.gz"
+checksum: "71c813d51bed39e73937dd4751d593c6"
+----
++
+The +archive+ is the file built by github at
++https://github.com/ocaml/ocamlbuild/archive/<tag-name>.tar.gz+. To
+compute the checksum, fetch this file and compute its md5 sum; your
+system may have a +md5sum+ command to do this.
+
+- 'opam': this should be just a copy of the 'opam' file at the root of
+  the ocamlbuild repository -- which should have been
+  <<synch-opam-files,kept in synch>> with upstream packaging
+  changes -- with the +version+ field changed from +"dev"+ to the
+  current version number.
+
+=== announcing the release ===
+
+You can send an email to the caml-list. The tradition is to use the subject
+
+  [ANN] OCamlbuild <version number>
+
+The mail could be just the release change summary and the detailed
+list of change entries. Feel free to add other content according to
+your personal preference.
