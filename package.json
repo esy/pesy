@@ -63,9 +63,11 @@
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
-    "@reason-native/pastel": "*"
+    "@reason-native/pastel": "*",
+    "ocaml": "4.4.2004 - 4.8"
   },
   "devDependencies": {
+    "ocaml": "4.6.10 - 4.8",
     "pesy-self": "*",
     "refmterr": "*",
     "@opam/merlin": "*"
@@ -89,7 +91,6 @@
     "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
     "@opam/dune": "link:./vendor/dune/dune.opam",
     "@opam/yojson": "link:./vendor/yojson/yojson.opam",
-    "@reason-native/pastel": "link:./vendor/reason-native/pastel.json",
-    "ocaml": "4.7.1004"
+    "@reason-native/pastel": "link:./vendor/reason-native/pastel.json"
   }
 }
