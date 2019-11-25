@@ -1,9 +1,0 @@
-ocamlbuild_pack.cmo
-ocamlbuild_pack.cmx
-ocamlbuildlightlib.cma
-ocamlbuildlib.cma
-ocamlbuild.top
-ocamlbuild.docdir/index.html
-src/ocamlbuildlight.byte
-src/ocamlbuild.byte
-src/ocamlbuild.native
