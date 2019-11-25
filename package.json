@@ -64,9 +64,10 @@
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
     "@reason-native/pastel": "*",
-    "ocaml": "4.7.x"
+    "ocaml": "4.6.10 - 4.8"
   },
   "devDependencies": {
+    "ocaml": "4.6.10 - 4.8",
     "pesy-self": "*",
     "refmterr": "*",
     "@opam/merlin": "*"
@@ -85,12 +86,10 @@
     "@opam/merlin-extend": "link:./vendor/merlin-extend",
     "@opam/menhir": "link:./vendor/menhir/menhir.opam",
     "@opam/ocaml-migrate-parsetree": "link:./vendor/ocaml-migrate-parsetree/ocaml-migrate-parsetree.opam",
-    "@opam/num": "link:./vendor/num",
     "@opam/jbuilder": "link:./vendor/jbuilder-transition/opam",
     "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
     "@opam/dune": "link:./vendor/dune/dune.opam",
     "@opam/yojson": "link:./vendor/yojson/yojson.opam",
-    "@reason-native/pastel": "link:./vendor/reason-native/pastel.json",
-    "ocaml": "4.7.1004"
+    "@reason-native/pastel": "link:./vendor/reason-native/pastel.json"
   }
 }

@@ -667,6 +667,10 @@ the e2e scripts.
     generated config.
 - Support new properties `modes` for binaries and libraries `list(string)`.
 
+### Compiler Support
+
+Please refer [this document](./notes/compiler-support.org)
+    
 ### Checksum verification
 
 As we create the build artifacts to publish to NPM, we also generate the SHA1 hash
