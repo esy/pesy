@@ -669,7 +669,7 @@ the e2e scripts.
 
 ### Compiler Support
 
-    Please refer [this document](./notes/compiler-support.org)
+Please refer [this document](./notes/compiler-support.org)
     
 ### Checksum verification
 
