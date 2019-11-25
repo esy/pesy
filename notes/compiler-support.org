@@ -1,0 +1,70 @@
+* Compiler support
+
+  This is an attempt to document compiler support pesy provides.
+  
+** Terminologies
+
+   As defined in [[https://esy.sh/docs/en/environment.html][Esy's documentation]]
+
+   - Regular dependencies
+
+    #+begin_quote
+    Regular dependencies are dependencies which are needed at
+    runtime. They are listed in "dependencies" key of the
+    package.json. 
+    #+end_quote 
+    
+   - Development dependencies
+    #+begin_quote
+    are dependencies which are needed only during development. They
+    are listed in "devDependencies" key of the package.json. Examples:
+    @opam/merlin, @opam/ocamlformat and so on.
+    #+end_quote
+
+** Regular dependencies must be atleast 4.4.2004 because of ocamlbuild and base
+   
+    Base becase (and @pesy/esy-pesy -> @opam/sexplib -> @opam/parsexp -> @opam/base -> ocaml@>=4.4.2)
+   
+**  4.4 cannot be supported - possibly because of a solver bug in esy
+
+    #+begin_example
+        [ERROR] It appears that the num library was previously installed to your system
+                compiler's lib directory, probably by a faulty opam package.
+                You will need to remove arith_flags.*, arith_status.*, big_int.*,
+                int_misc.*, nat.*, num.*, ratio.*, nums.*, libnums.* and
+                stublibs/dllnums.* from /Users/manas/.esy/3___________________________________________________________________/i/ocaml-4.4.2004-52c21c80/lib/ocaml.
+        make: *** [findlib-install] Error 1
+        error: command failed: 'make' 'LIBDIR=/Users/manas/.esy/3___________________________________________________________________/s/opam__s__num-opam__c__1.3-c60c3f0c/lib' 'findlib-install' (exited with 2)
+        esy-build-package: exiting with errors above...
+    #+end_example
+    esy seeems to fetch num1.3 for compiler 4.4 when it's supposed to
+    fetch num.0. Reported [[https://github.com/esy/esy/issues/1013][here]]
+
+**  Development dependencies must be altleast is 4.6 because of refmterr 
+
+    It uses string_of_bool_opt available post 4.05 only
+
+**  When dependencies: "ocaml": "4.4.2004 - 4.8" and devDependencies: "ocaml": "4.6.10 - 4.8"
+   
+    #+begin_example
+    Conflicting constraints:
+        @pesy/esy-pesy -> @reason-native/pastel -> @opam/re -> @opam/seq -> 
+        ocaml@<4.7.0
+        @pesy/esy-pesy -> ocaml@=4.8.1000
+    #+end_example 
+    ie if consuming packages want to use ocaml > 4.7, latest seq
+    package (which is basically empty since the compiler supports
+    natively) must be used. If consuming package is < 4.7, c-cube
+    fallback package must be used. Esy's resolutions field cannot be
+    used to vendor seq package - resolutions package can only be
+    used to pin one package at a time.
+
+** 4.9 support
+
+    #+begin_example
+        Conflicting constraints:
+        @pesy/esy-pesy -> @opam/sexplib -> @opam/parsexp -> @opam/base -> ocaml@>=4.4.2 && ocaml@<4.9.0
+        @pesy/esy-pesy -> ocaml@=4.9.0
+    #+end_example
+    Upgrading base requires latest dune. So 4.9 needs newer
+    dune. TODO
