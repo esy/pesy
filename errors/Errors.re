@@ -1,5 +1,3 @@
-type fileOperation;
-
 type validationError =
   | StaleDuneFile(string)
   | StaleOpamFile((string, string));
@@ -13,7 +11,3 @@ exception ResolveRelativePathFailure(string);
 exception InvalidBinProperty(string);
 exception BuildValidationFailures(list(validationError));
 exception ImportsParserFailure(unit);
-
-let gen: (string, string) => list(fileOperation);
-let log: list(fileOperation) => unit;
-let validateDuneFiles: (string, string) => string;

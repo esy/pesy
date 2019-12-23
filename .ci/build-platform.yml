@@ -28,6 +28,8 @@ jobs:
         displayName: "esy build"
       - script: "esy npm-release"
         displayName: "esy npm-release"
+      - script: "esy test"
+        displayName: "Running unit tests"
       - ${{ if eq(parameters.platform, 'Windows') }}:
           - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
             displayName: 'Creating temporary workspace for tests'

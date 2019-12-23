@@ -25,6 +25,7 @@
         "pesy": "Pesy.re"
       },
       "require": [
+        "pesy--esy-pesy/errors",
         "pesy--esy-pesy/lib",
         "pesy--esy-pesy/utils",
         "cmdliner",
@@ -37,24 +38,37 @@
         "str",
         "sexplib",
         "findlib",
-        "pesy--esy-pesy/utils"
+        "rely/lib",
+        "pesy--esy-pesy/utils",
+        "pesy--esy-pesy/errors"
       ],
       "rawBuildConfigFooter": [
         "(rule (targets Lexer.ml) (deps Lexer.mll) (action (run %{bin:ocamllex} -q -o %{targets} %{deps})))",
         "(rule (targets Parser.ml Parser.mli) (deps Parser.mly) (action (run %{bin:ocamlyacc} %{deps})))"
       ]
     },
+    "unit-tests/runner": {
+      "require": [
+        "pesy--esy-pesy/lib",
+        "pesy--esy-pesy/utils"
+      ],
+      "bin": {
+        "RunUnitTests.exe": "RunUnitTests.re"
+      }
+    },
+    "errors": {},
     "utils": {
       "require": [
         "unix",
         "yojson",
         "str",
-        "pastel/lib"
+        "pastel/lib",
+        "rely/lib"
       ]
     }
   },
   "scripts": {
-    "test": "esy dune runtest"
+    "test": "esy x RunUnitTests.exe"
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
@@ -64,6 +78,7 @@
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
     "@reason-native/pastel": "*",
+    "@reason-native/rely": "*",
     "ocaml": "4.6.10 - 4.8"
   },
   "devDependencies": {
@@ -90,6 +105,7 @@
     "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
     "@opam/dune": "link:./vendor/dune/dune.opam",
     "@opam/yojson": "link:./vendor/yojson/yojson.opam",
+    "@reason-native/rely": "link:./vendor/reason-native/rely.json",
     "@reason-native/pastel": "link:./vendor/reason-native/pastel.json"
   }
 }

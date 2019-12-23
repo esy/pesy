@@ -1,4 +1,8 @@
-(library (name Lib) (public_name pesy--esy-pesy.lib)
-    (libraries str sexplib findlib pesy--esy-pesy.utils)) (rule (targets Lexer.ml) (deps Lexer.mll)
-    (action (run %{bin:ocamllex} -q -o %{targets} %{deps}))) (rule (targets Parser.ml Parser.mli) (deps Parser.mly)
-    (action (run %{bin:ocamlyacc} %{deps}))) 
+(library (name PesyEsyPesyLib) (public_name pesy--esy-pesy.lib)
+    (modules (:standard))
+    (libraries str sexplib findlib rely.lib pesy--esy-pesy.utils
+        pesy--esy-pesy.errors))
+(rule (targets Lexer.ml) (deps Lexer.mll)
+    (action (run %{bin:ocamllex} -q -o %{targets} %{deps})))
+(rule (targets Parser.ml Parser.mli) (deps Parser.mly)
+    (action (run %{bin:ocamlyacc} %{deps})))
