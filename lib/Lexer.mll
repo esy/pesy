@@ -10,7 +10,7 @@ rule read = parse
 | ['=']      { ASSN }
 | "require"  { REQUIRE }
 | ['\'']      { SQUOTE }
-| ['A' - 'Z' ] [ 'A' - 'Z' 'a' - 'z' '_'] * as lxm { MODULE_NAME(lxm)  }
-| ['@'] ? ['a'-'z' '.' '/' '-' '0'-'9' '_'] + as lxm { MODULE_PATH(lxm)  }
+| ['A' - 'Z' ] [ 'A' - 'Z' 'a' - 'z' '_' '\'' '0'-'9'] * as lxm { MODULE_NAME(lxm)  }
+| ['@'] ? ['A'-'Z' 'a'-'z' '.' '/' '-' '0'-'9' '_'] + as lxm { MODULE_PATH(lxm)  }
 | ['\n']     {EOL}
 | eof      {EOF}
