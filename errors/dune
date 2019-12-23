@@ -1,0 +1,2 @@
+(library (name PesyEsyPesyErrors) (public_name pesy--esy-pesy.errors)
+    (modules (:standard)))

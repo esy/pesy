@@ -1,3 +1,4 @@
+module Utils = PesyEsyPesyUtils.Utils;
 open Sexplib.Sexp;
 open Printf;
 exception InvalidDuneFile(unit);

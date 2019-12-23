@@ -1,2 +1,3 @@
-(executable (name Pesy) (public_name pesy)
-    (libraries pesy--esy-pesy.lib pesy--esy-pesy.utils cmdliner str findlib)) 
+(executable (name Pesy) (modules (:standard)) (public_name pesy)
+    (libraries pesy--esy-pesy.errors pesy--esy-pesy.lib pesy--esy-pesy.utils
+        cmdliner str findlib))

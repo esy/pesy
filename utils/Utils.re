@@ -298,15 +298,5 @@ let filterNone = l => {
   List.rev(result^);
 };
 
-/* let%expect_test _ = { */
-/*   List.iter( */
-/*     print_int, */
-/*     filterNone([Some(1), None, None, Some(2), None, Some(3)]), */
-/*   ); */
-/*   %expect */
-/*   {| */
-     /*      123 */
-     /*    |}; */
-/* }; */
 module JSON = JSON;
 module FieldTypes = FieldTypes;
