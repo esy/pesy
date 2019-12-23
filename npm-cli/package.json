@@ -46,6 +46,7 @@
   "devDependencies": {
     "bs-node": "github:reasonml-community/bs-node",
     "bs-platform": "^5.0.4",
+    "@elliottcable/bs-cmdliner": "^10.2.1",
     "rollup": "^1.16.2",
     "rollup-plugin-commonjs": "^10.0.0",
     "rollup-plugin-node-resolve": "^5.0.4",
@@ -56,7 +57,6 @@
   },
   "homepage": "https://github.com/esy/pesy#readme",
   "dependencies": {
-    "@elliottcable/bs-cmdliner": "^10.2.1",
     "download-git-repo": "^2.0.0",
     "walk-sync": "^2.0.2"
   }
