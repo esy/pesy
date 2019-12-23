@@ -130,6 +130,9 @@ let resolveRelativePath = path => {
 let moduleNameOf = fileName =>
   Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
 
+let specialCaseOpamRequires = package =>
+  Str.global_replace(Str.regexp("^@opam"), "", package);
+
 /* let%expect_test _ = { */
 /*   print_endline(moduleNameOf("Foo.re")); */
 /*   %expect */
@@ -327,7 +330,12 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                    x =>
                      x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x
                  )
-                 <|> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x)
+                 <|> (
+                   x =>
+                     x.[0] == '@'
+                       ? x |> specialCaseOpamRequires |> doubleKebabifyIfScoped
+                       : x
+                 )
                  <|> resolveRelativePath
                  <|> pathToOCamlLibName,
                )
@@ -375,7 +383,14 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                        }
                      )
                      |> resolveRelativePath
-                     |> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x);
+                     |> (
+                       x =>
+                         x.[0] == '@'
+                           ? x
+                             |> specialCaseOpamRequires
+                             |> doubleKebabifyIfScoped
+                           : x
+                     );
 
                    let exportedNamespace =
                      if (findIndex(libraryAsPath, rootName) == 0) {
@@ -698,7 +713,14 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
                          x.[0] == '.'
                            ? sprintf("%s/%s/%s", rootName, dir, x) : x
                      )
-                     <|> (x => x.[0] == '@' ? doubleKebabifyIfScoped(x) : x)
+                     <|> (
+                       x =>
+                         x.[0] == '@'
+                           ? x
+                             |> specialCaseOpamRequires
+                             |> doubleKebabifyIfScoped
+                           : x
+                     )
                      <|> resolveRelativePath
                      <|> pathToOCamlLibName,
                    ),
