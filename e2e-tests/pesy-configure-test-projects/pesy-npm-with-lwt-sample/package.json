@@ -21,7 +21,7 @@
     "executable": {
       "imports": [
         "Library = require('test-project/library')",
-        "Lwt = require('lwt')",
+        "Lwt = require('@opam/lwt')",
         "Lwt_unix = require('lwt/unix')"
       ],
       "bin": {
