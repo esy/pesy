@@ -24,10 +24,7 @@ let reconcile = projectRoot => {
 
   print_endline(
     Pastel.(
-      <Pastel>
-        "Ready for "
-        <Pastel color=Green> "esy build" </Pastel>
-      </Pastel>
+      <Pastel> "Ready for " <Pastel color=Green> "esy" </Pastel> </Pastel>
     ),
   );
 };
