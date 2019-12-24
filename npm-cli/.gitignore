@@ -6,3 +6,4 @@ npm-debug.log
 /node_modules/
 pesy.bundle.js
 pesy-*.tgz
+templates/

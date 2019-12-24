@@ -1,8 +1,8 @@
-open Cmdliner;
-[%raw "process.argv.shift()"];
+Bindings.sourceMapSupportInstall();
 
-open Bindings;
 open Utils;
+open Bindings;
+open Js;
 
 let projectPath = cwd();
 let packageNameKebab = kebab(basename(projectPath));
@@ -45,100 +45,6 @@ let substituteFileNames = s =>
 let isDirectoryEmpty = path =>
   Belt.Array.length(Node.Fs.readdirSync(path)) == 0;
 
-let downloadTemplate = template => {
-  let spinner =
-    Spinner.start("\x1b[2mDownloading template\x1b[0m " ++ template);
-  download_git(
-    template,
-    projectPath,
-    error => {
-      Spinner.stop(spinner);
-      switch (error) {
-      | Some(e) => Js.log(e)
-      | None =>
-        let setup_files_spinner =
-          Spinner.start("\x1b[2mSetting up template\x1b[0m " ++ template);
-
-        try({
-          let files =
-            walk_sync(projectPath)
-            ->Belt.Array.keep(file_or_dir => statSync(file_or_dir)->isFile);
-
-          Belt.Array.forEach(
-            files,
-            file => {
-              let () =
-                readFile(file)->substituteTemplateValues |> write(file);
-
-              renameSync(
-                file,
-                file |> substituteFileNames |> stripTemplateExtension,
-              );
-            },
-          );
-          Spinner.stop(setup_files_spinner);
-        }) {
-        | Js.Exn.Error(e) =>
-          Spinner.stop(setup_files_spinner);
-          switch (Js.Exn.stack(e)) {
-          | Some(trace) =>
-            Js.log({j|\x1b[31mPesy encountered an error\x1b[0m|j});
-            Js.log(trace);
-          | None =>
-            Js.log(
-              {j|\x1b[31mPesy encountered an unknown error as it was trying to setup templates\x1b[0m|j},
-            )
-          };
-          exit(-1);
-        };
-
-        let id = Spinner.start("\x1b[2mRunning\x1b[0m esy install");
-        exec("esy i", (e, stdout, stderr) => {
-          Spinner.stop(id);
-          if (Js.eqNullable(e, Js.Nullable.null)) {
-            let id =
-              Spinner.start(
-                "\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0m building project dependencies",
-              );
-            exec("esy pesy", (e, stdout, stderr) => {
-              Spinner.stop(id);
-              if (Js.eqNullable(e, Js.Nullable.null)) {
-                let id = Spinner.start("\x1b[2mRunning\x1b[0m esy build");
-                exec("esy build", (e, stdout, stderr) => {
-                  Spinner.stop(id);
-                  if (Js.eqNullable(e, Js.Nullable.null)) {
-                    Printf.printf(
-                      "You may now run \x1b[32m'esy test'\x1b[0m\n",
-                    );
-                  } else {
-                    Printf.printf(
-                      "'esy build' \x1b[31mfailed.\x1b[0m Could not build project.\nLogs can be found in pesy.stdout.log and pesy.stderr.log\n",
-                    );
-                    write("pesy.stdout.log", stdout);
-                    write("pesy.stderr.log", stderr);
-                  };
-                });
-              } else {
-                Printf.printf(
-                  "'esy pesy' \x1b[31mfailed.\x1b[0m Dune files could not be created.\n Logs can be found in pesy.stdout.log and pesy.stderr.log\n",
-                );
-                write("pesy.stdout.log", stdout);
-                write("pesy.stderr.log", stderr);
-              };
-            });
-          } else {
-            Printf.printf(
-              "'esy install' \x1b[31mfailed.\x1b[0m Dependencies could not be installed.\nLogs can be found in pesy.stdout.log and pesy.stderr.log\n",
-            );
-            write("pesy.stdout.log", stdout);
-            write("pesy.stderr.log", stderr);
-          };
-        });
-      };
-    },
-  );
-};
-
 let rec askYesNoQuestion =
         (~rl: Readline.rlType, ~question, ~onYes, ~onNo=() => (), ()) => {
   rl##question(
@@ -160,9 +66,161 @@ let rec askYesNoQuestion =
   );
 };
 
-let main = (template, useDefaultOptions) =>
+let rec forEachDirEnt = (dir, f) => {
+  Js.Promise.(
+    Fs.Dir.read(dir)
+    |> then_(dirEnt =>
+         switch (Js.Nullable.toOption(dirEnt)) {
+         | Some(dirEnt) => f(dirEnt) |> then_(() => forEachDirEnt(dir, f))
+         | None => Fs.Dir.close(dir)
+         }
+       )
+  );
+};
+
+let rec scanDir = (dir, f) => {
+  Promise.(
+    Fs.opendir(dir)
+    |> then_(dir =>
+         forEachDirEnt(
+           dir,
+           entry => {
+             let entryPath = Path.join([|dir##path, entry##name|]);
+             f(entryPath)
+             |> then_(() =>
+                  if (Fs.DirEnt.isDirectory(entry)) {
+                    scanDir(entryPath, f);
+                  } else {
+                    resolve();
+                  }
+                );
+           },
+         )
+       )
+  );
+};
+
+let copyBundledTemplate = () => {
+  let templatesDir =
+    Path.resolve([|
+      Path.dirname(scriptPath),
+      "..",
+      "lib",
+      "node_modules",
+      "pesy",
+      "templates",
+      "pesy-reason-template-0.1.0-alpha.1",
+    |]);
+
+  Promise.(
+    scanDir(
+      templatesDir,
+      src => {
+        let dest = Js.String.replace(templatesDir, Process.cwd(), src);
+        Fs.isDirectory(src)
+        |> then_(isDir =>
+             if (isDir) {
+               Fs.mkdir(~dryRun=false, ~p=true, dest);
+             } else {
+               Fs.copy(~src, ~dest, ~dryRun=false, ());
+             }
+           );
+      },
+    )
+  );
+};
+
+/* Belt seems unnecessary */
+let bootstrap = projectPath =>
+  fun
+  | Some(template) => downloadGit(template, projectPath)
+  | None => copyBundledTemplate();
+
+let subst = file => {
+  Promise.(
+    Fs.(
+      readFile(. file)
+      |> then_(b =>
+           Buffer.toString(b)
+           |> substituteTemplateValues
+           |> Buffer.from
+           |> resolve
+         )
+      |> then_(s => writeFile(. file, s))
+      |> then_(() =>
+           renameSync(
+             file,
+             file |> substituteFileNames |> stripTemplateExtension,
+           )
+           |> resolve
+         )
+    )
+  );
+};
+
+let substitute = projectPath => {
+  walk_sync(projectPath)
+  |> Array.filter(file_or_dir => statSync(file_or_dir)->isFile)
+  |> Array.map(subst)
+  |> Promise.all;
+};
+
+let spinnerEnabledPromise = (spinnerMessage, promiseThunk) => {
+  let spinner = Spinner.start(spinnerMessage);
+  Promise.(
+    promiseThunk()
+    |> then_(x => {
+         Spinner.stop(spinner);
+         resolve(x);
+       })
+    |> catch(e => {
+         Spinner.stop(spinner);
+         throwJSError(e);
+       })
+  );
+};
+
+let setup = (template, projectPath) =>
+  Promise.(
+    bootstrap(projectPath, template)
+    |> then_(() =>
+         spinnerEnabledPromise("\x1b[2mSetting up\x1b[0m ", () =>
+           substitute(projectPath)
+         )
+       )
+    |> then_(_arrayOfCompletions =>
+         spinnerEnabledPromise("\x1b[2mRunning\x1b[0m esy install", () =>
+           ChildProcess.exec(
+             "esy i",
+             ChildProcess.Options.make(~cwd=projectPath, ()),
+           )
+         )
+       )
+    |> then_(_ /* (_stdout, _stderr) */ => {
+         spinnerEnabledPromise(
+           "\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0m building project dependencies",
+           () =>
+           ChildProcess.exec(
+             "esy pesy",
+             ChildProcess.Options.make(~cwd=projectPath, ()),
+           )
+         )
+       })
+    |> then_(_ /* (_stdout, _stderr) */ => {
+         spinnerEnabledPromise("\x1b[2mRunning\x1b[0m esy build", () =>
+           ChildProcess.exec(
+             "esy b",
+             ChildProcess.Options.make(~cwd=projectPath, ()),
+           )
+         )
+       })
+    |> then_(_ /* (_stdout, _stderr) */ => {resolve()})
+    |> catch(handlePromiseRejectInJS)
+  );
+
+let main' = (template, useDefaultOptions) =>
   if (isDirectoryEmpty(projectPath) || useDefaultOptions) {
-    downloadTemplate(template);
+    ignore @@ setup(template, projectPath);
   } else {
     let rl =
       Readline.createInterface({
@@ -172,35 +230,56 @@ let main = (template, useDefaultOptions) =>
     askYesNoQuestion(
       ~rl,
       ~question="Current directory is not empty. Are you sure to continue?",
-      ~onYes=() => downloadTemplate(template),
+      ~onYes=() => ignore @@ setup(template, projectPath),
       (),
     );
   };
 
-let version = "0.5.0-alpha.10";
+let main = (template, useDefaultOptions) =>
+  try(main'(template, useDefaultOptions)) {
+  | Js.Exn.Error(e) =>
+    switch (Js.Exn.message(e)) {
+    | Some(message) => Js.log({j|Error: $message|j})
+    | None => Js.log("An unknown error occurred")
+    }
+  };
 
-let template = {
-  let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
-  Arg.(
-    value
-    & opt(string, "github:esy/pesy-reason-template#86b37d16dcfe15")
-    & info(["t", "template"], ~docv="TEMPLATE_URL", ~doc)
-  );
+module CliOptions = {
+  module Template = {
+    let short = "-t";
+    let long = "--template";
+    let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
+    let v = ref(None);
+    let anonFun = Arg.String(template => v := Some(template));
+  };
+  module DefaultOptions = {
+    let short = "-y";
+    let long = "--yes";
+    let doc = "Use default options";
+    let v = ref(false);
+    let anonFun = Arg.Set(v);
+  };
+  module Version = {
+    let short = "-v";
+    let long = "--version";
+    let doc = "Prints version and exits";
+    let v = "0.5.0-alpha.10";
+    let anonFun = Arg.Unit(() => print_endline(v));
+  };
 };
 
-let useDefaultOptions = {
-  let doc = "Use default options";
-  Arg.(value & flag & info(["y", "yes"], ~doc));
-};
+open CliOptions;
+let specList = [
+  Template.(long, anonFun, doc),
+  Template.(short, anonFun, doc),
+  DefaultOptions.(long, anonFun, doc),
+  DefaultOptions.(short, anonFun, doc),
+  Version.(short, anonFun, doc),
+  Version.(long, anonFun, doc),
+];
 
-let cmd = {
-  open Cmdliner.Term;
-  let cmd = "pesy";
-  let envs: list(env_info) = [];
-  let exits: list(exit_info) = [];
-  let doc = "Your Esy Assistant.";
-  let cmdT = Term.(const(main) $ template $ useDefaultOptions);
-  (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
-};
+let usageMsg = "$ pesy [-t|--template <url>] [-y]";
 
-Term.eval(cmd);
+Arg.parse(specList, _ => (), usageMsg);
+
+main(Template.v^, DefaultOptions.v^);
