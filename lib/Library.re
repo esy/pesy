@@ -152,7 +152,6 @@ let toDuneStanza = (common, lib) => {
     ocamloptFlags,
     jsooFlags,
     preprocess,
-    includeSubdirs,
   ];
 
   let rawBuildConfig =
@@ -177,6 +176,12 @@ let toDuneStanza = (common, lib) => {
     )
     @ (
       switch (pesyModulesAliasModuleGen) {
+      | Some(s) => [s]
+      | None => []
+      }
+    )
+    @ (
+      switch (includeSubdirs) {
       | Some(s) => [s]
       | None => []
       }

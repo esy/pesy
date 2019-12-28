@@ -363,7 +363,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (include_subdirs unqualified))\n",
+      "(library (name Foo) (public_name bar.lib) (modules (:standard)))\n(include_subdirs unqualified)\n",
     ])
   );
   test("Sample config - 12", ({expect}) =>
@@ -387,7 +387,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (include_subdirs unqualified))\n",
+      "(library (name Foo) (public_name bar.lib) (modules (:standard)))\n(include_subdirs unqualified)\n",
     ])
   );
   test("Sample config - 14", ({expect}) =>
