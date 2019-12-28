@@ -5,6 +5,6 @@ let writeFile = promisify(fs.writeFile);
 let mkdir = promisify(fs.mkdir);
 let exists = promisify(fs.exists);
 let stat = promisify(fs.stat);
-let opendir = promisify(fs.opendir);
+let readdir = promisify(fs.readdir);
 
-module.exports = { readFile, writeFile, mkdir, exists, opendir, stat };
+module.exports = { readFile, writeFile, mkdir, exists, readdir, stat };

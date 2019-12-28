@@ -87,23 +87,23 @@ function askYesNoQuestion(rl, question, onYes, $staropt$star, param) {
 }
 
 function forEachDirEnt(dir, f) {
-  return dir.read().then(function(dirEnt) {
-    if (dirEnt == null) {
-      return dir.close();
-    } else {
-      return Curry._1(f, dirEnt).then(function(param) {
-        return forEachDirEnt(dir, f);
-      });
-    }
-  });
+  return Bindings$PesyBootstrapper.Fs.readdir(dir)
+    .then(function(files) {
+      return Promise.all(files.map(Curry.__1(f)));
+    })
+    .then(function(param) {
+      return Promise.resolve(/* () */ 0);
+    });
 }
 
 function scanDir(dir, f) {
-  return Bindings$PesyBootstrapper.Fs.opendir(dir).then(function(dir) {
-    return forEachDirEnt(dir, function(entry) {
-      var entryPath = Path.join(dir.path, entry.name);
-      return Curry._1(f, entryPath).then(function(param) {
-        if (entry.isDirectory()) {
+  return forEachDirEnt(dir, function(entry) {
+    var entryPath = Path.join(dir, entry);
+    return Curry._1(f, entryPath).then(function(param) {
+      return Bindings$PesyBootstrapper.Fs.isDirectory(entryPath).then(function(
+        isDir
+      ) {
+        if (isDir) {
           return scanDir(entryPath, f);
         } else {
           return Promise.resolve(/* () */ 0);

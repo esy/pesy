@@ -111,6 +111,8 @@ module Fs = {
 
   [@bs.module "../stubs/fs"]
   external opendir: string => Js.Promise.t(Dir.t) = "opendir";
+  [@bs.module "../stubs/fs"]
+  external readdir: string => Js.Promise.t(Js.Array.t(string)) = "readdir";
 
   module Stats = {
     type t;

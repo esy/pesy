@@ -86,6 +86,10 @@ function opendir(prim) {
   return Fs.opendir(prim);
 }
 
+function readdir(prim) {
+  return Fs.readdir(prim);
+}
+
 var Stats = {};
 
 function stat(prim) {
@@ -145,6 +149,7 @@ var Fs$1 = {
   DirEnt: DirEnt,
   Dir: Dir,
   opendir: opendir,
+  readdir: readdir,
   Stats: Stats,
   stat: stat,
   isDirectory: isDirectory,

@@ -68,35 +68,31 @@ let rec askYesNoQuestion =
 
 let rec forEachDirEnt = (dir, f) => {
   Js.Promise.(
-    Fs.Dir.read(dir)
-    |> then_(dirEnt =>
-         switch (Js.Nullable.toOption(dirEnt)) {
-         | Some(dirEnt) => f(dirEnt) |> then_(() => forEachDirEnt(dir, f))
-         | None => Fs.Dir.close(dir)
-         }
-       )
+    Fs.readdir(dir)
+    |> then_(files => Promise.all(Array.map(file => f(file), files)))
+    |> then_(_ => resolve())
   );
 };
 
 let rec scanDir = (dir, f) => {
   Promise.(
-    Fs.opendir(dir)
-    |> then_(dir =>
-         forEachDirEnt(
-           dir,
-           entry => {
-             let entryPath = Path.join([|dir##path, entry##name|]);
-             f(entryPath)
-             |> then_(() =>
-                  if (Fs.DirEnt.isDirectory(entry)) {
+    forEachDirEnt(
+      dir,
+      entry => {
+        let entryPath = Path.join([|dir, entry|]);
+        f(entryPath)
+        |> then_(() =>
+             Fs.isDirectory(entryPath)
+             |> then_(isDir =>
+                  if (isDir) {
                     scanDir(entryPath, f);
                   } else {
                     resolve();
                   }
-                );
-           },
-         )
-       )
+                )
+           );
+      },
+    )
   );
 };
 
