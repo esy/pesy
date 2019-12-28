@@ -156,7 +156,6 @@ let toDuneStanza = (common: Common.t, e) => {
     ocamloptFlags,
     jsooFlags,
     preprocess,
-    includeSubdirs,
     pesyModulesLibrary,
   ];
 
@@ -182,6 +181,12 @@ let toDuneStanza = (common: Common.t, e) => {
     )
     @ (
       switch (pesyModulesAliasModuleGen) {
+      | Some(s) => [s]
+      | None => []
+      }
+    )
+    @ (
+      switch (includeSubdirs) {
       | Some(s) => [s]
       | None => []
       }
