@@ -45,7 +45,7 @@ let removeScope = kebab =>
 
 let upperCamelCasify = kebab => {
   let parts = Js.String.split("-", kebab);
-  let k = Js.Array.joinWith("", Array.map(String.uppercase_ascii, parts));
+  let k = Js.Array.joinWith("", Array.map(String.capitalize_ascii, parts));
   if (Caml.String.get(k, 0) == '-') {
     Caml.String.sub(k, 1, String.length(k) - 1);
   } else {
