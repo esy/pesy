@@ -115,11 +115,8 @@ function scanDir(dir, f) {
 
 function copyBundledTemplate(param) {
   var templatesDir = Path.resolve(
-    Path.dirname(Bindings$PesyBootstrapper.scriptPath),
+    __dirname,
     '..',
-    'lib',
-    'node_modules',
-    'pesy',
     'templates',
     'pesy-reason-template-0.1.0-alpha.1'
   );

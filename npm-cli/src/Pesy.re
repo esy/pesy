@@ -99,11 +99,8 @@ let rec scanDir = (dir, f) => {
 let copyBundledTemplate = () => {
   let templatesDir =
     Path.resolve([|
-      Path.dirname(scriptPath),
+      dirname,
       "..",
-      "lib",
-      "node_modules",
-      "pesy",
       "templates",
       "pesy-reason-template-0.1.0-alpha.1",
     |]);
