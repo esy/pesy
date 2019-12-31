@@ -25,10 +25,12 @@
     ]
   },
   "scripts": {
-    "build": "bsb -make-world",
-    "start": "bsb -make-world -w",
-    "clean": "bsb -clean-world",
-    "rollup": "rollup -c rollup.config.js"
+    "bsb": "bsb -make-world",
+    "prettier": "prettier --single-quote --trailing-comma es5 --write src/**.js",
+    "build": "npm run bsb && npm run prettier",
+    "package": "node scripts/vendor-template.js && npm run build",
+    "bsb:watch": "bsb -make-world -w",
+    "bsb:clean": "bsb -clean-world"
   },
   "keywords": [
     "esy",
@@ -39,25 +41,25 @@
   "files": [
     "package.json",
     "pesy",
-    "pesy.bundle.js",
+    "src/",
+    "templates/",
+    "stubs/",
     "v0.4.4/"
   ],
   "license": "MIT",
   "devDependencies": {
-    "bs-node": "github:reasonml-community/bs-node",
-    "bs-platform": "^5.0.4",
-    "@elliottcable/bs-cmdliner": "^10.2.1",
-    "rollup": "^1.16.2",
-    "rollup-plugin-commonjs": "^10.0.0",
-    "rollup-plugin-node-resolve": "^5.0.4",
-    "tablecloth-bucklescript": "0.0.6"
+    "prettier": "^1.19.1"
   },
   "bugs": {
     "url": "https://github.com/esy/pesy/issues"
   },
   "homepage": "https://github.com/esy/pesy#readme",
   "dependencies": {
+    "bs-platform": "^7.0.1",
+    "chalk": "^3.0.0",
     "download-git-repo": "^2.0.0",
+    "source-map-support": "^0.5.16",
+    "tablecloth-bucklescript": "0.0.6",
     "walk-sync": "^2.0.2"
   }
 }

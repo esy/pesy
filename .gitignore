@@ -11,3 +11,4 @@ pesy.install
 *.install
 *~
 scripts/storage
+vendor
