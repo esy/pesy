@@ -9,6 +9,7 @@ var Fs = require('../stubs/fs');
 var Child_process = require('child_process');
 var FsJs = require('../stubs/fs.js');
 var Caml_exceptions = require('bs-platform/lib/js/caml_exceptions.js');
+var DownloadGitRepo = require('download-git-repo');
 var Caml_chrome_debugger = require('bs-platform/lib/js/caml_chrome_debugger.js');
 var Caml_builtin_exceptions = require('bs-platform/lib/js/caml_builtin_exceptions.js');
 var HandlePromiseRejectionInJsJs = require('../stubs/handle-promise-rejection-in-js.js');
@@ -16,6 +17,23 @@ var HandlePromiseRejectionInJsJs = require('../stubs/handle-promise-rejection-in
 var $$Error = {};
 
 var scriptPath = process.argv[1];
+
+function downloadGit(repo, path) {
+  return new Promise(function(resolve, param) {
+    DownloadGitRepo(repo, path, function(err) {
+      if (err == null) {
+        return resolve(
+          /* Ok */ Caml_chrome_debugger.variant('Ok', 0, [/* () */ 0])
+        );
+      } else {
+        return resolve(
+          /* Error */ Caml_chrome_debugger.variant('Error', 1, [err])
+        );
+      }
+    });
+    return /* () */ 0;
+  });
+}
 
 var ExecFailure = Caml_exceptions.create(
   'Bindings-PesyBootstrapper.ChildProcess.ExecFailure'
@@ -172,6 +190,7 @@ var Path = {};
 
 exports.$$Error = $$Error;
 exports.scriptPath = scriptPath;
+exports.downloadGit = downloadGit;
 exports.ChildProcess = ChildProcess;
 exports.Process = Process;
 exports.$$Buffer = $$Buffer$1;

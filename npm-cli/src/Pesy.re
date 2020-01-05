@@ -66,11 +66,11 @@ let rec askYesNoQuestion =
   );
 };
 
-let rec forEachDirEnt = (dir, f) => {
+let forEachDirEnt = (dir, f) => {
   Js.Promise.(
     Fs.readdir(dir)
     |> then_(files => Promise.all(Array.map(file => f(file), files)))
-    |> then_(_ => resolve())
+    |> then_(_ => resolve(Result.Ok()))
   );
 };
 
@@ -81,13 +81,13 @@ let rec scanDir = (dir, f) => {
       entry => {
         let entryPath = Path.join([|dir, entry|]);
         f(entryPath)
-        |> then_(() =>
+        |> then_(_ =>
              Fs.isDirectory(entryPath)
              |> then_(isDir =>
                   if (isDir) {
                     scanDir(entryPath, f);
                   } else {
-                    resolve();
+                    resolve(Result.Ok());
                   }
                 )
            );
@@ -102,7 +102,7 @@ let copyBundledTemplate = () => {
       dirname,
       "..",
       "templates",
-      "pesy-reason-template-0.1.0-alpha.1",
+      "pesy-reason-template-0.1.0-alpha.2",
     |]);
 
   Promise.(
@@ -117,7 +117,8 @@ let copyBundledTemplate = () => {
              } else {
                Fs.copy(~src, ~dest, ~dryRun=false, ());
              }
-           );
+           )
+        |> then_(_ => resolve(Result.Ok()));
       },
     )
   );
@@ -176,7 +177,7 @@ let spinnerEnabledPromise = (spinnerMessage, promiseThunk) => {
 let setup = (template, projectPath) =>
   Promise.(
     bootstrap(projectPath, template)
-    |> then_(() =>
+    |> then_(_ =>
          spinnerEnabledPromise("\x1b[2mSetting up\x1b[0m ", () =>
            substitute(projectPath)
          )
@@ -191,7 +192,7 @@ let setup = (template, projectPath) =>
        )
     |> then_(_ /* (_stdout, _stderr) */ => {
          spinnerEnabledPromise(
-           "\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0m building project dependencies",
+           "\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0mbuilding project dependencies",
            () =>
            ChildProcess.exec(
              "esy pesy",

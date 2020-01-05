@@ -33,7 +33,7 @@ function start(msg) {
                     'String_literal',
                     11,
                     [
-                      '                                                                                    \r',
+                      '                                                                                    \r\r',
                       /* End_of_format */ 0,
                     ]
                   ),
@@ -41,7 +41,7 @@ function start(msg) {
               ]
             ),
           ]),
-          '%s %s                                                                                    \r',
+          '%s %s                                                                                    \r\r',
         ])
       ),
       msg,
@@ -56,10 +56,10 @@ function stop(spinnerIntervalID) {
   Printf.printf(
     /* Format */ Caml_chrome_debugger.simpleVariant('Format', [
       /* String_literal */ Caml_chrome_debugger.variant('String_literal', 11, [
-        '                                                                                       \r',
+        '                                                                                       \r\r',
         /* End_of_format */ 0,
       ]),
-      '                                                                                       \r',
+      '                                                                                       \r\r',
     ])
   );
   var intervalID = spinnerIntervalID;

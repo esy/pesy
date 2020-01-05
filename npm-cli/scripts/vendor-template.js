@@ -5,9 +5,9 @@ const cp = require("child_process");
 const util = require("util");
 
 let url =
-  "https://github.com/esy/pesy-reason-template/archive/0.1.0-alpha.1.zip";
+  "https://github.com/esy/pesy-reason-template/archive/0.1.0-alpha.2.zip";
 let downloadAs = "template.zip";
-let extractedDirName = "pesy-reason-template-0.1.0-alpha.1";
+let extractedDirName = "pesy-reason-template-0.1.0-alpha.2";
 let get = url =>
   new Promise((resolve, reject) => {
     let request = https.get(url, function(response) {
@@ -66,14 +66,17 @@ let main = () => {
         );
         return Promise.resolve(
           cp
-            .execSync("unzip  template.zip", {
+            .execSync("unzip template.zip", {
               cwd: path.resolve(__dirname, "..", templateDir)
             })
             .toString()
         );
       }
     })
-    .catch(console.error);
+    .catch(e => {
+      console.error(e);
+      process.exit(-1);
+    });
 };
 
 main();

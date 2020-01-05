@@ -9,7 +9,6 @@ var Js_exn = require('bs-platform/lib/js/js_exn.js');
 var Process = require('process');
 var Readline = require('readline');
 var WalkSync = require('walk-sync');
-var DownloadGitRepo = require('download-git-repo');
 var Caml_js_exceptions = require('bs-platform/lib/js/caml_js_exceptions.js');
 var SourceMapSupport = require('source-map-support');
 var Caml_chrome_debugger = require('bs-platform/lib/js/caml_chrome_debugger.js');
@@ -92,7 +91,9 @@ function forEachDirEnt(dir, f) {
       return Promise.all(files.map(Curry.__1(f)));
     })
     .then(function(param) {
-      return Promise.resolve(/* () */ 0);
+      return Promise.resolve(
+        /* Ok */ Caml_chrome_debugger.variant('Ok', 0, [/* () */ 0])
+      );
     });
 }
 
@@ -106,7 +107,9 @@ function scanDir(dir, f) {
         if (isDir) {
           return scanDir(entryPath, f);
         } else {
-          return Promise.resolve(/* () */ 0);
+          return Promise.resolve(
+            /* Ok */ Caml_chrome_debugger.variant('Ok', 0, [/* () */ 0])
+          );
         }
       });
     });
@@ -118,23 +121,34 @@ function copyBundledTemplate(param) {
     __dirname,
     '..',
     'templates',
-    'pesy-reason-template-0.1.0-alpha.1'
+    'pesy-reason-template-0.1.0-alpha.2'
   );
   return scanDir(templatesDir, function(src) {
     var dest = src.replace(templatesDir, process.cwd());
-    return Bindings$PesyBootstrapper.Fs.isDirectory(src).then(function(isDir) {
-      if (isDir) {
-        return Bindings$PesyBootstrapper.Fs.mkdir(false, true, dest);
-      } else {
-        return Bindings$PesyBootstrapper.Fs.copy(false, src, dest, /* () */ 0);
-      }
-    });
+    return Bindings$PesyBootstrapper.Fs.isDirectory(src)
+      .then(function(isDir) {
+        if (isDir) {
+          return Bindings$PesyBootstrapper.Fs.mkdir(false, true, dest);
+        } else {
+          return Bindings$PesyBootstrapper.Fs.copy(
+            false,
+            src,
+            dest,
+            /* () */ 0
+          );
+        }
+      })
+      .then(function(param) {
+        return Promise.resolve(
+          /* Ok */ Caml_chrome_debugger.variant('Ok', 0, [/* () */ 0])
+        );
+      });
   });
 }
 
 function bootstrap(projectPath, param) {
   if (param !== undefined) {
-    return DownloadGitRepo(param, projectPath);
+    return Bindings$PesyBootstrapper.downloadGit(param, projectPath);
   } else {
     return copyBundledTemplate(/* () */ 0);
   }
@@ -205,7 +219,7 @@ function setup(template, projectPath) {
     })
     .then(function(param) {
       return spinnerEnabledPromise(
-        '\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0m building project dependencies',
+        '\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0mbuilding project dependencies',
         function(param) {
           return Bindings$PesyBootstrapper.ChildProcess.exec('esy pesy', {
             cwd: projectPath,

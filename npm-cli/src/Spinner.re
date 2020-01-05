@@ -12,7 +12,7 @@ let start = msg => {
     Js.Global.setInterval(
       () => {
         Printf.printf(
-          "%s %s                                                                                    \r",
+          "%s %s                                                                                    \r\r",
           msg,
           frames[i^ mod n_frames],
         );
@@ -30,7 +30,7 @@ let cancel = intervalID =>
 
 let stop = spinnerIntervalID => {
   Printf.printf(
-    "                                                                                       \r",
+    "                                                                                       \r\r",
   );
   cancel(spinnerIntervalID);
 };
