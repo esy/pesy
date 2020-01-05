@@ -24,7 +24,7 @@ let kebab = str => {
       Array.map(
         c => {
           let c = Caml.String.get(c, 0);
-          if (Char.uppercase_ascii(c) == c) {
+          if (Char.uppercase_ascii(c) == c && c != '-') {
             "-" ++ String.make(1, Char.lowercase_ascii(c));
           } else {
             String.make(1, c);
