@@ -17,12 +17,22 @@ type stats;
 
 [@bs.val] [@bs.module "process"] external cwd: unit => string = "cwd";
 [@bs.val] [@bs.module "process"] external argv: array(string) = "argv";
-let scriptPath: string = [%raw "process.argv[1]"]; 
+let scriptPath: string = [%raw "process.argv[1]"];
 [@bs.val] external dirname: string = "__dirname";
 
 [@bs.module]
-external downloadGit: (string, string) => Js.Promise.t(unit) =
+external downloadGit: (string, string, Js.Nullable.t(Error.t) => unit) => unit =
   "download-git-repo";
+
+let downloadGit = (repo, path) =>
+  Promise.make((~resolve, ~reject as _) => {
+    downloadGit(repo, path, err => {
+      switch (Nullable.toOption(err)) {
+      | Some(x) => resolve(. Result.Error(x))
+      | None => resolve(. Result.Ok())
+      }
+    })
+  });
 
 [@bs.module] external walk_sync: string => array(string) = "walk-sync";
 module ChildProcess = {

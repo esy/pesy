@@ -25,7 +25,7 @@ function kebab(str) {
     .map(function(c) {
       var c$1 = Caml_string.get(c, 0);
       if (Char.uppercase_ascii(c$1) === c$1) {
-        return '-' + $$String.make(1, c$1);
+        return '-' + $$String.make(1, Char.lowercase_ascii(c$1));
       } else {
         return $$String.make(1, c$1);
       }
@@ -44,7 +44,7 @@ function removeScope(kebab) {
 
 function upperCamelCasify(kebab) {
   var parts = kebab.split('-');
-  var k = $$Array.map($$String.uppercase_ascii, parts).join('');
+  var k = $$Array.map($$String.capitalize_ascii, parts).join('');
   if (Caml_string.get(k, 0) === /* "-" */ 45) {
     return $$String.sub(k, 1, (k.length - 1) | 0);
   } else {
