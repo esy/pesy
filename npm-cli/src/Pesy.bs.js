@@ -284,6 +284,10 @@ function main(template, useDefaultOptions) {
   }
 }
 
+var bootstrap$1 = {
+  contents: true,
+};
+
 var $$short = '-t';
 
 var $$long = '--template';
@@ -340,6 +344,7 @@ var v$2 = '0.5.0-alpha.10';
 
 var anonFun$2 = /* Unit */ Caml_chrome_debugger.variant('Unit', 0, [
   function(param) {
+    bootstrap$1.contents = false;
     console.log(v$2);
     return /* () */ 0;
   },
@@ -354,6 +359,7 @@ var Version = {
 };
 
 var CliOptions = {
+  bootstrap: bootstrap$1,
   Template: Template,
   DefaultOptions: DefaultOptions,
   Version: Version,
@@ -393,7 +399,9 @@ Arg.parse(
   usageMsg
 );
 
-main(v.contents, v$1.contents);
+if (bootstrap$1.contents) {
+  main(v.contents, v$1.contents);
+}
 
 exports.projectPath = projectPath;
 exports.packageNameKebab = packageNameKebab;

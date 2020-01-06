@@ -24,7 +24,7 @@ function kebab(str) {
   var k = $$Array
     .map(function(c) {
       var c$1 = Caml_string.get(c, 0);
-      if (Char.uppercase_ascii(c$1) === c$1) {
+      if (Char.uppercase_ascii(c$1) === c$1 && c$1 !== /* "-" */ 45) {
         return '-' + $$String.make(1, Char.lowercase_ascii(c$1));
       } else {
         return $$String.make(1, c$1);

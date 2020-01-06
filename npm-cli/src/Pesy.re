@@ -239,6 +239,11 @@ let main = (template, useDefaultOptions) =>
   };
 
 module CliOptions = {
+  let bootstrap = ref(true);
+  /* We presume that bootstrapping is the most likely action.
+     Other info retrieving commands with '--help' and '--version'
+     are less likely and turn the flag off */
+
   module Template = {
     let short = "-t";
     let long = "--template";
@@ -258,7 +263,13 @@ module CliOptions = {
     let long = "--version";
     let doc = "Prints version and exits";
     let v = "0.5.0-alpha.10";
-    let anonFun = Arg.Unit(() => print_endline(v));
+    let anonFun =
+      Arg.Unit(
+        () => {
+          bootstrap := false;
+          print_endline(v);
+        },
+      );
   };
 };
 
@@ -276,4 +287,6 @@ let usageMsg = "$ pesy [-t|--template <url>] [-y]";
 
 Arg.parse(specList, _ => (), usageMsg);
 
-main(Template.v^, DefaultOptions.v^);
+if (bootstrap^) {
+  main(Template.v^, DefaultOptions.v^);
+};
