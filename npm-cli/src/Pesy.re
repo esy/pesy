@@ -262,7 +262,7 @@ module CliOptions = {
     let short = "-v";
     let long = "--version";
     let doc = "Prints version and exits";
-    let v = "0.5.0-alpha.10";
+    let v = "0.5.0-alpha.11";
     let anonFun =
       Arg.Unit(
         () => {

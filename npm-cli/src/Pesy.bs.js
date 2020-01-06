@@ -340,7 +340,7 @@ var $$long$2 = '--version';
 
 var doc$2 = 'Prints version and exits';
 
-var v$2 = '0.5.0-alpha.10';
+var v$2 = '0.5.0-alpha.11';
 
 var anonFun$2 = /* Unit */ Caml_chrome_debugger.variant('Unit', 0, [
   function(param) {
