@@ -24,15 +24,20 @@ let kebab = str => {
       Array.map(
         c => {
           let c = Caml.String.get(c, 0);
-          if (Char.uppercase_ascii(c) == c && c != '-') {
+          if (c == ' ' || c == '_') {
+            String.make(1, '-');
+          }
+          else if (Char.uppercase_ascii(c) != Char.lowercase_ascii(c) && Char.uppercase_ascii(c) == c) {
             "-" ++ String.make(1, Char.lowercase_ascii(c));
-          } else {
+          }
+          else {
             String.make(1, c);
           };
         },
         charStrings,
       ),
-    );
+    ) |> Js.String.replaceByRe([%bs.re "/\-\-+/g"], "-");
+
   if (Js.String.split("", k)->Array.unsafe_get(0) == "-") {
     Caml.String.sub(k, 1, String.length(k) - 1);
   } else {
