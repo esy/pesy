@@ -12,3 +12,4 @@ pesy.install
 *~
 scripts/storage
 vendor
+coverage/
