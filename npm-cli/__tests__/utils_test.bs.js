@@ -6,10 +6,10 @@ var Utils$PesyBootstrapper = require("../src/Utils.bs.js");
 
 Jest.describe("kebab function", (function (param) {
         Jest.test("sample 1", (function (param) {
-                return Jest.Expect.toBe("esy- -pesy", Jest.Expect.expect(Utils$PesyBootstrapper.kebab("Esy Pesy")));
+                return Jest.Expect.toBe("esy-pesy", Jest.Expect.expect(Utils$PesyBootstrapper.kebab("Esy Pesy")));
               }));
         return Jest.test("sample 2", (function (param) {
-                      return Jest.Expect.toBe("hello--world--2-0-2-0-!", Jest.Expect.expect(Utils$PesyBootstrapper.kebab("Hello-World-2020!")));
+                      return Jest.Expect.toBe("hello-world-2020!", Jest.Expect.expect(Utils$PesyBootstrapper.kebab("Hello-World-2020!")));
                     }));
       }));
 

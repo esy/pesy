@@ -7,11 +7,11 @@ open Utils;
 describe("kebab function", () => {
     test("sample 1", () =>
       "Esy Pesy" |> kebab
-      |> expect |> toBe("esy- -pesy")
+      |> expect |> toBe("esy-pesy")
     );
     test("sample 2", () =>
       "Hello-World-2020!" |> kebab
-      |> expect |> toBe("hello--world--2-0-2-0-!")
+      |> expect |> toBe("hello-world-2020!")
     );
   }
 );
