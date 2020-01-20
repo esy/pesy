@@ -26,9 +26,10 @@
   },
   "scripts": {
     "bsb": "bsb -make-world",
-    "prettier": "prettier --single-quote --trailing-comma es5 --write src/**.js",
     "build": "npm run bsb && npm run prettier",
     "package": "node scripts/vendor-template.js && npm run build",
+    "prettier": "prettier --single-quote --trailing-comma es5 --write src/**.js",
+    "test": "npm run build && jest --coverage",
     "bsb:watch": "bsb -make-world -w",
     "bsb:clean": "bsb -clean-world"
   },
@@ -48,6 +49,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@glennsl/bs-jest": "^0.4.9",
     "prettier": "^1.19.1"
   },
   "bugs": {

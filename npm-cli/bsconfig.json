@@ -1,16 +1,22 @@
 {
   "name": "pesy-bootstrapper",
   "version": "0.1.0",
-  "sources": {
-    "dir": "src",
-    "subdirs": true
-  },
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    },
+    {
+      "dir": "__tests__",
+      "type": "dev"
+    }
+  ],
   "package-specs": {
     "module": "commonjs",
     "in-source": true
   },
   "suffix": ".bs.js",
-  "bs-dependencies": ["tablecloth-bucklescript"],
+  "bs-dependencies": ["@glennsl/bs-jest","tablecloth-bucklescript"],
   "bsc-flags": ["-bs-g"],
   "warnings": {
     "number": "-44-102-20",
