@@ -24,13 +24,19 @@ function kebab(str) {
   var k = $$Array
     .map(function(c) {
       var c$1 = Caml_string.get(c, 0);
-      if (Char.uppercase_ascii(c$1) === c$1 && c$1 !== /* "-" */ 45) {
+      if (c$1 === /* " " */ 32 || c$1 === /* "_" */ 95) {
+        return $$String.make(1, /* "-" */ 45);
+      } else if (
+        Char.uppercase_ascii(c$1) !== Char.lowercase_ascii(c$1) &&
+        Char.uppercase_ascii(c$1) === c$1
+      ) {
         return '-' + $$String.make(1, Char.lowercase_ascii(c$1));
       } else {
         return $$String.make(1, c$1);
       }
     }, charStrings)
-    .join('');
+    .join('')
+    .replace(/\-\-+/g, '-');
   if (k.split('')[0] === '-') {
     return $$String.sub(k, 1, (k.length - 1) | 0);
   } else {
