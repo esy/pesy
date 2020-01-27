@@ -13,14 +13,14 @@ steps:
   - template: utils/create-docs.yml
   - script: "esy test"
     displayName: "Test command"
-  - ${{ if eq(parameters.platform, 'Windows') }}:
+  - ${{ if eq(variables['Agent.OS'], 'Windows_NT') }}:
       - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
         displayName: 'Creating temporary workspace for tests'
       - script: .\_build\install\default\bin\Runner.exe
         displayName: 'Running e2e tests'
         env:
           TEMP: $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
-  - ${{ if ne(parameters.platform, 'Windows') }}:
+  - ${{ if ne(variables['Agent.OS'], 'Windows_NT') }}:
       - script: ./_build/install/default/bin/Runner.exe
         displayName: 'Running e2e tests'
         env:
