@@ -144,7 +144,11 @@ List.iter(
 
     Printf.printf("Running `esy install`");
     print_newline();
-    let exitStatus = runCommandWithEnv(esyCommand, [|"install"|]);
+    let exitStatus =
+      runCommandWithEnv(
+        esyCommand,
+        [|"install", "--skip-repository-update"|],
+      );
     if (exitStatus != 0) {
       Printf.fprintf(
         stderr,
