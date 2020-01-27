@@ -1,6 +1,3 @@
-variables:
-  npm_config_cache: $(Pipeline.Workspace)/.npm
-
 steps:
 - task: Cache@2
   inputs:
@@ -8,5 +5,5 @@ steps:
     restoreKeys: |
        npm | "$(Agent.OS)"
        npm
-    path: $(npm_config_cache)
+    path: $(Pipeline.Workspace)/.npm
   displayName: Cache npm
