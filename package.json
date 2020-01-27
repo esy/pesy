@@ -71,7 +71,7 @@
     }
   },
   "scripts": {
-    "doc": "esy dune build @doc",
+    "doc": "esy dune build @doc -p pesy--esy-pesy",
     "test": "esy x RunUnitTests.exe"
   },
   "dependencies": {
