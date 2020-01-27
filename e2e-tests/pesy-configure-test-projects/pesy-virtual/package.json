@@ -57,14 +57,10 @@
     "test": "esy x PesyVirtualAppBar.exe"
   },
   "dependencies": {
-    "ocaml": "4.7.x",
+    "ocaml": "4.8.x",
     "dune": "*",
     "@esy-ocaml/reason": "*",
-    "pesy": "*",
-    "refmterr": "*"
-  },
-  "devDependencies": {
-    "@opam/merlin": "*"
+    "pesy": "*"
   },
   "resolutions": {
     "pesy": "<RESOLUTION_LINK>"
