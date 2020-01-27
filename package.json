@@ -10,6 +10,9 @@
     "buildDev": [
       "refmterr dune build -p pesy--esy-pesy"
     ],
+    "buildEnv": {
+      "ODOC_SYNTAX": "re"
+    },
     "release": {
       "bin": [
         "pesy"
@@ -68,6 +71,7 @@
     }
   },
   "scripts": {
+    "doc": "esy dune build @doc",
     "test": "esy x RunUnitTests.exe"
   },
   "dependencies": {
@@ -83,6 +87,7 @@
   },
   "devDependencies": {
     "ocaml": "4.6.10 - 4.8",
+    "@opam/odoc": "*",
     "pesy-self": "*",
     "refmterr": "*",
     "@opam/merlin": "*"
