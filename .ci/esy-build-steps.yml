@@ -7,11 +7,9 @@ steps:
   - template: utils/use-cache-esy.yml
   - script: "esy install"
     displayName: "esy install"
-    condition: ne(variables.CACHE_RESTORED, 'true')
   - template: utils/restore-build-cache.yml # Run this to make sure cached prebuilts work. 
   - script: "esy build"
     displayName: "esy build"
-    condition: ne(variables.CACHE_RESTORED, 'true')
   - template: utils/create-docs.yml
   - script: "esy test"
     displayName: "Test command"
