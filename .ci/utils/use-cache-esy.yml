@@ -1,3 +1,4 @@
+steps:
   - task: Cache@2
     condition: and(eq(variables['Build.Reason'], 'PullRequest'), and(ne(variables['Agent.OS'], 'Windows_NT'), ne(variables['Build.SourceBranch'], variables['System.PullRequest.TargetBranch'])))
     inputs:
