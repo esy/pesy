@@ -13,18 +13,19 @@ steps:
   - template: utils/create-docs.yml
   - script: "esy test"
     displayName: "Test command"
-  - ${{ if eq(variables['Agent.OS'], 'Windows_NT') }}:
-      - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
-        displayName: 'Creating temporary workspace for tests'
-      - script: .\_build\install\default\bin\Runner.exe
-        displayName: 'Running e2e tests'
-        env:
-          TEMP: $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
-  - ${{ if ne(variables['Agent.OS'], 'Windows_NT') }}:
-      - script: ./_build/install/default/bin/Runner.exe
-        displayName: 'Running e2e tests'
-        env:
-          OCAMLRUNPARAM: 'b'
+  - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
+    displayName: 'Creating temporary workspace for tests'
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+  - script: .\_build\install\default\bin\Runner.exe
+    displayName: 'Running e2e tests'
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+    env:
+      TEMP: $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
+  - script: ./_build/install/default/bin/Runner.exe
+    displayName: 'Running e2e tests'
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
+    env:
+      OCAMLRUNPARAM: 'b'
   - script: "esy release"
     displayName: "esy release"
   - template: utils/publish-build-cache.yml
