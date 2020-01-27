@@ -2,31 +2,32 @@ name: Build npm release
 
 trigger:
   - master
+  - global
+  - release-*
+  - releases-*
+  - feature-*
+  - prometheansacrifice/*
+  - ulrikstrid/*
 
 jobs:
   - template: .ci/build-platform.yml
     parameters:
       platform: Linux
       vmImage: ubuntu-16.04
-      STAGING_DIRECTORY: /home/vsts/STAGING
-      STAGING_DIRECTORY_UNIX: /home/vsts/STAGING
-      ESY__CACHE_SOURCE_TARBALL_PATH: /home/vsts/.esy/source/i
 
   - template: .ci/build-platform.yml
     parameters:
       platform: macOS
       vmImage: macOS-10.13
-      STAGING_DIRECTORY: $(Agent.HomeDirectory)/STAGING
-      STAGING_DIRECTORY_UNIX: $(Agent.HomeDirectory)/STAGING
-      ESY__CACHE_SOURCE_TARBALL_PATH: $(Agent.HomeDirectory)/.esy/source/i
 
+  # Need windows-2019 to do esy import/export-dependencies
+  # which assumes you have bsdtar (tar.exe) in your system
+  # otherwise it will end up using the esy-bash tar which doesn't
+  # understand drives like D:/ (thinks it's an scp path).
   - template: .ci/build-platform.yml
     parameters:
       platform: Windows
-      vmImage: vs2017-win2016
-      STAGING_DIRECTORY: C:\Users\VssAdministrator\STAGING
-      STAGING_DIRECTORY_UNIX: /C/Users/VssAdministrator/STAGING
-      ESY__CACHE_SOURCE_TARBALL_PATH: /C/Users/VssAdministrator/.esy/source/i
+      vmImage: windows-2019
 
   # This job is kept here as we want to have the platform names in the same file
   - job: Release
