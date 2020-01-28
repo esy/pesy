@@ -1,4 +1,6 @@
 steps:
+  - bash: env
+    displayName: "Print environment"
   - task: Cache@2
     condition: and(eq(variables['Build.Reason'], 'PullRequest'), ne(variables['Build.SourceBranch'], variables['System.PullRequest.TargetBranch']))
     inputs:
