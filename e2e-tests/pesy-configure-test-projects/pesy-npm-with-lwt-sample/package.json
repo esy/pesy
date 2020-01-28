@@ -39,7 +39,7 @@
   "dependencies": {
     "@esy-ocaml/reason": "*",
     "@opam/dune": "*",
-    "@opam/lwt": "4.1.0",
+    "@opam/lwt": "5.1.1",
     "@opam/lwt_ppx": "1.2.1",
     "ocaml": "4.8.x",
     "pesy": "*"
