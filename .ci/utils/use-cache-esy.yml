@@ -1,10 +1,8 @@
 steps:
-  - bash: env
-    displayName: "Print environment"
   - task: Cache@2
     condition: and(eq(variables['Build.Reason'], 'PullRequest'), ne(variables['Build.SourceBranch'], variables['System.PullRequest.TargetBranch']))
     inputs:
       key: 'vPrimary | esy | "$(Agent.OS)" | "$(Build.SourcesDirectory)/esy.lock/index.json"' # vPrimary, here, is just a way to bust cache during debugging. Inspired from https://docs.microsoft.com/en-us/azure/devops/pipelines/caching/?view=azure-devops#can-i-clear-a-cache" 
-      path: $(THE_ESY__CACHE_INSTALL_PATH)
+      path: $(ESY__CACHE_INSTALL_PATH)
       cacheHitVar: CACHE_RESTORED
-    displayName:  "Caching $(THE_ESY__CACHE_INSTALL_PATH)"
+    displayName:  "Caching $(ESY__CACHE_INSTALL_PATH)"
