@@ -42,15 +42,12 @@
     "test": "esy b dune runtest"
   },
   "dependencies": {
+    "ocaml": "4.8.x",
     "@esy-ocaml/reason": "*",
     "@opam/dune": "*",
     "@opam/lwt": "4.1.0",
     "@opam/lwt_ppx": "1.2.1",
-    "pesy": "*",
-    "refmterr": "*"
-  },
-  "devDependencies": {
-    "@opam/merlin": "*"
+    "pesy": "*"
   },
   "resolutions": {
     "pesy": "<RESOLUTION_LINK>"

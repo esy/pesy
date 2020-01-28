@@ -37,15 +37,10 @@
     "test": "esy b dune runtest"
   },
   "dependencies": {
-    "ocaml": "4.7.x",
+    "ocaml": "4.8.x",
     "@opam/dune": ">=1.6.0",
     "@esy-ocaml/reason": "*",
-    "refmterr": "*",
-    "pesy": "*",
-    "refmterr": "*"
-  },
-  "devDependencies": {
-    "@opam/merlin": "*"
+    "pesy": "*"
   },
   "resolutions": {
     "pesy": "<RESOLUTION_LINK>"
