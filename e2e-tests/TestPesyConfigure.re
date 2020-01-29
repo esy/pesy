@@ -209,6 +209,10 @@ List.iter(
       );
       exit(-1);
     };
+
+    Printf.printf("Deleting %s", testProject);
+    print_newline();
+    rimraf(testProject);
   },
   testProjects,
 );
