@@ -49,8 +49,8 @@ if (run(
   exit(-1);
 };
 
-Printf.printf("Cleaning up ~/.esy before running bootstrapper\n");
-rimraf(Path.(Sys.getenv(Sys.unix ? "HOME" : "HOMEPATH") / ".esy"));
+/* Printf.printf("Cleaning up ~/.esy before running bootstrapper\n"); */
+/* rimraf(Path.(Sys.getenv(Sys.unix ? "HOME" : "HOMEPATH") / ".esy")); */
 
 print_endline("Running bootstrapper test");
 chdir(Path.(cwd / "npm-cli"));
