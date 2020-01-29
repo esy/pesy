@@ -8,6 +8,11 @@ let testProject = "test-project";
 let testProjectDir = Filename.concat(tmpDir, testProject);
 let pesyBinPath = makeCommand("pesy");
 
+Printf.printf("Cleaning up esy build tree (global)\n");
+rimraf(
+  Path.(Sys.getenv(Sys.unix ? "HOME" : "HOMEPATH") / ".esy" / "3" / "b"),
+);
+
 rimraf(testProjectDir); /* So that we can run it stateless locally */
 mkdir(testProjectDir);
 Sys.chdir(testProjectDir);
