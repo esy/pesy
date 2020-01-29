@@ -26,6 +26,13 @@ let run = (~env=?, c, args) => {
   };
 };
 
+if (!Sys.unix) {
+  Printf.printf(
+    "Cleaning up ~/.esy before running bootstrapper (Windows only)\n",
+  );
+  rimraf(Path.(Sys.getenv("HOMEPATH") / ".esy"));
+};
+
 let testPesyConfigureExe =
   Path.(
     cwd / "_build" / "install" / "default" / "bin" / "TestPesyConfigure.exe"
@@ -48,9 +55,6 @@ if (run(
     != 0) {
   exit(-1);
 };
-
-/* Printf.printf("Cleaning up ~/.esy before running bootstrapper\n"); */
-/* rimraf(Path.(Sys.getenv(Sys.unix ? "HOME" : "HOMEPATH") / ".esy")); */
 
 print_endline("Running bootstrapper test");
 chdir(Path.(cwd / "npm-cli"));
