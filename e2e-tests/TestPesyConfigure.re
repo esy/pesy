@@ -94,6 +94,13 @@ let tmpDir = Filename.get_temp_dir_name();
 let testDirName = "pesy-configure-test-projects";
 let testDir = Path.(tmpDir / testDirName);
 
+if (!Sys.unix) {
+  Printf.printf(
+    "Cleaning up ~/.esy before running bootstrapper (Windows only)\n",
+  );
+  rimraf(Path.(Sys.getenv("HOMEPATH") / ".esy"));
+};
+
 Printf.printf("Deleting %s", testDir);
 print_newline();
 rimraf(testDir);
