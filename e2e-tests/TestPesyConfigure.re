@@ -133,6 +133,11 @@ let testProjects =
 
 List.iter(
   testProject => {
+    Printf.printf("Cleaning up esy build tree (global)\n");
+    rimraf(
+      Path.(Sys.getenv(Sys.unix ? "HOME" : "HOMEPATH") / ".esy" / "3" / "b"),
+    );
+
     Printf.printf("Entering %s", testProject);
     print_newline();
     Sys.chdir(testProject);
