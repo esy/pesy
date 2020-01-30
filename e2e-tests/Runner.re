@@ -26,12 +26,12 @@ let run = (~env=?, c, args) => {
   };
 };
 
-if (!Sys.unix) {
-  Printf.printf(
-    "Cleaning up ~/.esy before running bootstrapper (Windows only)\n",
-  );
-  rimraf(Path.(Sys.getenv("HOMEPATH") / ".esy"));
-};
+/* if (!Sys.unix) { */
+/*   Printf.printf( */
+/*     "Cleaning up ~/.esy before running bootstrapper (Windows only)\n", */
+/*   ); */
+/*   rimraf(Path.(Sys.getenv("HOMEPATH") / ".esy")); */
+/* }; */
 
 let testPesyConfigureExe =
   Path.(
