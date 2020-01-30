@@ -86,7 +86,7 @@
     "ocaml": "4.6.10 - 4.8"
   },
   "devDependencies": {
-    "ocaml": "4.6.10 - 4.8",
+    "ocaml": "4.8.x",
     "@opam/odoc": "*",
     "pesy-self": "*",
     "refmterr": "*",

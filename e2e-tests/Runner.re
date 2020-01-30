@@ -26,6 +26,37 @@ let run = (~env=?, c, args) => {
   };
 };
 
+/* if (!Sys.unix) { */
+/*   Printf.printf( */
+/*     "Cleaning up ~/.esy before running bootstrapper (Windows only)\n", */
+/*   ); */
+/*   rimraf(Path.(Sys.getenv("HOMEPATH") / ".esy")); */
+/* }; */
+
+let testPesyConfigureExe =
+  Path.(
+    cwd / "_build" / "install" / "default" / "bin" / "TestPesyConfigure.exe"
+  );
+
+if (run(
+      testPesyConfigureExe,
+      [||],
+      ~env=
+        Array.append(
+          [|
+            sprintf(
+              "PESY_CLONE_PATH=%s",
+              Str.global_replace(Str.regexp("\\"), "/", Sys.getcwd()),
+            ),
+          |],
+          Unix.environment(),
+        ),
+    )
+    != 0) {
+  exit(-1);
+};
+
+print_endline("Running bootstrapper test");
 chdir(Path.(cwd / "npm-cli"));
 print_endline("Installing pesy globally..");
 run(makeCommand("npm"), [|"install"|]);
@@ -42,25 +73,3 @@ let testBootstrapperExe =
 if (run(testBootstrapperExe, [||]) != 0) {
   exit(-1);
 };
-
-let testPesyConfigureExe =
-  Path.(
-    cwd / "_build" / "install" / "default" / "bin" / "TestPesyConfigure.exe"
-  );
-
-exit(
-  run(
-    testPesyConfigureExe,
-    [||],
-    ~env=
-      Array.append(
-        [|
-          sprintf(
-            "PESY_CLONE_PATH=%s",
-            Str.global_replace(Str.regexp("\\"), "/", Sys.getcwd()),
-          ),
-        |],
-        Unix.environment(),
-      ),
-  ),
-);

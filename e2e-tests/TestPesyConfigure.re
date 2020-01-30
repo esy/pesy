@@ -133,6 +133,11 @@ let testProjects =
 
 List.iter(
   testProject => {
+    Printf.printf("Cleaning up esy build tree (global)\n");
+    rimraf(
+      Path.(Sys.getenv(Sys.unix ? "HOME" : "HOMEPATH") / ".esy" / "3" / "b"),
+    );
+
     Printf.printf("Entering %s", testProject);
     print_newline();
     Sys.chdir(testProject);
@@ -144,7 +149,11 @@ List.iter(
 
     Printf.printf("Running `esy install`");
     print_newline();
-    let exitStatus = runCommandWithEnv(esyCommand, [|"install"|]);
+    let exitStatus =
+      runCommandWithEnv(
+        esyCommand,
+        [|"install", "--skip-repository-update"|],
+      );
     if (exitStatus != 0) {
       Printf.fprintf(
         stderr,
@@ -200,6 +209,10 @@ List.iter(
       );
       exit(-1);
     };
+
+    Printf.printf("Deleting %s", testProject);
+    print_newline();
+    rimraf(testProject);
   },
   testProjects,
 );

@@ -2,15 +2,30 @@
 
 steps:
   - template: utils/use-node.yml
+  - template: utils/use-cache-npm.yml
   - template: utils/use-esy.yml
+  - template: utils/use-cache-esy.yml
   - script: "esy install"
     displayName: "esy install"
-  - template: utils/restore-build-cache.yml
+  - template: utils/restore-build-cache.yml # Run this to make sure cached prebuilts work. 
   - script: "esy build"
     displayName: "esy build"
   - template: utils/create-docs.yml
   - script: "esy test"
     displayName: "Test command"
+  # - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
+  #   displayName: 'Creating temporary workspace for tests'
+  #   condition: eq(variables['Agent.OS'], 'Windows_NT')
+  # - script: .\_build\install\default\bin\Runner.exe
+  #   displayName: 'Running e2e tests'
+  #   condition: eq(variables['Agent.OS'], 'Windows_NT')
+  #   env:
+  #     TEMP: $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
+  - script: ./_build/install/default/bin/Runner.exe
+    displayName: 'Running e2e tests'
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
+    env:
+      OCAMLRUNPARAM: 'b'
   - script: "esy release"
     displayName: "esy release"
   - template: utils/publish-build-cache.yml

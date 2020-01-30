@@ -35,13 +35,7 @@
   "dependencies": {
     "ocaml": "4.6.x",
     "@opam/dune": ">=1.6.0",
-    "@esy-ocaml/reason": "*",
-    "refmterr": "*",
-    "pesy": "*",
-    "refmterr": "*"
-  },
-  "devDependencies": {
-    "@opam/merlin": "*"
+    "pesy": "*"
   },
   "resolutions": {
     "pesy": "<RESOLUTION_LINK>"
