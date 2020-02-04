@@ -1,0 +1,29 @@
+# Cross-platform set of build steps for building esy projects
+
+steps:
+  - template: utils/use-node.yml
+  - template: utils/use-cache-npm.yml
+  - template: utils/use-esy.yml
+  - template: utils/use-cache-esy.yml
+  - script: "esy install"
+    displayName: "esy install"
+  - script: "esy build"
+    displayName: "esy build"
+  - script: "esy test"
+    displayName: "Test command"
+  - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
+    displayName: 'Creating temporary workspace for tests'
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+  - script: .\_build\install\default\bin\Runner.exe
+    displayName: 'Running e2e tests'
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+    env:
+      TEMP: $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
+  - script: ./_build/install/default/bin/Runner.exe
+    displayName: 'Running e2e tests'
+    condition: ne(variables['Agent.OS'], 'Windows_NT')
+    env:
+      OCAMLRUNPARAM: 'b'
+
+  # Run tests or any additional steps here
+  # - script: esy b dune runtest

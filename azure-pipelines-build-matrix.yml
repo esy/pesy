@@ -1,0 +1,30 @@
+name: Build npm release
+
+trigger:
+  - master
+  - global
+  - release-*
+  - releases-*
+  - feature-*
+  - prometheansacrifice/*
+  - ulrikstrid/*
+
+jobs:
+  - template: .ci/build-matrix.yml
+    parameters:
+      platform: Linux
+      vmImage: ubuntu-16.04
+
+  - template: .ci/build-matrix.yml
+    parameters:
+      platform: macOS
+      vmImage: macOS-10.13
+
+  # Need windows-2019 to do esy import/export-dependencies
+  # which assumes you have bsdtar (tar.exe) in your system
+  # otherwise it will end up using the esy-bash tar which doesn't
+  # understand drives like D:/ (thinks it's an scp path).
+  - template: .ci/build-matrix.yml
+    parameters:
+      platform: Windows
+      vmImage: windows-2019
