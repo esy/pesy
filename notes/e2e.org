@@ -1,0 +1,18 @@
+* Setup
+
+  Recently [[https://github.com/esy/pesy/pull/105][Windows CI started failing]] due disk space issue. This could
+  be due to the heavy e2e setup - multiple test projects were probably
+  installing too many dependencies
+
+  As a work around, we're writing an in place e2e setup that actually
+  reflects developer workflow - it would bootstrap a new project and
+  edit it in place.
+
+  This time around, we aim to test error cases too
+
+* Issues with mdx attempt
+
+  [[https://github.com/realworldocaml/mdx][MDX]] was the ideal tool for this. But unfortunately, we're testing a
+  cli tool that call =esy=. Using =MDX= meant we had to use esy to run
+  the tests and running a cli tool that spawns esy within esy can be
+  challenging. For instance, we had tried setting up the following
