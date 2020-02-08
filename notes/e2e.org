@@ -16,3 +16,36 @@
   cli tool that call =esy=. Using =MDX= meant we had to use esy to run
   the tests and running a cli tool that spawns esy within esy can be
   challenging. For instance, we had tried setting up the following
+
+  #+BEGIN_SRC lisp
+    (alias
+     (name runtest)
+     (deps (:t test.t) (source_tree ./files))
+     (action
+      (progn
+       (run pwd)
+       (run echo "%{project_root}/npm-cli/pesy")
+       (setenv ESY__PROJECT "."
+	(setenv OCAMLRUNPARAM b
+	(setenv TEST_PROJECT_DIR "."
+	 (setenv
+	   PESY %{bin:pesy}
+	  (run %{bin:mdx} test --syntax=cram %{t})))))
+       (diff? %{t} %{t}.corrected))))
+  #+END_SRC
+
+  and
+
+  #+BEGIN_SRC sh
+    The simplest case: running pesy in an empty directory
+
+	$ mkdir -p $TEST_PROJECT_DIR
+	$ cp -R $PWD/files/package.json $TEST_PROJECT_DIR
+	$ cd $TEST_PROJECT_DIR; $PESY
+  #+END_SRC
+
+  It needs =MDX= which is available only in the sandbox and =esy-pesy=
+  runs =esy status= which assumes the root package.json is the root
+  not the test-project folder inside the =_build=. Writing to external $TMPDIR
+
+
