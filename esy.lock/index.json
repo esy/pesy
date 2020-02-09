@@ -150,7 +150,7 @@
       ],
       "devDependencies": [
         "refmterr@3.3.0@d41d8cd9", "pesy-self@link:vendor/pesy",
-        "ocaml@4.8.1000@d41d8cd9", "@opam/odoc@opam:1.4.2@11b715bb",
+        "ocaml@4.8.1000@d41d8cd9", "@opam/odoc@opam:1.5.0@35218f5f",
         "@opam/merlin@opam:3.3.3@d653b06a"
       ]
     },
@@ -501,20 +501,20 @@
         "@opam/base@link:vendor/base/base.opam"
       ]
     },
-    "@opam/odoc@opam:1.4.2@11b715bb": {
-      "id": "@opam/odoc@opam:1.4.2@11b715bb",
+    "@opam/odoc@opam:1.5.0@35218f5f": {
+      "id": "@opam/odoc@opam:1.5.0@35218f5f",
       "name": "@opam/odoc",
-      "version": "opam:1.4.2",
+      "version": "opam:1.5.0",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/md5/d7/d75ce63539040cd199d22203d46fc5f3#md5:d75ce63539040cd199d22203d46fc5f3",
-          "archive:https://github.com/ocaml/odoc/archive/1.4.2.tar.gz#md5:d75ce63539040cd199d22203d46fc5f3"
+          "archive:https://opam.ocaml.org/cache/sha256/85/857759be968070bfda208add3ae2c2bc87826ca2bfc39cebab1cc1e13db7a140#sha256:857759be968070bfda208add3ae2c2bc87826ca2bfc39cebab1cc1e13db7a140",
+          "archive:https://github.com/ocaml/odoc/releases/download/1.5.0/odoc-1.5.0.tbz#sha256:857759be968070bfda208add3ae2c2bc87826ca2bfc39cebab1cc1e13db7a140"
         ],
         "opam": {
           "name": "odoc",
-          "version": "1.4.2",
-          "path": "esy.lock/opam/odoc.1.4.2"
+          "version": "1.5.0",
+          "path": "esy.lock/opam/odoc.1.5.0"
         }
       },
       "overrides": [],
@@ -529,7 +529,12 @@
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
-        "ocaml@4.8.1000@d41d8cd9", "@opam/dune@link:vendor/dune/dune.opam"
+        "ocaml@4.8.1000@d41d8cd9", "@opam/tyxml@opam:4.3.0@c1da25f1",
+        "@opam/result@link:vendor/result/result.opam",
+        "@opam/fpath@opam:0.7.2@45477b93",
+        "@opam/dune@link:vendor/dune/dune.opam",
+        "@opam/cmdliner@link:vendor/cmdliner/cmdliner.opam",
+        "@opam/astring@opam:0.8.3@4e5e17d5"
       ]
     },
     "@opam/ocamlfind@opam:1.8.1@ff07b0f9": {
