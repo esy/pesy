@@ -719,13 +719,14 @@ Some random text here.
         )
       )
   )
-  >>= checkPesyConfig("add raw build config", () =>
+  >>= checkPesyConfig("add raw build config footer", () =>
         PesyConfig.add(
           {|
                            {
-                                "raw-footer-config-assets" : {
-                                "rawBuildConfigFooter": [ "(install (section share_root) (files (asset.txt as asset.txt)))" ],
-                                "bin": { "TestRawBuildConfigFooter.exe": "Main.re" }
+                              "raw-footer-config-assets" : {
+                                "namespace": "RawAssets",
+                                "name": "test-project.assets",
+                                "rawBuildConfigFooter": [ "(install (section share_root) (files (plaintext.txt as asset.txt)))" ]
                                }
                            }
                        |},
