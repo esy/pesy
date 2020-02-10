@@ -29,8 +29,8 @@ steps:
     env:
       PESY_CLONE_PATH: $(Build.SourcesDirectory)
       OCAMLRUNPARAM: 'b'
-  - script: "esy release"
-    displayName: "esy release"
+  # - script: "esy release"
+  #   displayName: "esy release"
   - template: utils/publish-build-cache.yml
 
   # Run tests or any additional steps here
