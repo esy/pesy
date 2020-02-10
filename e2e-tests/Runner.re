@@ -1,75 +1,49 @@
+open Yojson.Basic;
 open Unix;
 open Utils;
 open Printf;
 open Bos;
 open Printf;
 
-let cwd = Sys.getcwd();
-
-let run = (~env=?, c, args) => {
-  let env_vars =
-    switch (env) {
-    | Some(v) => v
-    | None => Unix.environment()
+/** TODO: Cleanup **/
+let () = {
+  let run = (~env=?, c, args) => {
+    let env_vars =
+      switch (env) {
+      | Some(v) => v
+      | None => Unix.environment()
+      };
+    let pid =
+      create_process_env(
+        c,
+        Array.append([|c|], args),
+        env_vars,
+        stdin,
+        stdout,
+        stderr,
+      );
+    switch (Unix.waitpid([], pid)) {
+    | (_, WEXITED(c)) => c
+    | (_, WSIGNALED(c)) => c
+    | (_, WSTOPPED(c)) => c
     };
-  let pid =
-    create_process_env(
-      c,
-      Array.append([|c|], args),
-      env_vars,
-      stdin,
-      stdout,
-      stderr,
-    );
-  switch (Unix.waitpid([], pid)) {
-  | (_, WEXITED(c)) => c
-  | (_, WSIGNALED(c)) => c
-  | (_, WSTOPPED(c)) => c
   };
+  let run = (cmd, args) =>
+    if (run(cmd, args) != 0) {
+      printf("%s failed\n", cmd);
+    };
+  let cwd = Sys.getcwd();
+  printf("Running bootstrapper test");
+  print_newline();
+  chdir(Path.(cwd / "npm-cli"));
+  printf("Installing pesy globally...");
+  print_newline();
+  run(makeCommand("npm"), [|"install"|]);
+  run(makeCommand("npm"), [|"run", "package"|]);
+  run(makeCommand("npm"), [|"pack"|]);
+  run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-alpha.11.tgz"|]);
+  chdir(cwd);
 };
-
-/* let testPesyConfigureExe = */
-/*   Path.( */
-/*     cwd / "_build" / "install" / "default" / "bin" / "TestPesyConfigure.exe" */
-/*   ); */
-
-/* if (run( */
-/*       testPesyConfigureExe, */
-/*       [||], */
-/*       ~env= */
-/*         Array.append( */
-/*           [| */
-/*             sprintf( */
-/*               "PESY_CLONE_PATH=%s", */
-/*               Str.global_replace(Str.regexp("\\"), "/", Sys.getcwd()), */
-/*             ), */
-/*           |], */
-/*           Unix.environment(), */
-/*         ), */
-/*     ) */
-/*     != 0) { */
-/*   exit(-1); */
-/* }; */
-
-printf("Running bootstrapper test");
-print_newline();
-chdir(Path.(cwd / "npm-cli"));
-printf("Installing pesy globally...");
-print_newline();
-run(makeCommand("npm"), [|"install"|]);
-run(makeCommand("npm"), [|"run", "package"|]);
-run(makeCommand("npm"), [|"pack"|]);
-run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-alpha.11.tgz"|]);
-chdir(cwd);
-
-/* let testBootstrapperExe = */
-/*   Path.( */
-/*     cwd / "_build" / "install" / "default" / "bin" / "TestBootstrapper.exe" */
-/*   ); */
-
-/* if (run(testBootstrapperExe, [||]) != 0) { */
-/*   exit(-1); */
-/* }; */
 
 open Rresult.R.Infix;
 module Log = {
@@ -145,73 +119,169 @@ let failIfNotZeroExit = taskName =>
   | `Signaled(code) =>
     Error(`Msg(sprintf("'%s' failed: signaled (%d)", taskName, code)));
 
-open Yojson.Basic;
-let editPesyConfig = (jsonString, manifest) => {
-  OS.File.read(Fpath.v(manifest))
-  >>= (
-    manifestJsonString =>
-      try(
-        switch (from_string(manifestJsonString)) {
-        | `Assoc(jsonKVPairs) =>
-          let pesyConfigJson =
-            try(Ok(from_string(jsonString))) {
-            | _ =>
-              Error(
-                `Msg(
-                  sprintf(
-                    "Input pesy config was not a valid json: %s",
-                    jsonString,
-                  ),
-                ),
-              )
-            };
-          List.map(
-            ((k, v)) =>
-              if (k == "buildDirs") {
-                pesyConfigJson >>= (json => Ok((k, json)));
-              } else {
-                Ok((k, v));
-              },
-            jsonKVPairs,
-          )
-          |> List.fold_left(
-               (acc, v) =>
-                 switch (acc, v) {
-                 | (Ok(l), Ok(e)) => Ok([e, ...l])
-                 | (_, Error(_) as e) => e
-                 | (Error(_) as e, _) => e
-                 },
-               Ok([]),
-             )
-          >>= (
-            kvs =>
-              `Assoc(kvs) |> to_string |> OS.File.write(Fpath.v(manifest))
-          );
-        | _ => Error(`Msg("Manifest file was invalid json"))
-        }
-      ) {
-      | _ => Error(`Msg("Manifest file could not be parsed"))
+module Config: {
+  type a;
+  let ofString: string => result(a, [ | `Msg(string)]);
+  let ofFile: Fpath.t => result(a, [ | `Msg(string)]);
+  /** Basically a toString but results a string in a result **/
+  let serialize:
+    result(a, [ | `Msg(string)]) => result(string, [ | `Msg(string)]);
+  let createError: string => result('a, [ | `Msg(string)]);
+} = {
+  type a =
+    | FilePath(Fpath.t)
+    | Contents(string);
+
+  let ofString = x => Ok(Contents(x));
+  let ofFile = x => Ok(FilePath(x));
+  let createError = msg => Error(`Msg(msg));
+  let serialize:
+    result(a, [ | `Msg(string)]) => result(string, [ | `Msg(string)]) =
+    fun
+    | Ok(t) =>
+      switch (t) {
+      | FilePath(p) => OS.File.read(p)
+      | Contents(s) => Ok(s)
       }
-  );
+    | Error(`Msg(msg)) => createError(msg);
+};
+
+module PesyConfig = {
+  let edit = (config, manifest) => {
+    Config.serialize(config)
+    >>= (
+      jsonString => {
+        OS.File.read(Fpath.v(manifest))
+        >>= (
+          manifestJsonString =>
+            try(
+              switch (from_string(manifestJsonString)) {
+              | `Assoc(jsonKVPairs) =>
+                let pesyConfigJson =
+                  try(Ok(from_string(jsonString))) {
+                  | _ =>
+                    Error(
+                      `Msg(
+                        sprintf(
+                          "Input pesy config was not a valid json: %s",
+                          jsonString,
+                        ),
+                      ),
+                    )
+                  };
+                List.map(
+                  ((k, v)) =>
+                    if (k == "buildDirs") {
+                      pesyConfigJson >>= (json => Ok((k, json)));
+                    } else {
+                      Ok((k, v));
+                    },
+                  jsonKVPairs,
+                )
+                |> List.fold_left(
+                     (acc, v) =>
+                       switch (acc, v) {
+                       | (Ok(l), Ok(e)) => Ok([e, ...l])
+                       | (_, Error(_) as e) => e
+                       | (Error(_) as e, _) => e
+                       },
+                     Ok([]),
+                   )
+                >>= (
+                  kvs =>
+                    `Assoc(kvs)
+                    |> to_string
+                    |> OS.File.write(Fpath.v(manifest))
+                );
+              | _ => Error(`Msg("Manifest file was invalid json"))
+              }
+            ) {
+            | _ => Error(`Msg("Manifest file could not be parsed"))
+            }
+        );
+      }
+    );
+  };
+
+  let mergeJsons = (j1, j2) => {
+    switch (j1, j2) {
+    | (`Assoc(kvs1), `Assoc(kvs2)) => Ok(`Assoc(kvs1 @ kvs2))
+    | _ =>
+      Error(
+        `Msg(
+          sprintf("Merging %s and %s failed", to_string(j1), to_string(j2)),
+        ),
+      )
+    };
+  };
+
+  let add = (jsonString, manifest) => {
+    OS.File.read(Fpath.v(manifest))
+    >>= (
+      manifestJsonString =>
+        try(
+          switch (from_string(manifestJsonString)) {
+          | `Assoc(jsonKVPairs) =>
+            let pesyConfigJson =
+              try(Ok(from_string(jsonString))) {
+              | _ =>
+                Error(
+                  `Msg(
+                    sprintf(
+                      "Input pesy config was not a valid json: %s",
+                      jsonString,
+                    ),
+                  ),
+                )
+              };
+            List.map(
+              ((k, v)) =>
+                if (k == "buildDirs") {
+                  pesyConfigJson
+                  >>= (json => mergeJsons(v, json))
+                  >>= (mergedConfig => Ok((k, mergedConfig)));
+                } else {
+                  Ok((k, v));
+                },
+              jsonKVPairs,
+            )
+            |> List.fold_left(
+                 (acc, v) =>
+                   switch (acc, v) {
+                   | (Ok(l), Ok(e)) => Ok([e, ...l])
+                   | (_, Error(_) as e) => e
+                   | (Error(_) as e, _) => e
+                   },
+                 Ok([]),
+               )
+            >>= (
+              kvs =>
+                `Assoc(kvs) |> to_string |> OS.File.write(Fpath.v(manifest))
+            );
+          | _ => Error(`Msg("Manifest file was invalid json"))
+          }
+        ) {
+        | _ => Error(`Msg("Manifest file could not be parsed"))
+        }
+    );
+  };
 };
 
 let checkProject = (msg, ()) =>
-  L.withLog(Printf.sprintf("esy start"), () =>
+  L.withLog(Printf.sprintf("esy start (%s)", msg), () =>
     OS.Cmd.run_status(Cmd.(v(esyBinPath) % "start"))
     >>= failIfNotZeroExit("esy start: " ++ msg)
   )
   >>= (
     () =>
-      L.withLog(Printf.sprintf("esy test"), () =>
+      L.withLog(Printf.sprintf("esy test (%s)", msg), () =>
         OS.Cmd.run_status(Cmd.(v(esyBinPath) % "test"))
         >>= failIfNotZeroExit("esy test: " ++ msg)
       )
   );
 
-let checkPesyConfig = (cwd, msg, config, ()) =>
-  L.withLog("Editing pesy config: " ++ msg, () =>
-    editPesyConfig(config, Path.(cwd / "package.json"))
-  )
+let checkPesyConfig = (msg, editPesyConfig, ()) =>
+  L.withLog("Editing pesy config: " ++ msg, () => editPesyConfig())
   >>= (
     () =>
       L.withLog("esy pesy: " ++ msg, () =>
@@ -232,10 +302,10 @@ let checkBootstrapper = cwd => {
   OS.Cmd.(run_status(Cmd.v(pesyBinPath)))
   >>= failIfNotZeroExit("pesy")
   >>= checkProject("checking if bootstrapper works")
-  >>= checkPesyConfig(
-        cwd,
-        "try old (4.x) pesy syntax",
-        {|
+  >>= checkPesyConfig("try old (4.x) pesy syntax", () =>
+        PesyConfig.edit(
+          Config.ofString(
+            {|
 {
     "test": {
       "imports": [
@@ -273,6 +343,9 @@ let checkBootstrapper = cwd => {
     }
 }
        |},
+          ),
+          Path.(cwd / "package.json"),
+        )
       )
   >>= (
     () =>
@@ -291,23 +364,20 @@ caml_foo(value a) {
 }
          |},
         )
-        >>= (
-          () =>
-            OS.File.read(Fpath.(v(cwd) / "library" / "Util.re"))
-            >>= (
-              utilRe =>
-                OS.File.write(
-                  Fpath.(v(cwd) / "library" / "Util.re"),
-                  utilRe ++ "\n" ++ "external foo: int => unit = \"caml_foo\";",
-                )
-            )
-        )
+      )
+      >>= (() => OS.File.read(Fpath.(v(cwd) / "library" / "Util.re")))
+      >>= (
+        utilRe =>
+          OS.File.write(
+            Fpath.(v(cwd) / "library" / "Util.re"),
+            utilRe ++ "\n" ++ "external foo: int => unit = \"caml_foo\";",
+          )
       )
   )
-  >>= checkPesyConfig(
-        cwd,
-        "add cNames for stubs",
-        {|
+  >>= checkPesyConfig("add cNames for stubs", () =>
+        PesyConfig.edit(
+          Config.ofString(
+            {|
 {
     "test": {
       "imports": [
@@ -346,7 +416,212 @@ caml_foo(value a) {
     }
 }
            |},
-      );
+          ),
+          Path.(cwd / "package.json"),
+        )
+      )
+  >>= checkPesyConfig("add byte mode compilation ", () =>
+        PesyConfig.edit(
+          Config.ofString(
+            {|
+{
+    "test": {
+      "imports": [
+        "Library = require('test-project/library')",
+        "Rely = require('rely/lib')"
+      ],
+      "flags": [
+        "-linkall",
+        "-g",
+        "-w",
+        "-9"
+      ],
+      "modes": [
+        "byte"
+      ]
+    },
+    "testExe": {
+      "imports": [
+        "Test = require('test-project/test')"
+      ],
+      "bin": {
+        "RunTestProjectTests.exe": "RunTestProjectTests.re"
+      },
+      "modes": [
+        "byte",
+        "exe"
+      ]
+    },
+    "library": {
+      "require": [
+        "console.lib",
+        "pastel.lib"
+      ],
+      "modes": [
+        "byte"
+      ],
+      "cNames": ["stubs"]
+    },
+    "bin": {
+      "modes": [
+        "byte",
+        "exe"
+      ],
+      "imports": [
+        "Library = require('test-project/library')"
+      ],
+      "bin": {
+        "TestProjectApp.exe": "TestProjectApp.re"
+      }
+    }
+}
+           |},
+          ),
+          Path.(cwd / "package.json"),
+        )
+      )
+  >>= (
+    () =>
+      L.withLog("Editing source: Add file virtual-foo/VirtualFoo.rei", () =>
+        OS.Dir.create(~path=true, Fpath.(v(cwd) / "virtual-foo"))
+        >>= (
+          _ =>
+            OS.File.write(
+              Fpath.(v(cwd) / "virtual-foo" / "VirtualFoo.rei"),
+              {|
+let thisWillBeImplementedLater: unit => unit;
+|},
+            )
+        )
+      )
+      >>= (
+        () =>
+          L.withLog(
+            "Editing source: Add file implementation-bar/VirtualFoo.re", () =>
+            OS.Dir.create(~path=true, Fpath.(v(cwd) / "implementation-bar"))
+            >>= (
+              _ =>
+                OS.File.write(
+                  Fpath.(v(cwd) / "implementation-bar" / "VirtualFoo.re"),
+                  {|
+let thisWillBeImplementedLater = () => {
+  print_endline("From implementation bar...");
+};
+|},
+                )
+            )
+          )
+          >>= (
+            _ =>
+              L.withLog(
+                "Editing source: Add file implementation-baz/VirtualFoo.re", () =>
+                OS.Dir.create(
+                  ~path=true,
+                  Fpath.(v(cwd) / "implementation-baz"),
+                )
+                >>= (
+                  _ =>
+                    OS.File.write(
+                      Fpath.(v(cwd) / "implementation-baz" / "VirtualFoo.re"),
+                      {|
+let thisWillBeImplementedLater = () => {
+  print_endline("From implementation baz...");
+};
+|},
+                    )
+                )
+              )
+              >>= (
+                _ =>
+                  L.withLog(
+                    "Editing source: Add file executable-virutal-bar/VirtualFoo.re",
+                    () =>
+                    OS.Dir.create(
+                      ~path=true,
+                      Fpath.(v(cwd) / "executable-virtual-bar"),
+                    )
+                    >>= (
+                      _ =>
+                        OS.File.write(
+                          Fpath.(
+                            v(cwd)
+                            / "executable-virtual-bar"
+                            / "PesyVirtualApp.re"
+                          ),
+                          {|
+Bar.thisWillBeImplementedLater();
+|},
+                        )
+                    )
+                  )
+              )
+              >>= (
+                _ =>
+                  L.withLog(
+                    "Editing source: Add file executable-virutal-baz/VirtualFoo.re",
+                    () =>
+                    OS.Dir.create(
+                      ~path=true,
+                      Fpath.(v(cwd) / "executable-virtual-baz"),
+                    )
+                    >>= (
+                      _ =>
+                        OS.File.write(
+                          Fpath.(
+                            v(cwd)
+                            / "executable-virtual-baz"
+                            / "PesyVirtualApp.re"
+                          ),
+                          {|
+Baz.thisWillBeImplementedLater();
+|},
+                        )
+                    )
+                  )
+              )
+              >>= checkPesyConfig("add virtual modules", () =>
+                    PesyConfig.add(
+                      {|
+{
+    "foo-virtual": {
+      "virtualModules": [
+        "VirtualFoo"
+      ]
+    },
+    "implementation-bar": {
+      "implements": [
+        "test-project/foo-virtual"
+      ]
+    },
+    "implementation-baz": {
+      "implements": [
+        "test-project/foo-virtual"
+      ]
+    },
+    "executable-virtual-bar": {
+      "imports": [
+        "Bar = require('test-project/bar')"
+      ],
+      "bin": {
+        "PesyVirtualAppBar.exe": "PesyVirtualApp.re"
+      }
+    },
+    "executable-virtual-baz": {
+      "imports": [
+        "Bar = require('test-project/baz')"
+      ],
+      "bin": {
+        "PesyVirtualAppBaz.exe": "PesyVirtualApp.re"
+      }
+    }
+}
+|},
+                      Path.(cwd / "package.json"),
+                    )
+                  )
+          )
+      )
+  );
 };
 
 switch (

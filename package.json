@@ -4,22 +4,45 @@
   "description": "\"Esy Pesy\" - Your Esy Assistant.",
   "esy": {
     "buildsInSource": "_build",
-    "build": [ "dune build -p pesy--esy-pesy" ],
-    "buildDev": [ "refmterr dune build -p pesy--esy-pesy" ],
-    "buildEnv": { "ODOC_SYNTAX": "re" },
-    "release": { "bin": [ "pesy" ], "includePackages": [ "root" ] }
+    "build": [
+      "dune build -p pesy--esy-pesy"
+    ],
+    "buildDev": [
+      "refmterr dune build -p pesy--esy-pesy"
+    ],
+    "buildEnv": {
+      "ODOC_SYNTAX": "re"
+    },
+    "release": {
+      "bin": [
+        "pesy"
+      ],
+      "includePackages": [
+        "root"
+      ]
+    }
   },
   "buildDirs": {
     "bin": {
-      "bin": { "pesy": "Pesy.re" },
+      "bin": {
+        "pesy": "Pesy.re"
+      },
       "require": [
-        "pesy--esy-pesy/errors", "pesy--esy-pesy/lib",
-        "pesy--esy-pesy/utils", "cmdliner", "str", "findlib"
+        "pesy--esy-pesy/errors",
+        "pesy--esy-pesy/lib",
+        "pesy--esy-pesy/utils",
+        "cmdliner",
+        "str",
+        "findlib"
       ]
     },
     "lib": {
       "require": [
-        "str", "sexplib", "findlib", "rely/lib", "pesy--esy-pesy/utils",
+        "str",
+        "sexplib",
+        "findlib",
+        "rely/lib",
+        "pesy--esy-pesy/utils",
         "pesy--esy-pesy/errors"
       ],
       "rawBuildConfigFooter": [
@@ -28,18 +51,29 @@
       ]
     },
     "unit-tests/runner": {
-      "require": [ "pesy--esy-pesy/lib", "pesy--esy-pesy/utils" ],
-      "bin": { "RunUnitTests.exe": "RunUnitTests.re" }
+      "require": [
+        "pesy--esy-pesy/lib",
+        "pesy--esy-pesy/utils"
+      ],
+      "bin": {
+        "RunUnitTests.exe": "RunUnitTests.re"
+      }
     },
     "errors": {},
     "utils": {
-      "require": [ "unix", "yojson", "str", "pastel/lib", "rely/lib" ]
+      "require": [
+        "unix",
+        "yojson",
+        "str",
+        "pastel/lib",
+        "rely/lib"
+      ]
     }
   },
   "scripts": {
     "doc": "esy dune build @doc -p pesy--esy-pesy",
-    "test:e2e": "esy x RunE2ETests.exe",
-    "test:unit": "esy x RunUnitTests.exe"
+    "test:unit": "esy x RunUnitTests.exe",
+    "test": "esy run-script test:unit"
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
@@ -73,8 +107,7 @@
     "@opam/easy-format": "link:./vendor/easy-format/easy-format.opam",
     "@opam/merlin-extend": "link:./vendor/merlin-extend",
     "@opam/menhir": "link:./vendor/menhir/menhir.opam",
-    "@opam/ocaml-migrate-parsetree":
-      "link:./vendor/ocaml-migrate-parsetree/ocaml-migrate-parsetree.opam",
+    "@opam/ocaml-migrate-parsetree": "link:./vendor/ocaml-migrate-parsetree/ocaml-migrate-parsetree.opam",
     "@opam/jbuilder": "link:./vendor/jbuilder-transition/opam",
     "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
     "@opam/dune": "link:./vendor/dune/dune.opam",
