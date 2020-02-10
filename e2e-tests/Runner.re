@@ -347,7 +347,7 @@ let checkBootstrapper = cwd => {
           {|
 {
   "resolutions": {
-    "pesy": "<RESOLUTION_LINK>"
+    "@pesy/esy-pesy": "<RESOLUTION_LINK>"
   }
 }
 |},
@@ -482,7 +482,7 @@ caml_foo(value a) {
           Path.(cwd / "package.json"),
         )
       )
-  >>= checkPesyConfig("add byte mode compilation ", () =>
+  >>= checkPesyConfig("add byte mode compilation", () =>
         PesyConfig.edit(
           Config.ofString(
             {|
@@ -601,7 +601,131 @@ Foo.foo();
                                  "imports": [
                                    "Foo = require('../library-with-relative-imports')"
                                  ],
-                                 "bin": "Main.re"
+                                 "bin": { "TestRelativelyImportedLib.exe": "Main.re" }
+                               }
+                           }
+                       |},
+          Path.(cwd / "package.json"),
+        )
+      )
+  >>= (
+    () =>
+      L.withLog(Printf.sprintf("esy add @opam/lwt @opam/lwt_ppx"), () =>
+        OS.Cmd.run_status(
+          Cmd.(v(esyBinPath) % "add" % "@opam/lwt" % "@opam/lwt_ppx"),
+        )
+        >>= failIfNotZeroExit("esy add @opam/lwt @opam/lwt_ppx")
+      )
+  )
+  >>= (
+    () =>
+      L.withLog(Printf.sprintf("esy build"), () =>
+        OS.Cmd.run_status(Cmd.(v(esyBinPath) % "build"))
+        >>= failIfNotZeroExit("esy build")
+      )
+  )
+  >>= (
+    _ =>
+      L.withLog(
+        "Editing source: Add file executable-with-lwt-preprocess/Main.re", () =>
+        OS.Dir.create(
+          ~path=true,
+          Fpath.(v(cwd) / "executable-with-lwt-preprocess"),
+        )
+        >>= (
+          _ =>
+            OS.File.write(
+              Fpath.(v(cwd) / "executable-with-lwt-preprocess" / "Main.re"),
+              {|
+open Lwt;
+let foo = {
+  let%lwt foo = Lwt.return("hello world from lwt");
+  Lwt.return(foo ++ " blah");
+};
+print_endline(Lwt_main.run(foo));
+                                    |},
+            )
+        )
+      )
+  )
+  >>= checkPesyConfig("add preprocessor", () =>
+        PesyConfig.add(
+          {|
+                           {
+                               "executable-with-lwt-preprocess": {
+                                 "imports": [
+                                   "Lwt = require('lwt')",
+       "LwtUnix = require('lwt/unix')"
+                                 ],
+                                "preprocess": [
+                                    "pps",
+                                    "lwt_ppx"
+                                ],
+                                "bin": { "TestLwtPreprocessor.exe": "Main.re" }
+                               }
+                           }
+                       |},
+          Path.(cwd / "package.json"),
+        )
+      )
+  >>= (
+    _ =>
+      L.withLog(
+        "Editing source: Add file executable-with-raw-config/Main.re", () =>
+        OS.Dir.create(
+          ~path=true,
+          Fpath.(v(cwd) / "executable-with-raw-config"),
+        )
+        >>= (
+          _ =>
+            OS.File.write(
+              Fpath.(v(cwd) / "executable-with-raw-config" / "Main.re"),
+              {|
+print_endline(Unix.getenv("PATH"));
+             |},
+            )
+        )
+      )
+  )
+  >>= checkPesyConfig("add raw build config", () =>
+        PesyConfig.add(
+          {|
+                           {
+                               "executable-with-raw-config": {
+                                "rawBuildConfig": [ "(libraries unix)" ],
+                                "bin": { "TestRawBuildConfig.exe": "Main.re" }
+                               }
+                           }
+                       |},
+          Path.(cwd / "package.json"),
+        )
+      )
+  >>= (
+    _ =>
+      L.withLog(
+        "Editing source: Add file raw-footer-config-assets/plaintext.txt", () =>
+        OS.Dir.create(
+          ~path=true,
+          Fpath.(v(cwd) / "raw-footer-config-assets"),
+        )
+        >>= (
+          _ =>
+            OS.File.write(
+              Fpath.(v(cwd) / "raw-footer-config-assets" / "plaintext.txt"),
+              {|
+Some random text here.
+             |},
+            )
+        )
+      )
+  )
+  >>= checkPesyConfig("add raw build config", () =>
+        PesyConfig.add(
+          {|
+                           {
+                                "raw-footer-config-assets" : {
+                                "rawBuildConfigFooter": [ "(install (section share_root) (files (asset.txt as asset.txt)))" ],
+                                "bin": { "TestRawBuildConfigFooter.exe": "Main.re" }
                                }
                            }
                        |},
