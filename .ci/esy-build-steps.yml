@@ -31,6 +31,8 @@ steps:
       OCAMLRUNPARAM: 'b'
   # - script: "esy release"
   #   displayName: "esy release"
+  - bash: rm -rf ~/.esy/3/b
+    displayName: 'Emptying ~/.esy/3/b to clear up space'
   - template: utils/publish-build-cache.yml
 
   # Run tests or any additional steps here
