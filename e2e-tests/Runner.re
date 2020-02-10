@@ -343,7 +343,7 @@ let checkBootstrapper = cwd => {
       addToManifest(
         Str.global_replace(
           Str.regexp("<RESOLUTION_LINK>"),
-          "link:" ++ Sys.getenv("PESY_CLONE_PATH"),
+          "link:" ++ (Sys.getenv("PESY_CLONE_PATH") |> Str.(global_replace(regexp("\\"), "/"))),
           {|
 {
   "resolutions": {
