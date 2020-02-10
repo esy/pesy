@@ -1,5 +1,5 @@
 steps:
-  - script: "No release steps. They are disabled"
+  - script: echo "No release steps. They are disabled"
     displayName: "[Disabled] Release steps"
   # - template: utils/use-node.yml
 
