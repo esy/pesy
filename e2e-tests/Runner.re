@@ -600,7 +600,7 @@ Baz.thisWillBeImplementedLater();
     },
     "executable-virtual-bar": {
       "imports": [
-        "Bar = require('test-project/bar')"
+        "Bar = require('test-project/implementation-bar')"
       ],
       "bin": {
         "PesyVirtualAppBar.exe": "PesyVirtualApp.re"
@@ -608,7 +608,7 @@ Baz.thisWillBeImplementedLater();
     },
     "executable-virtual-baz": {
       "imports": [
-        "Bar = require('test-project/baz')"
+        "Baz = require('test-project/implementation-baz')"
       ],
       "bin": {
         "PesyVirtualAppBaz.exe": "PesyVirtualApp.re"
