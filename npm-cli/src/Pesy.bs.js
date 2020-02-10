@@ -121,7 +121,7 @@ function copyBundledTemplate(param) {
     __dirname,
     '..',
     'templates',
-    'pesy-reason-template-0.1.0-alpha.2'
+    'pesy-reason-template-0.1.0-alpha.3'
   );
   return scanDir(templatesDir, function(src) {
     var dest = src.replace(templatesDir, process.cwd());

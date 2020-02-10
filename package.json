@@ -72,10 +72,12 @@
   },
   "scripts": {
     "doc": "esy dune build @doc -p pesy--esy-pesy",
-    "test": "esy x RunUnitTests.exe"
+    "test:unit": "esy x RunUnitTests.exe",
+    "test": "esy run-script test:unit"
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
+    "@opam/bos": "0.2.0",
     "@opam/cmdliner": "*",
     "@opam/dune": "*",
     "@opam/ocamlfind": "*",

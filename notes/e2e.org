@@ -1,0 +1,51 @@
+* Setup
+
+  Recently [[https://github.com/esy/pesy/pull/105][Windows CI started failing]] due disk space issue. This could
+  be due to the heavy e2e setup - multiple test projects were probably
+  installing too many dependencies
+
+  As a work around, we're writing an in place e2e setup that actually
+  reflects developer workflow - it would bootstrap a new project and
+  edit it in place.
+
+  This time around, we aim to test error cases too
+
+* Issues with mdx attempt
+
+  [[https://github.com/realworldocaml/mdx][MDX]] was the ideal tool for this. But unfortunately, we're testing a
+  cli tool that call =esy=. Using =MDX= meant we had to use esy to run
+  the tests and running a cli tool that spawns esy within esy can be
+  challenging. For instance, we had tried setting up the following
+
+  #+BEGIN_SRC lisp
+    (alias
+     (name runtest)
+     (deps (:t test.t) (source_tree ./files))
+     (action
+      (progn
+       (run pwd)
+       (run echo "%{project_root}/npm-cli/pesy")
+       (setenv ESY__PROJECT "."
+	(setenv OCAMLRUNPARAM b
+	(setenv TEST_PROJECT_DIR "."
+	 (setenv
+	   PESY %{bin:pesy}
+	  (run %{bin:mdx} test --syntax=cram %{t})))))
+       (diff? %{t} %{t}.corrected))))
+  #+END_SRC
+
+  and
+
+  #+BEGIN_SRC sh
+    The simplest case: running pesy in an empty directory
+
+	$ mkdir -p $TEST_PROJECT_DIR
+	$ cp -R $PWD/files/package.json $TEST_PROJECT_DIR
+	$ cd $TEST_PROJECT_DIR; $PESY
+  #+END_SRC
+
+  It needs =MDX= which is available only in the sandbox and =esy-pesy=
+  runs =esy status= which assumes the root package.json is the root
+  not the test-project folder inside the =_build=. Writing to external $TMPDIR
+
+
