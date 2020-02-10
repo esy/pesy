@@ -102,7 +102,7 @@ let copyBundledTemplate = () => {
       dirname,
       "..",
       "templates",
-      "pesy-reason-template-0.1.0-alpha.2",
+      "pesy-reason-template-0.1.0-alpha.3",
     |]);
 
   Promise.(

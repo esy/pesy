@@ -146,6 +146,54 @@ module Config: {
     | Error(`Msg(msg)) => createError(msg);
 };
 
+let mergeJsons = (j1, j2) => {
+  switch (j1, j2) {
+  | (`Assoc(kvs1), `Assoc(kvs2)) => Ok(`Assoc(kvs1 @ kvs2))
+  | _ =>
+    Error(
+      `Msg(
+        sprintf("Merging %s and %s failed", to_string(j1), to_string(j2)),
+      ),
+    )
+  };
+};
+
+let addToManifest = (jsonString, manifest) => {
+  OS.File.read(Fpath.v(manifest))
+  >>= (
+    manifestJsonString => {
+      let manifestJson =
+        try(Ok(from_string(manifestJsonString))) {
+        | _ =>
+          Error(
+            `Msg(
+              sprintf("Input manifest was not a valid json: %s", jsonString),
+            ),
+          )
+        };
+      let editJson =
+        try(Ok(from_string(jsonString))) {
+        | _ =>
+          Error(
+            `Msg(
+              sprintf(
+                "Input pesy config was not a valid json: %s",
+                jsonString,
+              ),
+            ),
+          )
+        };
+
+      editJson
+      >>= (edit => manifestJson >>= (manifest => mergeJsons(manifest, edit)))
+      >>= (
+        mergedJson =>
+          mergedJson |> to_string |> OS.File.write(Fpath.v(manifest))
+      );
+    }
+  );
+};
+
 module PesyConfig = {
   let edit = (config, manifest) => {
     Config.serialize(config)
@@ -201,18 +249,6 @@ module PesyConfig = {
         );
       }
     );
-  };
-
-  let mergeJsons = (j1, j2) => {
-    switch (j1, j2) {
-    | (`Assoc(kvs1), `Assoc(kvs2)) => Ok(`Assoc(kvs1 @ kvs2))
-    | _ =>
-      Error(
-        `Msg(
-          sprintf("Merging %s and %s failed", to_string(j1), to_string(j2)),
-        ),
-      )
-    };
   };
 
   let add = (jsonString, manifest) => {
@@ -302,6 +338,32 @@ let checkBootstrapper = cwd => {
   OS.Cmd.(run_status(Cmd.v(pesyBinPath)))
   >>= failIfNotZeroExit("pesy")
   >>= checkProject("checking if bootstrapper works")
+  >>= (
+    () =>
+      addToManifest(
+        Str.global_replace(
+          Str.regexp("<RESOLUTION_LINK>"),
+          "link:" ++ Sys.getenv("PESY_CLONE_PATH"),
+          {|
+{
+  "resolutions": {
+    "pesy": "<RESOLUTION_LINK>"
+  }
+}
+|},
+        ),
+        Path.(cwd / "package.json"),
+      )
+      >>= (
+        () =>
+          L.withLog(Printf.sprintf("esy"), () =>
+            OS.Cmd.run_status(
+              Cmd.(v(esyBinPath) % "--skip-repository-update"),
+            )
+            >>= failIfNotZeroExit("esy")
+          )
+      )
+  )
   >>= checkPesyConfig("try old (4.x) pesy syntax", () =>
         PesyConfig.edit(
           Config.ofString(
@@ -458,7 +520,8 @@ caml_foo(value a) {
         "pastel.lib"
       ],
       "modes": [
-        "byte"
+        "byte",
+        "native"
       ],
       "cNames": ["stubs"]
     },
@@ -481,147 +544,70 @@ caml_foo(value a) {
         )
       )
   >>= (
-    () =>
-      L.withLog("Editing source: Add file virtual-foo/VirtualFoo.rei", () =>
-        OS.Dir.create(~path=true, Fpath.(v(cwd) / "virtual-foo"))
+    _ =>
+      L.withLog(
+        "Editing source: Add file library-with-relative-imports/Index.re", () =>
+        OS.Dir.create(
+          ~path=true,
+          Fpath.(v(cwd) / "library-with-relative-imports"),
+        )
         >>= (
           _ =>
             OS.File.write(
-              Fpath.(v(cwd) / "virtual-foo" / "VirtualFoo.rei"),
+              Fpath.(v(cwd) / "library-with-relative-imports" / "Index.re"),
               {|
-let thisWillBeImplementedLater: unit => unit;
-|},
+open Foo
+let foo = () => {
+  print_endline("relatively imported" ++ Foo.Util.hello());
+};
+                                    |},
             )
         )
       )
       >>= (
-        () =>
+        _ =>
           L.withLog(
-            "Editing source: Add file implementation-bar/VirtualFoo.re", () =>
-            OS.Dir.create(~path=true, Fpath.(v(cwd) / "implementation-bar"))
+            "Editing source: Add file executable-with-relative-imports/Main.re",
+            () =>
+            OS.Dir.create(
+              ~path=true,
+              Fpath.(v(cwd) / "executable-with-relative-imports"),
+            )
             >>= (
               _ =>
                 OS.File.write(
-                  Fpath.(v(cwd) / "implementation-bar" / "VirtualFoo.re"),
+                  Fpath.(
+                    v(cwd) / "executable-with-relative-imports" / "Main.re"
+                  ),
                   {|
-let thisWillBeImplementedLater = () => {
-  print_endline("From implementation bar...");
-};
-|},
+open Foo
+Foo.foo();
+                                    |},
                 )
             )
           )
-          >>= (
-            _ =>
-              L.withLog(
-                "Editing source: Add file implementation-baz/VirtualFoo.re", () =>
-                OS.Dir.create(
-                  ~path=true,
-                  Fpath.(v(cwd) / "implementation-baz"),
-                )
-                >>= (
-                  _ =>
-                    OS.File.write(
-                      Fpath.(v(cwd) / "implementation-baz" / "VirtualFoo.re"),
-                      {|
-let thisWillBeImplementedLater = () => {
-  print_endline("From implementation baz...");
-};
-|},
-                    )
-                )
-              )
-              >>= (
-                _ =>
-                  L.withLog(
-                    "Editing source: Add file executable-virutal-bar/VirtualFoo.re",
-                    () =>
-                    OS.Dir.create(
-                      ~path=true,
-                      Fpath.(v(cwd) / "executable-virtual-bar"),
-                    )
-                    >>= (
-                      _ =>
-                        OS.File.write(
-                          Fpath.(
-                            v(cwd)
-                            / "executable-virtual-bar"
-                            / "PesyVirtualApp.re"
-                          ),
-                          {|
-Bar.thisWillBeImplementedLater();
-|},
-                        )
-                    )
-                  )
-              )
-              >>= (
-                _ =>
-                  L.withLog(
-                    "Editing source: Add file executable-virutal-baz/VirtualFoo.re",
-                    () =>
-                    OS.Dir.create(
-                      ~path=true,
-                      Fpath.(v(cwd) / "executable-virtual-baz"),
-                    )
-                    >>= (
-                      _ =>
-                        OS.File.write(
-                          Fpath.(
-                            v(cwd)
-                            / "executable-virtual-baz"
-                            / "PesyVirtualApp.re"
-                          ),
-                          {|
-Baz.thisWillBeImplementedLater();
-|},
-                        )
-                    )
-                  )
-              )
-              >>= checkPesyConfig("add virtual modules", () =>
-                    PesyConfig.add(
-                      {|
-{
-    "foo-virtual": {
-      "virtualModules": [
-        "VirtualFoo"
-      ]
-    },
-    "implementation-bar": {
-      "implements": [
-        "test-project/foo-virtual"
-      ]
-    },
-    "implementation-baz": {
-      "implements": [
-        "test-project/foo-virtual"
-      ]
-    },
-    "executable-virtual-bar": {
-      "imports": [
-        "Bar = require('test-project/implementation-bar')"
-      ],
-      "bin": {
-        "PesyVirtualAppBar.exe": "PesyVirtualApp.re"
-      }
-    },
-    "executable-virtual-baz": {
-      "imports": [
-        "Baz = require('test-project/implementation-baz')"
-      ],
-      "bin": {
-        "PesyVirtualAppBaz.exe": "PesyVirtualApp.re"
-      }
-    }
-}
-|},
-                      Path.(cwd / "package.json"),
-                    )
-                  )
-          )
       )
-  );
+  )
+  >>= checkPesyConfig("add relatively imported modules", () =>
+        PesyConfig.add(
+          {|
+                           {
+                               "library-with-relative-imports": {
+                                 "imports": [
+                                   "Foo = require('../library')"
+                                 ]
+                               },
+                               "executable-with-relative-imports": {
+                                 "imports": [
+                                   "Foo = require('../library-with-relative-imports')"
+                                 ],
+                                 "bin": "Main.re"
+                               }
+                           }
+                       |},
+          Path.(cwd / "package.json"),
+        )
+      );
 };
 
 switch (

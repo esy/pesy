@@ -5,9 +5,9 @@ const cp = require("child_process");
 const util = require("util");
 
 let url =
-  "https://github.com/esy/pesy-reason-template/archive/0.1.0-alpha.2.zip";
+  "https://github.com/esy/pesy-reason-template/archive/0.1.0-alpha.3.zip";
 let downloadAs = "template.zip";
-let extractedDirName = "pesy-reason-template-0.1.0-alpha.2";
+let extractedDirName = "pesy-reason-template-0.1.0-alpha.3";
 let get = url =>
   new Promise((resolve, reject) => {
     let request = https.get(url, function(response) {
