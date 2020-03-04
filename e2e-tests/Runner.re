@@ -1,7 +1,6 @@
 open Yojson.Basic;
 open Unix;
 open Utils;
-open Printf;
 open Bos;
 open Printf;
 
@@ -343,7 +342,11 @@ let checkBootstrapper = cwd => {
       addToManifest(
         Str.global_replace(
           Str.regexp("<RESOLUTION_LINK>"),
-          "link:" ++ (Sys.getenv("PESY_CLONE_PATH") |> Str.(global_replace(regexp("\\"), "/"))),
+          "link:"
+          ++ (
+            Sys.getenv("PESY_CLONE_PATH")
+            |> Str.(global_replace(regexp("\\"), "/"))
+          ),
           {|
 {
   "resolutions": {

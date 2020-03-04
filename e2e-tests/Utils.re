@@ -12,7 +12,7 @@ let makeCommand = cmd =>
         Array.to_list(Unix.environment())
         |> List.map(e =>
              switch (Str.split(Str.regexp("="), e)) {
-             | [k, v, ...rest] => Some((k, v))
+             | [k, v, ..._rest] => Some((k, v))
              | _ => None
              }
            )
@@ -115,7 +115,7 @@ module IO = {
     let ic = open_in(file);
     while (! breakOut^) {
       let line =
-        try (input_line(ic)) {
+        try(input_line(ic)) {
         | End_of_file =>
           breakOut := true;
           "";
@@ -128,7 +128,7 @@ module IO = {
 
 let contains = (s1, s2) => {
   let re = Str.regexp_string(s2);
-  try (Str.search_forward(re, s1, 0)) {
+  try(Str.search_forward(re, s1, 0)) {
   | Not_found => (-1)
   };
 };
@@ -136,7 +136,7 @@ let contains = (s1, s2) => {
 let rec fetch_files = (f, p) => {
   let rec walk = (dh, acc) => {
     let read_dir = dh =>
-      try (Some(Unix.readdir(dh))) {
+      try(Some(Unix.readdir(dh))) {
       | End_of_file => None
       };
 
@@ -152,7 +152,7 @@ let rec fetch_files = (f, p) => {
     };
   };
 
-  if (try (Sys.is_directory(p)) {
+  if (try(Sys.is_directory(p)) {
       | _ => false
       }) {
     let dh = Unix.opendir(p);

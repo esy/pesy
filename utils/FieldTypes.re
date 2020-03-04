@@ -11,7 +11,7 @@ let toBool =
     raise(
       ConversionException(sprintf("Expected string. Actual string (%s)", s)),
     )
-  | List(l) => raise(ConversionException("Expected string. Actual list"));
+  | List(_l) => raise(ConversionException("Expected string. Actual list"));
 let toString =
   fun
   | String(s) => s

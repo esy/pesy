@@ -5,7 +5,7 @@ let esy_command = "esy";
 /*  @esy-ocaml/foo-package -> foo-package */
 let resolveEsyCommand = () =>
   Sys.unix
-    ? try (
+    ? try(
         Sys.command(sprintf("%s --version &>/dev/null", esy_command)) == 0
           ? Some(esy_command) : None
       ) {
@@ -16,7 +16,7 @@ let resolveEsyCommand = () =>
         Array.to_list(Unix.environment())
         |> List.map(e =>
              switch (Str.split(Str.regexp("="), e)) {
-             | [k, v, ...rest] => Some((k, v))
+             | [k, v, ..._rest] => Some((k, v))
              | _ => None
              }
            )
@@ -39,17 +39,17 @@ let resolveEsyCommand = () =>
 
       let paths =
         Str.split(
-          Str.regexp( Sys.unix ? ": ": ";"),
+          Str.regexp(Sys.unix ? ": " : ";"),
           String.concat(
-            Sys.unix ? ": ": ";",
-              List.map(
-              (e) => {
+            Sys.unix ? ": " : ";",
+            List.map(
+              e => {
                 let (_, v) = e;
                 v;
               },
               pathVars,
-            )
-          )
+            ),
+          ),
         );
 
       /* Unix.putenv("PATH", v); /\* This didn't work! *\/ */

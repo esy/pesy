@@ -1,7 +1,6 @@
 open Printf;
 module Utils = PesyEsyPesyUtils.Utils;
 open Utils;
-open Utils.NoLwt;
 open PesyEsyPesyErrors.Errors;
 
 /*****
@@ -208,7 +207,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
             |> List.map(FieldTypes.toString <|> ImportsParser.parse)
           ) {
           | JSON.NullJSONValue(_) => []
-          | e => raise(ImportsParserFailure())
+          | _e => raise(ImportsParserFailure())
           };
 
         let pesyModuleNamespace =
@@ -618,7 +617,7 @@ let toPesyConf = (projectPath: string, json: JSON.t): t => {
   );
 };
 
-let toDunePackages = (_prjPath, rootName, pkgs) => {
+let toDunePackages = (_prjPath, _rootName, pkgs) => {
   List.map(
     pkg =>
       switch (pkg.pkgType) {

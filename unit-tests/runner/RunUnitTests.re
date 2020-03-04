@@ -1,4 +1,4 @@
-module UtilsTests = PesyEsyPesyUtils.UnitTests;
-module LibTests = PesyEsyPesyLib.UnitTests;
+module UtilsTests = Utils;
+module LibTests = Lib;
 LibTests.TestFramework.cli();
 UtilsTests.TestFramework.cli();

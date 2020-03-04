@@ -126,7 +126,7 @@ let testProjects =
   |> Array.to_list
   |> List.filter(dir =>
        try(Sys.is_directory(Path.(testDir / dir))) {
-       | Sys_error(e) => false
+       | Sys_error(_e) => false
        }
      )
   |> List.map(d => Path.(testDir / d));

@@ -1,6 +1,3 @@
-module Utils = PesyEsyPesyUtils;
-open Utils;
-
 exception InvalidSubDirs(string);
 type include_subdirs =
   | No
