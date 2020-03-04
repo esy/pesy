@@ -1,5 +1,5 @@
 <p align="center" style="margin: 2rem 0">
-  <img src="./images/screenshot.png" width="256" title="Github Logo">
+  <img src="./images/screenshot.png" title="Github Logo">
 </p>
 
 [![Build Status](https://dev.azure.com/pesy/pesy/_apis/build/status/esy.pesy?branchName=master)](https://dev.azure.com/pesy/pesy/_build/latest?definitionId=1&branchName=master)
