@@ -1,2 +1,0 @@
-(executable (name PesyVirtualApp) (public_name PesyVirtualAppBar.exe)
-    (libraries pesy-virtual.lib pesy-virtual.bar)) 

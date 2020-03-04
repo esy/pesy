@@ -42,12 +42,10 @@
     "ocaml": "4.8.x",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
-    "pesy-self": "*",
     "refmterr": "*",
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "pesy-self": "link:./vendor/pesy",
     "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
     "@reason-native/console": "link:./vendor/reason-native/console.json",
     "@opam/sexplib0": "link:./vendor/sexplib0/sexplib0.opam",
