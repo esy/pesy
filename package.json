@@ -22,54 +22,6 @@
       ]
     }
   },
-  "buildDirs": {
-    "bin": {
-      "bin": {
-        "pesy": "Pesy.re"
-      },
-      "require": [
-        "pesy--esy-pesy/errors",
-        "pesy--esy-pesy/lib",
-        "pesy--esy-pesy/utils",
-        "cmdliner",
-        "str",
-        "findlib"
-      ]
-    },
-    "lib": {
-      "require": [
-        "str",
-        "sexplib",
-        "findlib",
-        "rely/lib",
-        "pesy--esy-pesy/utils",
-        "pesy--esy-pesy/errors"
-      ],
-      "rawBuildConfigFooter": [
-        "(rule (targets Lexer.ml) (deps Lexer.mll) (action (run %{bin:ocamllex} -q -o %{targets} %{deps})))",
-        "(rule (targets Parser.ml Parser.mli) (deps Parser.mly) (action (run %{bin:ocamlyacc} %{deps})))"
-      ]
-    },
-    "unit-tests/runner": {
-      "require": [
-        "pesy--esy-pesy/lib",
-        "pesy--esy-pesy/utils"
-      ],
-      "bin": {
-        "RunUnitTests.exe": "RunUnitTests.re"
-      }
-    },
-    "errors": {},
-    "utils": {
-      "require": [
-        "unix",
-        "yojson",
-        "str",
-        "pastel/lib",
-        "rely/lib"
-      ]
-    }
-  },
   "scripts": {
     "doc": "esy dune build @doc -p pesy--esy-pesy",
     "test:unit": "esy x RunUnitTests.exe",
