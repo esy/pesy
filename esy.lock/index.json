@@ -1,5 +1,5 @@
 {
-  "checksum": "317b43b14ca4a2797dc4ba6c63394c03",
+  "checksum": "efab12815dcec322542e3285143ba1ed",
   "root": "@pesy/esy-pesy@link-dev:./package.json",
   "node": {
     "refmterr@3.3.0@d41d8cd9": {
@@ -38,20 +38,22 @@
       "dependencies": [],
       "devDependencies": []
     },
-    "@reason-native/rely@link:vendor/reason-native/rely.json": {
-      "id": "@reason-native/rely@link:vendor/reason-native/rely.json",
+    "@reason-native/rely@3.2.1@d41d8cd9": {
+      "id": "@reason-native/rely@3.2.1@d41d8cd9",
       "name": "@reason-native/rely",
-      "version": "link:vendor/reason-native/rely.json",
+      "version": "3.2.1",
       "source": {
-        "type": "link",
-        "path": "vendor/reason-native",
-        "manifest": "rely.json"
+        "type": "install",
+        "source": [
+          "archive:https://registry.npmjs.org/@reason-native/rely/-/rely-3.2.1.tgz#sha1:7945ac6a51773a97b8f8cfd97d2855ac7ac4ecb2"
+        ]
       },
       "overrides": [],
       "dependencies": [
-        "refmterr@3.3.0@d41d8cd9", "ocaml@4.8.1000@d41d8cd9",
+        "ocaml@4.8.1000@d41d8cd9",
         "@reason-native/pastel@link:vendor/reason-native/pastel.json",
         "@reason-native/file-context-printer@0.0.3@d41d8cd9",
+        "@reason-native/cli@0.0.1-alpha@d41d8cd9",
         "@opam/re@opam:1.9.0@d4d5e13d", "@opam/junit@opam:2.0.2@0b7bd730",
         "@opam/dune@link:vendor/dune/dune.opam",
         "@esy-ocaml/reason@3.5.2@d41d8cd9"
@@ -111,6 +113,26 @@
       ],
       "devDependencies": [ "ocaml@4.8.1000@d41d8cd9" ]
     },
+    "@reason-native/cli@0.0.1-alpha@d41d8cd9": {
+      "id": "@reason-native/cli@0.0.1-alpha@d41d8cd9",
+      "name": "@reason-native/cli",
+      "version": "0.0.1-alpha",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://registry.npmjs.org/@reason-native/cli/-/cli-0.0.1-alpha.tgz#sha1:0b911053fa7cc661eac10ead50d6ea6cc1fcd94d"
+        ]
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.8.1000@d41d8cd9",
+        "@reason-native/pastel@link:vendor/reason-native/pastel.json",
+        "@opam/re@opam:1.9.0@d4d5e13d",
+        "@opam/dune@link:vendor/dune/dune.opam",
+        "@esy-ocaml/reason@3.5.2@d41d8cd9"
+      ],
+      "devDependencies": []
+    },
     "@pesy/esy-pesy@link-dev:./package.json": {
       "id": "@pesy/esy-pesy@link-dev:./package.json",
       "name": "@pesy/esy-pesy",
@@ -133,7 +155,7 @@
       ],
       "devDependencies": [
         "refmterr@3.3.0@d41d8cd9", "ocaml@4.8.1000@d41d8cd9",
-        "@reason-native/rely@link:vendor/reason-native/rely.json",
+        "@reason-native/rely@3.2.1@d41d8cd9",
         "@opam/odoc@opam:1.5.0@35218f5f", "@opam/merlin@opam:3.3.3@d653b06a"
       ]
     },

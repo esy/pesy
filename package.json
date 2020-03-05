@@ -59,7 +59,6 @@
     "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
     "@opam/dune": "link:./vendor/dune/dune.opam",
     "@opam/yojson": "link:./vendor/yojson/yojson.opam",
-    "@reason-native/rely": "link:./vendor/reason-native/rely.json",
     "@reason-native/pastel": "link:./vendor/reason-native/pastel.json"
   }
 }
