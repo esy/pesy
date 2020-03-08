@@ -158,53 +158,59 @@ let substitute = projectPath => {
   |> Promise.all;
 };
 
-let spinnerEnabledPromise = (spinnerMessage, promiseThunk) => {
-  let spinner = Spinner.start(spinnerMessage);
-  Promise.(
-    promiseThunk()
-    |> then_(x => {
-         Spinner.stop(spinner);
-         resolve(x);
-       })
-    |> catch(e => {
-         Spinner.stop(spinner);
-         throwJSError(e);
-       })
-  );
+let spinnerEnabledPromise = (cmd, args, projectPath, message) => {
+  Js.log(message);
+  Js.Promise.make((~resolve, ~reject: _) => {
+    let process =
+      ChildProcess.spawn(
+        cmd,
+        args,
+        ChildProcess.Options.make(~cwd=projectPath, ()),
+      );
+    switch (process |> ChildProcess.stdout) {
+    | None => ()
+    | Some(stdout) =>
+      Stream.onData(
+        stdout,
+        d => {
+          Js.log("here");
+          Js.log(d);
+        },
+      );
+      Stream.onEnd(stdout, () => resolve(. "dummy"));
+    };
+  });
 };
 
 let setup = (template, projectPath) =>
   Promise.(
     bootstrap(projectPath, template)
-    |> then_(_ =>
-         spinnerEnabledPromise("\x1b[2mSetting up\x1b[0m ", () =>
-           substitute(projectPath)
-         )
-       )
-    |> then_(_arrayOfCompletions =>
-         spinnerEnabledPromise("\x1b[2mRunning\x1b[0m esy install", () =>
-           ChildProcess.exec(
-             "esy i",
-             ChildProcess.Options.make(~cwd=projectPath, ()),
-           )
-         )
-       )
-    |> then_(_ /* (_stdout, _stderr) */ => {
+    |> then_(_ => {
+         Js.log("Setting up");
+         substitute(projectPath);
+       })
+    |> then_(_arrayOfCompletions => {
          spinnerEnabledPromise(
-           "\x1b[2mRunning\x1b[0m esy pesy\x1b[2m and \x1b[0mbuilding project dependencies",
-           () =>
-           ChildProcess.exec(
-             "esy pesy",
-             ChildProcess.Options.make(~cwd=projectPath, ()),
-           )
+           "esy",
+           [|"i"|],
+           projectPath,
+           ("Running" |> Chalk.dim) ++ (" esy install" |> Chalk.whiteBright),
          )
        })
     |> then_(_ /* (_stdout, _stderr) */ => {
-         spinnerEnabledPromise("\x1b[2mRunning\x1b[0m esy build", () =>
-           ChildProcess.exec(
-             "esy b",
-             ChildProcess.Options.make(~cwd=projectPath, ()),
-           )
+         spinnerEnabledPromise(
+           "esy",
+           [|"pesy"|],
+           projectPath,
+           "Running\x1b[0m esy pesy\x1b[2m and \x1b[0mbuilding project dependencies",
+         )
+       })
+    |> then_(_ /* (_stdout, _stderr) */ => {
+         spinnerEnabledPromise(
+           "esy",
+           [|"b"|],
+           projectPath,
+           "\x1b[2mRunning\x1b[0m esy build",
          )
        })
     |> then_(_ /* (_stdout, _stderr) */ => {resolve()})
@@ -239,6 +245,7 @@ let main = (template, useDefaultOptions) =>
 
 module CliOptions = {
   let bootstrap = ref(true);
+
   /* We presume that bootstrapping is the most likely action.
      Other info retrieving commands with '--help' and '--version'
      are less likely and turn the flag off */
