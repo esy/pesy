@@ -29,12 +29,12 @@
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
-    "@opam/bos": "0.2.0",
     "@opam/cmdliner": "*",
     "@opam/dune": "*",
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
+    "@opam/bos": "0.2.0",
     "@reason-native/pastel": "*",
     "ocaml": "4.6.10 - 4.8"
   },
@@ -52,7 +52,6 @@
     "@opam/ppx_derivers": "link:./vendor/ppx_derivers/ppx_derivers.opam",
     "@opam/parsexp": "link:./vendor/parsexp/parsexp.opam",
     "@opam/base": "link:./vendor/base/base.opam",
-    "@opam/merlin-extend": "link:./vendor/merlin-extend",
     "@opam/menhir": "link:./vendor/menhir/menhir.opam",
     "@opam/ocaml-migrate-parsetree": "link:./vendor/ocaml-migrate-parsetree/ocaml-migrate-parsetree.opam",
     "@opam/jbuilder": "link:./vendor/jbuilder-transition/opam",
