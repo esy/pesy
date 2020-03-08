@@ -27,7 +27,7 @@
   "scripts": {
     "rollup": "rollup -c rollup.config.js",
     "bsb": "bsb -make-world",
-    "build": "npm run bsb && npm run prettier",
+    "build": "npm run bsb && npm run rollup",
     "package": "node scripts/vendor-template.js && npm run build",
     "prettier": "prettier --single-quote --trailing-comma es5 --write src/**.js",
     "test": "npm run build && jest --coverage",
@@ -43,7 +43,7 @@
   "files": [
     "package.json",
     "pesy",
-    "src/",
+    "pesy.bundle.js",
     "templates/",
     "stubs/",
     "v0.4.4/"

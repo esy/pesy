@@ -37,8 +37,8 @@ let () = {
   chdir(Path.(cwd / "npm-cli"));
   printf("Installing pesy globally...");
   print_newline();
-  run(makeCommand("npm"), [|"install"|]);
-  run(makeCommand("npm"), [|"run", "package"|]);
+  run(makeCommand("yarn"), [||]);
+  run(makeCommand("yarn"), [|"run", "package"|]);
   run(makeCommand("npm"), [|"pack"|]);
   run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-alpha.11.tgz"|]);
   chdir(cwd);

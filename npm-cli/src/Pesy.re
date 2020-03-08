@@ -100,7 +100,6 @@ let copyBundledTemplate = () => {
   let templatesDir =
     Path.resolve([|
       dirname,
-      "..",
       "templates",
       "pesy-reason-template-0.1.0-alpha.3",
     |]);
