@@ -1,2 +1,5 @@
-(library (name PesyEsyPesyUtils) (public_name pesy--esy-pesy.utils)
-    (modules (:standard)) (libraries unix yojson str pastel.lib rely.lib))
+(library
+ (name PesyEsyPesyUtils)
+ (public_name pesy--esy-pesy.utils)
+ (modules (:standard))
+ (libraries unix yojson str pastel.lib))

@@ -85,7 +85,7 @@ let toDuneStanza = (common: Common.t, e) => {
   /* let {name: pkgName, require, path} = common; */
   let {main, modes: modesP} = e;
   let (
-    public_name,
+    _public_name,
     libraries,
     flags,
     ocamlcFlags,

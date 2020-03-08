@@ -1,2 +1,0 @@
-(library (name Utils) (public_name pesy.utils)
-    (libraries unix str pastel.lib)) 

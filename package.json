@@ -8,7 +8,7 @@
       "dune build -p pesy--esy-pesy"
     ],
     "buildDev": [
-      "refmterr dune build -p pesy--esy-pesy"
+      "refmterr dune build --root . --only-package pesy--esy-pesy"
     ],
     "buildEnv": {
       "ODOC_SYNTAX": "re"
@@ -22,97 +22,42 @@
       ]
     }
   },
-  "buildDirs": {
-    "bin": {
-      "bin": {
-        "pesy": "Pesy.re"
-      },
-      "require": [
-        "pesy--esy-pesy/errors",
-        "pesy--esy-pesy/lib",
-        "pesy--esy-pesy/utils",
-        "cmdliner",
-        "str",
-        "findlib"
-      ]
-    },
-    "lib": {
-      "require": [
-        "str",
-        "sexplib",
-        "findlib",
-        "rely/lib",
-        "pesy--esy-pesy/utils",
-        "pesy--esy-pesy/errors"
-      ],
-      "rawBuildConfigFooter": [
-        "(rule (targets Lexer.ml) (deps Lexer.mll) (action (run %{bin:ocamllex} -q -o %{targets} %{deps})))",
-        "(rule (targets Parser.ml Parser.mli) (deps Parser.mly) (action (run %{bin:ocamlyacc} %{deps})))"
-      ]
-    },
-    "unit-tests/runner": {
-      "require": [
-        "pesy--esy-pesy/lib",
-        "pesy--esy-pesy/utils"
-      ],
-      "bin": {
-        "RunUnitTests.exe": "RunUnitTests.re"
-      }
-    },
-    "errors": {},
-    "utils": {
-      "require": [
-        "unix",
-        "yojson",
-        "str",
-        "pastel/lib",
-        "rely/lib"
-      ]
-    }
-  },
   "scripts": {
     "doc": "esy dune build @doc -p pesy--esy-pesy",
-    "test:unit": "esy x RunUnitTests.exe",
+    "test:unit": "esy b dune exec ./unit-tests/runner/RunUnitTests.exe",
     "test": "esy run-script test:unit"
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
-    "@opam/bos": "0.2.0",
     "@opam/cmdliner": "*",
     "@opam/dune": "*",
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
+    "@opam/bos": "0.2.0",
     "@reason-native/pastel": "*",
-    "@reason-native/rely": "*",
     "ocaml": "4.6.10 - 4.8"
   },
   "devDependencies": {
     "ocaml": "4.8.x",
+    "@reason-native/rely": "*",
     "@opam/odoc": "*",
-    "pesy-self": "*",
     "refmterr": "*",
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "pesy-self": "link:./vendor/pesy",
     "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
     "@reason-native/console": "link:./vendor/reason-native/console.json",
     "@opam/sexplib0": "link:./vendor/sexplib0/sexplib0.opam",
-    "@opam/result": "link:./vendor/result/result.opam",
-    "@opam/re": "link:./vendor/re/re.opam",
     "@opam/ppx_derivers": "link:./vendor/ppx_derivers/ppx_derivers.opam",
     "@opam/parsexp": "link:./vendor/parsexp/parsexp.opam",
     "@opam/base": "link:./vendor/base/base.opam",
-    "@opam/easy-format": "link:./vendor/easy-format/easy-format.opam",
-    "@opam/merlin-extend": "link:./vendor/merlin-extend",
     "@opam/menhir": "link:./vendor/menhir/menhir.opam",
     "@opam/ocaml-migrate-parsetree": "link:./vendor/ocaml-migrate-parsetree/ocaml-migrate-parsetree.opam",
     "@opam/jbuilder": "link:./vendor/jbuilder-transition/opam",
     "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
     "@opam/dune": "link:./vendor/dune/dune.opam",
     "@opam/yojson": "link:./vendor/yojson/yojson.opam",
-    "@reason-native/rely": "link:./vendor/reason-native/rely.json",
     "@reason-native/pastel": "link:./vendor/reason-native/pastel.json"
   }
 }

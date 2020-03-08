@@ -3,11 +3,10 @@ module Utils = PesyEsyPesyUtils.Utils;
 open Lib;
 open Utils;
 open Printf;
-open EsyCommand;
 open Cmdliner;
 open PesyEsyPesyErrors.Errors;
 
-exception BootstrappingError(string);
+exception BootstrappingError(unit);
 exception LsLibsError(string);
 
 let reconcile = projectRoot => {
@@ -55,7 +54,7 @@ let main = () => {
 
 let main = () =>
   try(main()) {
-  | BootstrappingError(message) =>
+  | BootstrappingError () =>
     let message =
       Pastel.(
         <Pastel>
@@ -128,7 +127,7 @@ let main = () =>
       );
     fprintf(stderr, "%s\n", message);
     exit(-1);
-  | ImportsParserFailure(e) =>
+  | ImportsParserFailure(_e) =>
     /* TODO: Be more specific about which imports */
     let message =
       Pastel.(
@@ -181,14 +180,14 @@ let pesy_build = () =>
                          );
                        sprintf(
                          "      Dune file %s is stale",
-                         Pastel.(<Pastel bold=true> duneFile </Pastel>),
+                         <Pastel bold=true> duneFile </Pastel>,
                        );
                      }
                    | StaleOpamFile((o, n)) =>
                      sprintf(
                        "      Project target name has changed. Found %s instead of %s",
-                       Pastel.(<Pastel bold=true> o </Pastel>),
-                       Pastel.(<Pastel bold=true> n </Pastel>),
+                       <Pastel bold=true> o </Pastel>,
+                       <Pastel bold=true> n </Pastel>,
                      ),
                  ),
             );

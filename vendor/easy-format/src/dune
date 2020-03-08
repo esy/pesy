@@ -1,4 +1,0 @@
-(library
- (name easy_format)
- (public_name easy-format)
- (synopsis "Indentation made easy(ier)"))

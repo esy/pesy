@@ -1,2 +1,3 @@
-(executable (name RunUnitTests) (modules (:standard))
-    (public_name RunUnitTests.exe) (libraries pesy--esy-pesy.lib))
+(test (name RunUnitTests)
+ (modules (:standard))
+ (libraries pesy--esy-pesy.lib pesy--esy-pesy.utils rely.lib))

@@ -1,6 +1,6 @@
 (library (name PesyEsyPesyLib) (public_name pesy--esy-pesy.lib)
     (modules (:standard))
-    (libraries str sexplib findlib rely.lib pesy--esy-pesy.utils
+    (libraries str sexplib findlib pesy--esy-pesy.utils
         pesy--esy-pesy.errors))
 (rule (targets Lexer.ml) (deps Lexer.mll)
     (action (run %{bin:ocamllex} -q -o %{targets} %{deps})))

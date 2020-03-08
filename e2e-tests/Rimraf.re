@@ -16,7 +16,7 @@ let is_directory = p => {
 };
 
 let rec del_file = p =>
-  try (
+  try(
     {
       Unix.unlink(p);
       Ok;
@@ -26,13 +26,13 @@ let rec del_file = p =>
   | Unix.Unix_error(Unix.EISDIR | Unix.EPERM, _, _) => Ok
   | Unix.Unix_error(Unix.EACCES, _, _) when Sys.win32 => Ok
   | Unix.Unix_error(Unix.EINTR, _, _) => del_file(p)
-  | Unix.Unix_error(e, _, _) => Failure
+  | Unix.Unix_error(_e, _, _) => Failure
   };
 
 let rec del_dir = p => {
   let rec del_members = (dHandle, p) => {
     switch (
-      try (Some(Unix.readdir(dHandle))) {
+      try(Some(Unix.readdir(dHandle))) {
       | End_of_file => None
       }
     ) {
@@ -60,7 +60,7 @@ let rec del_dir = p => {
 
 and run: string => result =
   p =>
-    try (is_directory(p) ? del_dir(p) : del_file(p)) {
+    try(is_directory(p) ? del_dir(p) : del_file(p)) {
     | Unix.Unix_error(e, _, _) =>
       switch (e) {
       | Unix.ENOENT => Ok

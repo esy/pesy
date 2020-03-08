@@ -230,9 +230,9 @@ let commandOutput = (command, args) => {
     );
   };
   switch (close_process_full((cout, cin, cerr))) {
-  | WEXITED(c) => (stdout^, stderr^)
-  | WSIGNALED(c) => (stdout^, stderr^)
-  | WSTOPPED(c) => (stdout^, stderr^)
+  | WEXITED(_c) => (stdout^, stderr^)
+  | WSIGNALED(_c) => (stdout^, stderr^)
+  | WSTOPPED(_c) => (stdout^, stderr^)
   };
 };
 
@@ -259,7 +259,7 @@ let runCommandWithEnv = (command, args) => {
     ignore(
       try({
         let line = input_line(cerr);
-        print_endline(Pastel.(<Pastel dim=true> line </Pastel>));
+        print_endline(<Pastel dim=true> line </Pastel>);
       }) {
       | End_of_file => repeat := false
       },
@@ -269,7 +269,7 @@ let runCommandWithEnv = (command, args) => {
     ignore(
       try({
         let line = input_line(cout);
-        print_endline(Pastel.(<Pastel dim=true> line </Pastel>));
+        print_endline(<Pastel dim=true> line </Pastel>);
       }) {
       | End_of_file => repeat := false
       },

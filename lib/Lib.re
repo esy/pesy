@@ -4,8 +4,6 @@ module EsyCommand = EsyCommand;
 module Utils = PesyEsyPesyUtils.Utils;
 open Utils;
 open NoLwt;
-open Printf;
-open EsyCommand;
 
 type fileOperation =
   | UPDATE(string)
@@ -102,15 +100,11 @@ let log = operations => {
       switch (o) {
       | CREATE(x) =>
         print_endline(
-          Pastel.(
-            <Pastel> "    Created " <Pastel bold=true> x </Pastel> </Pastel>
-          ),
+          <Pastel> "    Created " <Pastel bold=true> x </Pastel> </Pastel>,
         )
       | UPDATE(x) =>
         print_endline(
-          Pastel.(
-            <Pastel> "    Updated " <Pastel bold=true> x </Pastel> </Pastel>
-          ),
+          <Pastel> "    Updated " <Pastel bold=true> x </Pastel> </Pastel>,
         )
       };
       ();
