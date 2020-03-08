@@ -50,13 +50,13 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "bs-platform": "^7.0.1",
+    "@glennsl/bs-jest": "^0.4.9",
+    "bs-platform": "7.0.1",
+    "prettier": "^1.19.1",
     "rollup": "^1.16.2",
     "rollup-plugin-commonjs": "^10.0.0",
     "rollup-plugin-node-resolve": "^5.0.4",
-    "tablecloth-bucklescript": "0.0.6",
-    "@glennsl/bs-jest": "^0.4.9",
-    "prettier": "^1.19.1"
+    "tablecloth-bucklescript": "0.0.6"
   },
   "bugs": {
     "url": "https://github.com/esy/pesy/issues"
@@ -66,7 +66,6 @@
     "chalk": "^3.0.0",
     "download-git-repo": "^2.0.0",
     "source-map-support": "^0.5.16",
-    "tablecloth-bucklescript": "0.0.6",
     "walk-sync": "^2.0.2"
   }
 }
