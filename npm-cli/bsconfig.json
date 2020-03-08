@@ -16,7 +16,7 @@
     "in-source": true
   },
   "suffix": ".bs.js",
-  "bs-dependencies": ["@glennsl/bs-jest","tablecloth-bucklescript"],
+  "bs-dependencies": ["@glennsl/bs-jest", "tablecloth-bucklescript"],
   "bsc-flags": ["-bs-g"],
   "warnings": {
     "number": "-44-102-20",

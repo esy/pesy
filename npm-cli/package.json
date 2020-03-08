@@ -25,8 +25,9 @@
     ]
   },
   "scripts": {
+    "rollup": "rollup -c rollup.config.js",
     "bsb": "bsb -make-world",
-    "build": "npm run bsb && npm run prettier",
+    "build": "npm run bsb && npm run rollup",
     "package": "node scripts/vendor-template.js && npm run build",
     "prettier": "prettier --single-quote --trailing-comma es5 --write src/**.js",
     "test": "npm run build && jest --coverage",
@@ -42,7 +43,7 @@
   "files": [
     "package.json",
     "pesy",
-    "src/",
+    "pesy.bundle.js",
     "templates/",
     "stubs/",
     "v0.4.4/"
@@ -50,18 +51,21 @@
   "license": "MIT",
   "devDependencies": {
     "@glennsl/bs-jest": "^0.4.9",
-    "prettier": "^1.19.1"
+    "bs-platform": "7.0.1",
+    "prettier": "^1.19.1",
+    "rollup": "^1.16.2",
+    "rollup-plugin-commonjs": "^10.0.0",
+    "rollup-plugin-node-resolve": "^5.0.4",
+    "tablecloth-bucklescript": "0.0.6"
   },
   "bugs": {
     "url": "https://github.com/esy/pesy/issues"
   },
   "homepage": "https://github.com/esy/pesy#readme",
   "dependencies": {
-    "bs-platform": "^7.0.1",
     "chalk": "^3.0.0",
     "download-git-repo": "^2.0.0",
     "source-map-support": "^0.5.16",
-    "tablecloth-bucklescript": "0.0.6",
     "walk-sync": "^2.0.2"
   }
 }
