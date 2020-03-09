@@ -1,5 +1,18 @@
 open Js;
 
+module Process = {
+  type t;
+  [@bs.val] external v: t = "process";
+  [@bs.val] [@bs.scope "process"] external cwd: unit => string = "cwd";
+  [@bs.val] [@bs.scope "process"] external platform: string = "platform";
+  [@bs.val] [@bs.scope "process"] external env: Js.Dict.t(string) = "env";
+  module Stdout = {
+    type t;
+    [@bs.val] external v: t = "process.stdout";
+    [@bs.send] external write: (t, string) => unit = "write";
+  };
+};
+
 module Error = {
   type t;
   [@bs.new] external make: string => t = "Error";
@@ -34,6 +47,13 @@ let downloadGit = (repo, path) =>
     })
   });
 
+module Buffer = {
+  type t;
+  [@bs.send] external toString: t => string = "toString";
+  [@bs.val] [@bs.scope "Buffer"] external from: string => t = "from";
+  let ofString = from;
+};
+
 module type STREAM = {
   type t;
   let onData: (t, string, Buffer.t => unit) => unit;
@@ -57,44 +77,40 @@ module Stream =
 
 [@bs.module] external walk_sync: string => array(string) = "walk-sync";
 module ChildProcess: {
-  type t = {
-    stdout: Js.Nullable.t(Stream.t),
-    stderr: Js.Nullable.t(Stream.t),
-  };
-
-  let stdout: t => option(Stream.t);
+  type t;
 
   module Options: {
     type t;
-    let make: (~cwd: string=?, ~env: Js.Dict.t(string)=?, unit) => t;
+    let make: (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t;
   };
   exception ExecFailure((string, string, string));
 
   let spawn: (string, array(string), Options.t) => t;
+  let onClose: (t, unit => unit) => unit;
   let exec:
     (string, Options.t) =>
     Js.Promise.t(
       result((string, string, string), (string, string, string)),
     );
 } = {
-  type t = {
-    stdout: Js.Nullable.t(Stream.t),
-    stderr: Js.Nullable.t(Stream.t),
-  };
-
-  let stdout = ({stdout, stderr: _}) => Js.Nullable.toOption(stdout);
+  type t;
 
   exception ExecFailure((string, string, string));
 
   module Options = {
     type t;
     [@bs.obj]
-    external make: (~cwd: string=?, ~env: Js.Dict.t(string)=?, unit) => t =
+    external make: (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t =
       "";
   };
 
   [@bs.module "child_process"]
   external spawn: (string, array(string), Options.t) => t = "spawn";
+
+ [@bs.send]
+  external on': (t, string, unit => unit) => unit = "on";
+
+  let onClose = (t, cb) => on'(t, "close", cb);
 
   [@bs.module "child_process"]
   external exec:
@@ -120,17 +136,6 @@ module ChildProcess: {
       )
     );
   };
-};
-
-module Process = {
-  [@bs.val] [@bs.scope "process"] external cwd: unit => string = "cwd";
-};
-
-module Buffer = {
-  type t;
-  [@bs.send] external toString: t => string = "toString";
-  [@bs.val] [@bs.scope "Buffer"] external from: string => t = "from";
-  let ofString = from;
 };
 
 module Fs = {

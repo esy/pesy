@@ -159,26 +159,16 @@ let substitute = projectPath => {
 };
 
 let spinnerEnabledPromise = (cmd, args, projectPath, message) => {
+  Js.log("");
   Js.log(message);
-  Js.Promise.make((~resolve, ~reject: _) => {
+  Js.Promise.make((~resolve, ~reject as _) => {
     let process =
       ChildProcess.spawn(
         cmd,
         args,
-        ChildProcess.Options.make(~cwd=projectPath, ()),
+        ChildProcess.Options.make(~cwd=projectPath, ~stdio="inherit", ()),
       );
-    switch (process |> ChildProcess.stdout) {
-    | None => ()
-    | Some(stdout) =>
-      Stream.onData(
-        stdout,
-        d => {
-          Js.log("here");
-          Js.log(d);
-        },
-      );
-      Stream.onEnd(stdout, () => resolve(. "dummy"));
-    };
+    ChildProcess.onClose(process, () => resolve(. "dummy"));
   });
 };
 
@@ -186,10 +176,33 @@ let setup = (template, projectPath) =>
   Promise.(
     bootstrap(projectPath, template)
     |> then_(_ => {
+         Js.log("");
          Js.log("Setting up");
-         substitute(projectPath);
+         substitute(projectPath)
+         |> then_(_arrayOfCompletions => {
+              Js.log("");
+              Utils.Path.(
+                [|
+                  "azure-pipelines.yml",
+                  "library" / "Util.re",
+                  "test" / "TestFile.re",
+                  "test" / "TestFramework.re",
+                  "README.md",
+                  "bin" / (packageNameUpperCamelCase ++ "App.re"),
+                  "dune-project",
+                  packageNameKebab ++ ".opam",
+                  "package.json",
+                |]
+                |> Js.Array.forEach(file =>
+                     ("    created " |> Chalk.green)
+                     ++ (file |> Chalk.whiteBright)
+                     |> Js.log
+                   )
+              );
+              resolve();
+            });
        })
-    |> then_(_arrayOfCompletions => {
+    |> then_(() => {
          spinnerEnabledPromise(
            "esy",
            [|"i"|],
@@ -202,7 +215,10 @@ let setup = (template, projectPath) =>
            "esy",
            [|"pesy"|],
            projectPath,
-           "Running\x1b[0m esy pesy\x1b[2m and \x1b[0mbuilding project dependencies",
+           ("Running" |> Chalk.dim)
+           ++ (" esy pesy" |> Chalk.whiteBright)
+           ++ (" and " |> Chalk.dim)
+           ++ ("building project dependencies" |> Chalk.whiteBright),
          )
        })
     |> then_(_ /* (_stdout, _stderr) */ => {
@@ -210,10 +226,13 @@ let setup = (template, projectPath) =>
            "esy",
            [|"b"|],
            projectPath,
-           "\x1b[2mRunning\x1b[0m esy build",
+           ("Running" |> Chalk.dim) ++ (" esy build" |> Chalk.whiteBright),
          )
        })
-    |> then_(_ /* (_stdout, _stderr) */ => {resolve()})
+    |> then_(_ /* (_stdout, _stderr) */ => {
+         ("Ready for development!" |> Chalk.green) |> Js.log;
+         resolve();
+       })
     |> catch(handlePromiseRejectInJS)
   );
 
