@@ -9,15 +9,21 @@ open PesyEsyPesyErrors.Errors;
 exception BootstrappingError(unit);
 exception LsLibsError(string);
 
+module EnvVars = {
+  let rootPackageConfigPath = Sys.getenv_opt("ESY__ROOT_PACKAGE_CONFIG_PATH");
+};
+
+let getManifestFile = projectRoot => {
+  switch (EnvVars.rootPackageConfigPath) {
+  | Some(x) => x
+  | None => Path.(projectRoot / "package.json")
+  };
+};
+
 let reconcile = projectRoot => {
   /* use readFileOpt to read previously computed directory path */
-  let manifestFile =
-    switch (Sys.getenv_opt("ESY__ROOT_PACKAGE_CONFIG_PATH")) {
-    | Some(x) => x
-    | None => Path.(projectRoot / "package.json")
-    };
 
-  let operations = Lib.gen(projectRoot, manifestFile);
+  let operations = projectRoot |> getManifestFile |> Lib.gen(projectRoot);
 
   switch (operations) {
   | [] => ()
@@ -157,7 +163,6 @@ let main = () =>
     raise(x)
   };
 
-/** DEPRECATED: Pesy is not supposed to be run in build env https://github.com/jchavarri/rebez/issues/4 **/
 let pesy_build = () =>
   ignore(
     switch (Sys.getenv_opt("cur__root")) {

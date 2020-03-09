@@ -2,6 +2,7 @@ module Mode = Mode;
 module EsyCommand = EsyCommand;
 
 module Utils = PesyEsyPesyUtils.Utils;
+open PesyEsyPesyErrors.Errors;
 open Utils;
 open NoLwt;
 
@@ -12,7 +13,21 @@ type fileOperation =
 let gen = (projectPath, pkgPath) => {
   open PesyConf;
   let json = JSON.fromFile(pkgPath);
-  let (rootName, pesyPackages) = toPesyConf(projectPath, json);
+  let pkgs = JSON.toKeyValuePairs(JSON.member(json, "buildDirs"));
+
+  let rootName =
+    /* "name" in root package.json */
+    try(
+      doubleKebabifyIfScoped(
+        JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
+      )
+    ) {
+    | JSON.NullJSONValue () => raise(ShouldNotBeNull("name"))
+    | x => raise(x)
+    };
+  /* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
+
+  let pesyPackages = List.map(toPesyConf(projectPath, rootName), pkgs);
   let rootNameOpamFile = rootName ++ ".opam";
   let dunePackages = toDunePackages(projectPath, rootName, pesyPackages);
 
@@ -119,10 +134,4 @@ let generateBuildFiles = projectRoot => {
   gen(projectRoot, packageJSONPath);
 };
 
-let build = projectRoot => {
-  let packageJSONPath = Path.(projectRoot / "package.json");
-  /* Will throw if there validation errors. We catch then at Pesy.re
-   * Else, returns the build target name
-   */
-  PesyConf.validateDuneFiles(projectRoot, packageJSONPath);
-};
+let build = PesyConf.rootName;
