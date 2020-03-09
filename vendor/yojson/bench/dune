@@ -1,9 +1,0 @@
-(executable
- (name bench)
- (flags (-safe-string))
- (libraries yojson core_bench core))
-
-(alias
-  (name bench)
-  (deps bench.json)
-  (action (run ./bench.exe)))

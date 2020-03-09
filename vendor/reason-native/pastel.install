@@ -1,0 +1,86 @@
+lib: [
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/META"
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/dune-package"
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Ansi.re" {"lib/Ansi.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/ColorName.re" {"lib/ColorName.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Decorators.re" {"lib/Decorators.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/DisabledImplementation.re" {"lib/DisabledImplementation.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/HumanReadableImplementation.re" {"lib/HumanReadableImplementation.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/MakeAnsiDecorator.re" {"lib/MakeAnsiDecorator.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Mode.re" {"lib/Mode.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.a" {"lib/Pastel.a"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.cma" {"lib/Pastel.cma"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.cmi" {"lib/Pastel.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.cmt" {"lib/Pastel.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.cmti" {"lib/Pastel.cmti"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.cmx" {"lib/Pastel.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.cmxa" {"lib/Pastel.cmxa"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.cmxs" {"lib/Pastel.cmxs"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.re" {"lib/Pastel.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/Pastel.rei" {"lib/Pastel.rei"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/PastelFactory.re" {"lib/PastelFactory.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/PastelSig.re" {"lib/PastelSig.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/SupportsColor.re" {"lib/SupportsColor.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/SupportsColor.rei" {"lib/SupportsColor.rei"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/TerminalImplementation.re" {"lib/TerminalImplementation.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/WinConsoleColorsSupport.re" {"lib/WinConsoleColorsSupport.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/WinConsoleColorsSupport.rei" {"lib/WinConsoleColorsSupport.rei"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/WinCygPtySupport.re" {"lib/WinCygPtySupport.re"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/libPastel_stubs.a" {"lib/libPastel_stubs.a"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__.cmi" {"lib/pastel__.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__.cmt" {"lib/pastel__.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__.cmx" {"lib/pastel__.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__.ml" {"lib/pastel__.ml"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Ansi.cmi" {"lib/pastel__Ansi.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Ansi.cmt" {"lib/pastel__Ansi.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Ansi.cmx" {"lib/pastel__Ansi.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__ColorName.cmi" {"lib/pastel__ColorName.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__ColorName.cmt" {"lib/pastel__ColorName.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__ColorName.cmx" {"lib/pastel__ColorName.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Decorators.cmi" {"lib/pastel__Decorators.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Decorators.cmt" {"lib/pastel__Decorators.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Decorators.cmx" {"lib/pastel__Decorators.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__DisabledImplementation.cmi" {"lib/pastel__DisabledImplementation.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__DisabledImplementation.cmt" {"lib/pastel__DisabledImplementation.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__DisabledImplementation.cmx" {"lib/pastel__DisabledImplementation.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__HumanReadableImplementation.cmi" {"lib/pastel__HumanReadableImplementation.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__HumanReadableImplementation.cmt" {"lib/pastel__HumanReadableImplementation.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__HumanReadableImplementation.cmx" {"lib/pastel__HumanReadableImplementation.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__MakeAnsiDecorator.cmi" {"lib/pastel__MakeAnsiDecorator.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__MakeAnsiDecorator.cmt" {"lib/pastel__MakeAnsiDecorator.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__MakeAnsiDecorator.cmx" {"lib/pastel__MakeAnsiDecorator.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Mode.cmi" {"lib/pastel__Mode.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Mode.cmt" {"lib/pastel__Mode.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__Mode.cmx" {"lib/pastel__Mode.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__PastelFactory.cmi" {"lib/pastel__PastelFactory.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__PastelFactory.cmt" {"lib/pastel__PastelFactory.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__PastelFactory.cmx" {"lib/pastel__PastelFactory.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__PastelSig.cmi" {"lib/pastel__PastelSig.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__PastelSig.cmt" {"lib/pastel__PastelSig.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__PastelSig.cmx" {"lib/pastel__PastelSig.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__SupportsColor.cmi" {"lib/pastel__SupportsColor.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__SupportsColor.cmt" {"lib/pastel__SupportsColor.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__SupportsColor.cmti" {"lib/pastel__SupportsColor.cmti"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__SupportsColor.cmx" {"lib/pastel__SupportsColor.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__TerminalImplementation.cmi" {"lib/pastel__TerminalImplementation.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__TerminalImplementation.cmt" {"lib/pastel__TerminalImplementation.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__TerminalImplementation.cmx" {"lib/pastel__TerminalImplementation.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__WinConsoleColorsSupport.cmi" {"lib/pastel__WinConsoleColorsSupport.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__WinConsoleColorsSupport.cmt" {"lib/pastel__WinConsoleColorsSupport.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__WinConsoleColorsSupport.cmti" {"lib/pastel__WinConsoleColorsSupport.cmti"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__WinConsoleColorsSupport.cmx" {"lib/pastel__WinConsoleColorsSupport.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__WinCygPtySupport.cmi" {"lib/pastel__WinCygPtySupport.cmi"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__WinCygPtySupport.cmt" {"lib/pastel__WinCygPtySupport.cmt"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/pastel__WinCygPtySupport.cmx" {"lib/pastel__WinCygPtySupport.cmx"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/winConsoleColorsSupport.js" {"lib/winConsoleColorsSupport.js"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/lib/winCygPtySupport.js" {"lib/winCygPtySupport.js"}
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/pastel/opam"
+]
+doc: [
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/doc/pastel/CHANGELOG.md"
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/doc/pastel/LICENSE"
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/doc/pastel/README.md"
+]
+stublibs: [
+  "/Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/install/default/lib/stublibs/dllPastel_stubs.so"
+]

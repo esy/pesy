@@ -1,8 +1,0 @@
-(executable
- (name sexp_tests)
- (modules sexp_tests)
- (libraries stdune dune_lang))
-
-(alias
- (name runtest)
- (action (run ./sexp_tests.exe)))

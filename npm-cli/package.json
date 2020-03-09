@@ -26,6 +26,7 @@
   },
   "scripts": {
     "rollup": "rollup -c rollup.config.js",
+    "rollup:watch": "rollup -c rollup.config.js -w",
     "bsb": "bsb -make-world",
     "build": "npm run bsb && npm run rollup",
     "package": "node scripts/vendor-template.js && npm run build",
