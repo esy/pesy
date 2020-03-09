@@ -163,12 +163,31 @@ let main = () =>
     raise(x)
   };
 
+let pesy_dune_file = () => {
+  switch (Sys.getenv_opt("cur__root")) {
+  | None =>
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red>
+            "'pesy build' must be run the build environment only\n"
+          </Pastel>
+          <Pastel> "Try esy b pesy build" </Pastel>
+        </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | Some(curRoot) =>
+    duneFile(curRoot, getManifestFile(curRoot), Sys.getcwd())
+  };
+};
+
 let pesy_build = () =>
   ignore(
     switch (Sys.getenv_opt("cur__root")) {
     | Some(curRoot) =>
       let buildTarget =
-        try(build(curRoot)) {
+        try(build(curRoot |> getManifestFile)) {
         | BuildValidationFailures(failures) =>
           let errorMessages =
             String.concat(

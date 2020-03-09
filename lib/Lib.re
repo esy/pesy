@@ -2,7 +2,6 @@ module Mode = Mode;
 module EsyCommand = EsyCommand;
 
 module Utils = PesyEsyPesyUtils.Utils;
-open PesyEsyPesyErrors.Errors;
 open Utils;
 open NoLwt;
 
@@ -12,20 +11,9 @@ type fileOperation =
 
 let gen = (projectPath, pkgPath) => {
   open PesyConf;
-  let json = JSON.fromFile(pkgPath);
-  let pkgs = JSON.toKeyValuePairs(JSON.member(json, "buildDirs"));
-
-  let rootName =
-    /* "name" in root package.json */
-    try(
-      doubleKebabifyIfScoped(
-        JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
-      )
-    ) {
-    | JSON.NullJSONValue () => raise(ShouldNotBeNull("name"))
-    | x => raise(x)
-    };
-  /* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
+  let conf = PesyConf.get(pkgPath);
+  let pkgs = PesyConf.pkgs(conf);
+  let rootName = PesyConf.rootName(conf);
 
   let pesyPackages = List.map(toPesyConf(projectPath, rootName), pkgs);
   let rootNameOpamFile = rootName ++ ".opam";
@@ -134,4 +122,9 @@ let generateBuildFiles = projectRoot => {
   gen(projectRoot, packageJSONPath);
 };
 
-let build = PesyConf.rootName;
+let build = manifestFile => PesyConf.get(manifestFile) |> PesyConf.rootName;
+
+let duneFile = (projectPath, _manifestFile, cwd) => {
+  let dir = Str.global_replace(Str.regexp(projectPath), "", cwd);
+  print_endline(dir);
+};

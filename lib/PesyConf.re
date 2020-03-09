@@ -90,6 +90,7 @@ let isValidScopeName = n => {
 
 let stripAtTheRate = s => String.sub(s, 1, String.length(s) - 1);
 
+/* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
 let doubleKebabifyIfScoped = n => {
   switch (Str.split(Str.regexp("/"), n)) {
   | [pkgName] => pkgName
@@ -652,8 +653,8 @@ let toDunePackages = (_prjPath, _rootName, pkgs) => {
 /*   Str.global_replace(Str.regexp(".opam"), "", rootNameOpamFile); */
 /* }; */
 
-let rootName = manifestFile => {
-  let json = JSON.fromFile(manifestFile);
+/* "name" in root package.json */
+let rootName = json =>
   try(
     doubleKebabifyIfScoped(
       JSON.member(json, "name") |> JSON.toValue |> FieldTypes.toString,
@@ -662,4 +663,9 @@ let rootName = manifestFile => {
   | JSON.NullJSONValue () => raise(ShouldNotBeNull("name"))
   | x => raise(x)
   };
+
+let get = manifestFile => {
+  JSON.fromFile(manifestFile);
 };
+
+let pkgs = json => JSON.toKeyValuePairs(JSON.member(json, "buildDirs"));
