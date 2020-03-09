@@ -8,7 +8,7 @@
       "dune build -p pesy--esy-pesy"
     ],
     "buildDev": [
-      "refmterr dune build --root . --only-package pesy--esy-pesy"
+      "dune build --root . --only-package pesy--esy-pesy"
     ],
     "buildEnv": {
       "ODOC_SYNTAX": "re"
@@ -41,24 +41,18 @@
   },
   "devDependencies": {
     "ocaml": "4.8.x",
+    "@opam/dune": "2.0.1",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
-    "refmterr": "*",
-    "@opam/merlin": "*"
+    "@opam/merlin": "*",
+    "@opam/ocamlformat": "0.12",
+    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam#f2bdbe9dd8926"
   },
   "resolutions": {
     "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
     "@reason-native/console": "link:./vendor/reason-native/console.json",
-    "@opam/sexplib0": "link:./vendor/sexplib0/sexplib0.opam",
-    "@opam/ppx_derivers": "link:./vendor/ppx_derivers/ppx_derivers.opam",
-    "@opam/parsexp": "link:./vendor/parsexp/parsexp.opam",
-    "@opam/base": "link:./vendor/base/base.opam",
     "@opam/menhir": "link:./vendor/menhir/menhir.opam",
     "@opam/ocaml-migrate-parsetree": "link:./vendor/ocaml-migrate-parsetree/ocaml-migrate-parsetree.opam",
-    "@opam/jbuilder": "link:./vendor/jbuilder-transition/opam",
-    "@opam/sexplib": "link:./vendor/sexplib/sexplib.opam",
-    "@opam/dune": "link:./vendor/dune/dune.opam",
-    "@opam/yojson": "link:./vendor/yojson/yojson.opam",
     "@reason-native/pastel": "link:./vendor/reason-native/pastel.json"
   }
 }

@@ -1,4 +1,0 @@
-(library
- (name      main)
- (libraries memo dune_lang wp fiber stdune unix dune cmdliner build_info)
- (preprocess future_syntax))
