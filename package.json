@@ -8,7 +8,7 @@
       "dune build -p pesy--esy-pesy"
     ],
     "buildDev": [
-      "dune build --root . --only-package pesy--esy-pesy"
+      "refmterr dune build --root . --only-package pesy--esy-pesy"
     ],
     "buildEnv": {
       "ODOC_SYNTAX": "re"
@@ -30,14 +30,15 @@
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
+    "@opam/bos": "0.2.0",
     "@opam/cmdliner": "*",
     "@opam/dune": "*",
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
-    "@opam/bos": "0.2.0",
     "@reason-native/pastel": "*",
-    "ocaml": "4.6.10 - 4.8"
+    "ocaml": "4.6.10 - 4.8",
+    "refmterr": "^3.3.0"
   },
   "devDependencies": {
     "ocaml": "4.8.x",

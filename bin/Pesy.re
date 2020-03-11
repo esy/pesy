@@ -163,22 +163,20 @@ let main = () =>
     raise(x)
   };
 
-let pesy_dune_file = () => {
+let pesy_dune_file = dir => {
   switch (Sys.getenv_opt("cur__root")) {
   | None =>
     let message =
       Pastel.(
         <Pastel>
           <Pastel color=Red>
-            "'pesy build' must be run the build environment only\n"
+            "'pesy dune-file' must be run the build environment only\n"
           </Pastel>
-          <Pastel> "Try esy b pesy build" </Pastel>
         </Pastel>
       );
     fprintf(stderr, "%s\n", message);
     exit(-1);
-  | Some(curRoot) =>
-    duneFile(curRoot, getManifestFile(curRoot), Sys.getcwd())
+  | Some(curRoot) => duneFile(curRoot, getManifestFile(curRoot), dir)
   };
 };
 
@@ -299,6 +297,27 @@ let build = () => {
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
+let subpkgTerm =
+  Cmdliner.Arg.(
+    required
+    & pos(0, some(string), None)
+    & info(
+        [],
+        ~doc="Subpackage which needs the Dune file generated",
+        ~docv="SUBPACKAGE",
+      )
+  );
+
+let pesy_dune_file = () => {
+  open Cmdliner.Term;
+  let cmd = "dune-file";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "dune-file - prints dune file for a given dir/subpackage";
+  let build_t = Term.(const(pesy_dune_file) $ subpkgTerm);
+  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
 let lsLibs = () => {
   open Cmdliner.Term;
   let cmd = "ls-libs";
@@ -309,4 +328,4 @@ let lsLibs = () => {
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
-Term.exit @@ Term.eval_choice(cmd(), [build(), lsLibs()]);
+Term.exit @@ Term.eval_choice(cmd(), [build(), pesy_dune_file(), lsLibs()]);
