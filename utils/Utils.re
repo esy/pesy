@@ -31,7 +31,7 @@ let getCurrentDirName = () => Filename.basename(Sys.getenv("PWD"));
 let upperCamelCasify = kebab => {
   let parts = Str.split(Str.regexp_string("-"), kebab);
   let k = String.concat("", List.map(String.capitalize_ascii, parts));
-  if (k.[0] == '-') {
+  if (String.length(k) > 0 && k.[0] == '-') {
     String.sub(k, 1, String.length(k) - 1);
   } else {
     k;
@@ -237,20 +237,19 @@ let commandOutput = (command, args) => {
 };
 
 let runCommandWithEnv = (command, args) => {
-  /* let attach = */
-  /*   Unix.create_process_env( */
-  /*     command, */
-  /*     Array.append([|command|], args), */
-  /*     Unix.environment(), */
-  /*   ); */
-  /* let pid = attach(Unix.stdin, Unix.stdout, Unix.stderr); */
-  /* switch (Unix.waitpid([], pid)) { */
-  /* | (_, WEXITED(c)) => c */
-  /* | (_, WSIGNALED(c)) => c */
-  /* | (_, WSTOPPED(c)) => c */
-  /* }; */
-
-  open Unix;
+  open /* let attach = */
+       /*   Unix.create_process_env( */
+       /*     command, */
+       /*     Array.append([|command|], args), */
+       /*     Unix.environment(), */
+       /*   ); */
+       /* let pid = attach(Unix.stdin, Unix.stdout, Unix.stderr); */
+       /* switch (Unix.waitpid([], pid)) { */
+       /* | (_, WEXITED(c)) => c */
+       /* | (_, WSIGNALED(c)) => c */
+       /* | (_, WSTOPPED(c)) => c */
+       /* }; */
+       Unix;
   let cmd =
     String.concat(" ", Array.to_list(Array.append([|command|], args)));
   let (cout, cin, cerr) = open_process_full(cmd, Unix.environment());

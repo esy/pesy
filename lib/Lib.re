@@ -10,54 +10,41 @@ type fileOperation =
   | CREATE(string);
 
 let gen = (projectPath, pkgPath) => {
-  open PesyConf;
-  let json = JSON.fromFile(pkgPath);
-  let (rootName, pesyPackages) = toPesyConf(projectPath, json);
+  let conf = PesyConf.get(pkgPath);
+  let pkgs = PesyConf.pkgs(conf);
+  let rootName = PesyConf.rootName(conf);
+
   let rootNameOpamFile = rootName ++ ".opam";
-  let dunePackages = toDunePackages(projectPath, rootName, pesyPackages);
 
   let operations = ref([]);
-  List.iter(
-    dpkg => {
-      let (path, duneFile) = dpkg;
-      let duneFilePath = Path.(path / "dune");
+  pkgs
+  |> List.iter(((subpackage, _)) => {
+       mkdirp(Path.(projectPath / subpackage));
+       let duneFilePath = Path.(projectPath / subpackage / "dune");
+       write(
+         duneFilePath,
+         {|(* -*- tuareg -*- *)
 
-      mkdirp(path);
+open Jbuild_plugin.V1
 
-      let duneFileStr = DuneFile.toString(duneFile);
-      try(
-        if (duneFile != DuneFile.ofFile(duneFilePath)) {
-          write(duneFilePath, duneFileStr);
-          operations :=
-            [
-              UPDATE(
-                Str.global_replace(
-                  Str.regexp(Path.(projectPath / "")),
-                  "",
-                  duneFilePath,
-                ),
-              ),
-              ...operations^,
-            ];
-        }
-      ) {
-      | _ =>
-        write(duneFilePath, duneFileStr);
-        operations :=
-          [
-            CREATE(
-              Str.global_replace(
-                Str.regexp(Path.(projectPath / "")),
-                "",
-                duneFilePath,
-              ),
-            ),
-            ...operations^,
-          ];
-      };
-    },
-    dunePackages,
-  );
+let () =
+  run_and_read_lines ("pesy dune-file " ^ Sys.getcwd ())
+  |> String.concat "\n"
+  |> send
+|},
+       );
+       operations :=
+         [
+           CREATE(
+             Str.global_replace(
+               Str.regexp(Path.(projectPath / "")),
+               "",
+               duneFilePath,
+             ),
+           ),
+           ...operations^,
+         ];
+     });
 
   let foundAnOpamFile = ref(false);
   let dirForEachEntry = (f, dirname) => {
@@ -119,10 +106,23 @@ let generateBuildFiles = projectRoot => {
   gen(projectRoot, packageJSONPath);
 };
 
-let build = projectRoot => {
-  let packageJSONPath = Path.(projectRoot / "package.json");
-  /* Will throw if there validation errors. We catch then at Pesy.re
-   * Else, returns the build target name
-   */
-  PesyConf.validateDuneFiles(projectRoot, packageJSONPath);
+let build = manifestFile => PesyConf.get(manifestFile) |> PesyConf.rootName;
+
+let duneFile = (projectPath, manifestFile, subpackagePath) => {
+  let conf = PesyConf.get(manifestFile);
+  let pkgs = PesyConf.pkgs(conf);
+  let rootName = PesyConf.rootName(conf);
+  let pesyPackages =
+    List.map(PesyConf.toPesyConf(projectPath, rootName), pkgs);
+  let dunePackages =
+    PesyConf.toDunePackages(projectPath, rootName, pesyPackages);
+  List.iter(
+    dpkg => {
+      let (path, duneFile) = dpkg;
+      if (path == subpackagePath) {
+        print_endline(DuneFile.toString(duneFile));
+      };
+    },
+    dunePackages,
+  );
 };

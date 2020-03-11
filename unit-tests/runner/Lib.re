@@ -2,7 +2,7 @@ module TestFramework = {
   include Rely.Make({
     let config =
       Rely.TestFrameworkConfig.initialize({
-        snapshotDir: "_build/default",
+        snapshotDir: "_build/default/unit-tests",
         projectDir: "",
       });
   });
@@ -83,7 +83,8 @@ describe("PesyConf.doubleKebabifyIfScoped", ({test, _}) => {
 
 let testToPackages = jsonStr => {
   let json = JSON.ofString(jsonStr);
-  let (_, pesyPackages) = toPesyConf("", json);
+  let pkgs = PesyConf.pkgs(json);
+  let pesyPackages = List.map(toPesyConf("", ""), pkgs);
   let dunePackages = toDunePackages("", "", pesyPackages);
   List.map(
     p => {

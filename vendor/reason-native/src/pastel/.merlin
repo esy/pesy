@@ -1,10 +1,10 @@
 EXCLUDE_QUERY_DIR
-B /Users/manas/.esy/3___________________________________________________________________/i/ocaml-4.8.1000-426898cd/lib/ocaml
-B /Users/manas/.esy/3___________________________________________________________________/i/opam__s__re-opam__c__1.9.0-7cda616c/lib/re
-B /Users/manas/.esy/3___________________________________________________________________/i/opam__s__seq-opam__c__base-c4bafc44/lib/seq
-B /Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__pastel-20d538ce/default/src/pastel/.Pastel.objs/byte
-S /Users/manas/.esy/3___________________________________________________________________/i/ocaml-4.8.1000-426898cd/lib/ocaml
-S /Users/manas/.esy/3___________________________________________________________________/i/opam__s__re-opam__c__1.9.0-7cda616c/lib/re
-S /Users/manas/.esy/3___________________________________________________________________/i/opam__s__seq-opam__c__base-c4bafc44/lib/seq
+B /Users/manas/.esy/3___________________________________________________________________/i/ocaml-4.7.1004-e5a2754f/lib/ocaml
+B /Users/manas/.esy/3___________________________________________________________________/i/opam__s__re-opam__c__1.9.0-6f1c31c7/lib/re
+B /Users/manas/.esy/3___________________________________________________________________/i/opam__s__seq-opam__c__base-3b1f4409/lib/seq
+B ../../../../_build/default/vendor/reason-native/src/pastel/.Pastel.objs/byte
+S /Users/manas/.esy/3___________________________________________________________________/i/ocaml-4.7.1004-e5a2754f/lib/ocaml
+S /Users/manas/.esy/3___________________________________________________________________/i/opam__s__re-opam__c__1.9.0-6f1c31c7/lib/re
+S /Users/manas/.esy/3___________________________________________________________________/i/opam__s__seq-opam__c__base-3b1f4409/lib/seq
 S .
-FLG -open Pastel__ -w -40
+FLG -open Pastel__ -w -40 -w -a

@@ -9,15 +9,21 @@ open PesyEsyPesyErrors.Errors;
 exception BootstrappingError(unit);
 exception LsLibsError(string);
 
+module EnvVars = {
+  let rootPackageConfigPath = Sys.getenv_opt("ESY__ROOT_PACKAGE_CONFIG_PATH");
+};
+
+let getManifestFile = projectRoot => {
+  switch (EnvVars.rootPackageConfigPath) {
+  | Some(x) => x
+  | None => Path.(projectRoot / "package.json")
+  };
+};
+
 let reconcile = projectRoot => {
   /* use readFileOpt to read previously computed directory path */
-  let manifestFile =
-    switch (Sys.getenv_opt("ESY__ROOT_PACKAGE_CONFIG_PATH")) {
-    | Some(x) => x
-    | None => Path.(projectRoot / "package.json")
-    };
 
-  let operations = Lib.gen(projectRoot, manifestFile);
+  let operations = projectRoot |> getManifestFile |> Lib.gen(projectRoot);
 
   switch (operations) {
   | [] => ()
@@ -157,13 +163,29 @@ let main = () =>
     raise(x)
   };
 
-/** DEPRECATED: Pesy is not supposed to be run in build env https://github.com/jchavarri/rebez/issues/4 **/
+let pesy_dune_file = dir => {
+  switch (Sys.getenv_opt("cur__root")) {
+  | None =>
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red>
+            "'pesy dune-file' must be run the build environment only\n"
+          </Pastel>
+        </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | Some(curRoot) => duneFile(curRoot, getManifestFile(curRoot), dir)
+  };
+};
+
 let pesy_build = () =>
   ignore(
     switch (Sys.getenv_opt("cur__root")) {
     | Some(curRoot) =>
       let buildTarget =
-        try(build(curRoot)) {
+        try(build(curRoot |> getManifestFile)) {
         | BuildValidationFailures(failures) =>
           let errorMessages =
             String.concat(
@@ -275,6 +297,27 @@ let build = () => {
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
+let subpkgTerm =
+  Cmdliner.Arg.(
+    required
+    & pos(0, some(string), None)
+    & info(
+        [],
+        ~doc="Subpackage which needs the Dune file generated",
+        ~docv="SUBPACKAGE",
+      )
+  );
+
+let pesy_dune_file = () => {
+  open Cmdliner.Term;
+  let cmd = "dune-file";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "dune-file - prints dune file for a given dir/subpackage";
+  let build_t = Term.(const(pesy_dune_file) $ subpkgTerm);
+  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
 let lsLibs = () => {
   open Cmdliner.Term;
   let cmd = "ls-libs";
@@ -285,4 +328,4 @@ let lsLibs = () => {
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
-Term.exit @@ Term.eval_choice(cmd(), [build(), lsLibs()]);
+Term.exit @@ Term.eval_choice(cmd(), [build(), pesy_dune_file(), lsLibs()]);

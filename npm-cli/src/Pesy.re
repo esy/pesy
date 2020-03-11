@@ -230,7 +230,7 @@ let setup = (template, projectPath) =>
          )
        })
     |> then_(_ /* (_stdout, _stderr) */ => {
-         ("Ready for development!" |> Chalk.green) |> Js.log;
+         "Ready for development!" |> Chalk.green |> Js.log;
          resolve();
        })
     |> catch(handlePromiseRejectInJS)
