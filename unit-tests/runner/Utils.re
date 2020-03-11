@@ -2,7 +2,7 @@ module TestFramework = {
   include Rely.Make({
     let config =
       Rely.TestFrameworkConfig.initialize({
-        snapshotDir: "_build/default",
+        snapshotDir: "_build/default/unit-tests",
         projectDir: "",
       });
   });
