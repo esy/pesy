@@ -15,3 +15,9 @@ vendor
 coverage/
 *.bs.js
 npm-cli/
+esy.lock/
+site/
+images/
+azure-pipelines.yml
+.ci/
+scripts/

@@ -1,2 +1,0 @@
-(library (name PesyVirtualBaz) (public_name pesy-virtual.baz)
-    (implements PesyVirtualFoo)) 

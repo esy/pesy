@@ -1,6 +1,5 @@
-(executables
-(names Runner TestBootstrapper TestPesyConfigure TestNonEmptyDirBootstrapper)
-(public_names Runner.exe TestBootstrapper.exe TestPesyConfigure.exe TestNonEmptyDirBootstrapper.exe)
-(libraries unix bos pesy--esy-pesy.lib))
+(executable
+ (name Runner)
+ (public_name Runner.exe)
+ (libraries unix bos pesy--esy-pesy.lib))
 
-(data_only_dirs pesy-configure-test-projects)
