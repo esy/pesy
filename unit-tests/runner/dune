@@ -1,3 +1,3 @@
-(test (name RunUnitTests)
- (modules (:standard))
+(test
+ (name RunUnitTests)
  (libraries pesy--esy-pesy.lib pesy--esy-pesy.utils rely.lib))

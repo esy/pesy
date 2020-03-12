@@ -1,2 +1,0 @@
-(library (name PesyVirtualFoo) (public_name pesy-virtual.foo)
-    (virtual_modules VirtualFoo)) 
