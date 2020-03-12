@@ -116,10 +116,15 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
     List.map(PesyConf.toPesyConf(projectPath, rootName), pkgs);
   let dunePackages =
     PesyConf.toDunePackages(projectPath, rootName, pesyPackages);
+
+  let normalize = x =>
+    x
+    |> Str.global_replace(Str.regexp("\\"), "/")
+    |> Str.global_replace(Str.regexp("[/|\\]$"), "");
   List.iter(
     dpkg => {
       let (path, duneFile) = dpkg;
-      if (path == subpackagePath) {
+      if (path |> normalize == (subpackagePath |> normalize)) {
         print_endline(DuneFile.toString(duneFile));
       };
     },

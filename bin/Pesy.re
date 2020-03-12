@@ -185,7 +185,24 @@ let pesy_build = () =>
     switch (Sys.getenv_opt("cur__root")) {
     | Some(curRoot) =>
       let buildTarget = build(curRoot |> getManifestFile);
-      Sys.command("refmterr dune build -p " ++ buildTarget);
+
+      Unix.(
+        switch (
+          create_process(
+            "dune",
+            [|"dune", "build", "-p", buildTarget|],
+            Unix.stdin,
+            Unix.stdout,
+            Unix.stderr,
+          )
+          |> waitpid([])
+        ) {
+        | (_, WEXITED(c)) => c
+        | (_, WSIGNALED(c)) => c
+        | (_, WSTOPPED(c)) => c
+        }
+      );
+
     | None =>
       let message =
         Pastel.(
