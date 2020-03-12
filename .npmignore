@@ -16,3 +16,8 @@ coverage/
 *.bs.js
 npm-cli/
 esy.lock/
+site/
+image/
+azure-pipelines.yml
+.ci/
+scripts/
