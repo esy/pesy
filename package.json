@@ -1,6 +1,6 @@
 {
   "name": "@pesy/esy-pesy",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "description": "\"Esy Pesy\" - Your Esy Assistant.",
   "esy": {
     "buildsInSource": "_build",
