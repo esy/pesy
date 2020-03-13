@@ -172,6 +172,7 @@ let spinnerEnabledPromise = (cmd, args, projectPath, message) => {
   });
 };
 
+let esyCommand = Sys.unix ? "esy": "esy.cmd";
 let setup = (template, projectPath) =>
   Promise.(
     bootstrap(projectPath, template)
@@ -204,7 +205,7 @@ let setup = (template, projectPath) =>
        })
     |> then_(() => {
          spinnerEnabledPromise(
-           "esy",
+           esyCommand,
            [|"i"|],
            projectPath,
            ("Running" |> Chalk.dim) ++ (" esy install" |> Chalk.whiteBright),
@@ -212,7 +213,7 @@ let setup = (template, projectPath) =>
        })
     |> then_(_ /* (_stdout, _stderr) */ => {
          spinnerEnabledPromise(
-           "esy",
+           esyCommand,
            [|"pesy"|],
            projectPath,
            ("Running" |> Chalk.dim)
@@ -223,7 +224,7 @@ let setup = (template, projectPath) =>
        })
     |> then_(_ /* (_stdout, _stderr) */ => {
          spinnerEnabledPromise(
-           "esy",
+           esyCommand,
            [|"b"|],
            projectPath,
            ("Running" |> Chalk.dim) ++ (" esy build" |> Chalk.whiteBright),
