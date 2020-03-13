@@ -66,7 +66,7 @@ let moduleNameOf = fileName =>
   Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
 
 let specialCaseOpamRequires = package =>
-  Str.global_replace(Str.regexp("^@opam"), "", package);
+  Str.global_replace(Str.regexp("^@opam/"), "", package);
 
 let isValidBinaryFileName = fileName =>
   Str.string_match(Str.regexp("^.+\\.exe$"), fileName, 0);
@@ -100,7 +100,7 @@ let doubleKebabifyIfScoped = n => {
           "/",
           [stripAtTheRate(scope) ++ "--" ++ pkgName, ...rest],
         )
-      : raise(InvalidRootName(n))
+      : String.concat("/", [scope, pkgName, ...rest])
   | _ => raise(InvalidRootName(n))
   };
 };
