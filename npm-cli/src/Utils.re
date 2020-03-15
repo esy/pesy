@@ -1,4 +1,4 @@
-open Bindings;
+let (<<) = (f, g, x) => f(g(x));
 module Caml = {
   module List = List;
   module String = String;
@@ -26,17 +26,17 @@ let kebab = str => {
           let c = Caml.String.get(c, 0);
           if (c == ' ' || c == '_') {
             String.make(1, '-');
-          }
-          else if (Char.uppercase_ascii(c) != Char.lowercase_ascii(c) && Char.uppercase_ascii(c) == c) {
+          } else if (Char.uppercase_ascii(c) != Char.lowercase_ascii(c)
+                     && Char.uppercase_ascii(c) == c) {
             "-" ++ String.make(1, Char.lowercase_ascii(c));
-          }
-          else {
+          } else {
             String.make(1, c);
           };
         },
         charStrings,
       ),
-    ) |> Js.String.replaceByRe([%bs.re "/\-\-+/g"], "-");
+    )
+    |> Js.String.replaceByRe([%bs.re "/\\-\\-+/g"], "-");
 
   if (Js.String.split("", k)->Array.unsafe_get(0) == "-") {
     Caml.String.sub(k, 1, String.length(k) - 1);
@@ -46,7 +46,7 @@ let kebab = str => {
 };
 
 let removeScope = kebab =>
-  Js.String.replaceByRe([%bs.re "/[^\\\/]*\//g"], "", kebab);
+  Js.String.replaceByRe([%bs.re "/[^\\/]*\\//g"], "", kebab);
 
 let upperCamelCasify = kebab => {
   let parts = Js.String.split("-", kebab);
@@ -120,3 +120,38 @@ let renderAsciiTree = (dir, name, namespace, require, isLast) =>
 /*       Js.log(renderAscTreeChildren(t)); */
 /*       renderAscTree(rest); */
 /*     }; */
+
+module Result = {
+  open Belt.Result;
+
+  let (>>=) = flatMap;
+
+  let (>>|) = map;
+
+  let return = x => Ok(x);
+
+  let fail = x => Error(x);
+};
+
+module Option: {
+  type t('a) = option('a);
+  let (>>=): (t('a), 'a => t('b)) => t('b);
+  let (>>|): (t('a), 'a => 'b) => t('b);
+  let return: 'a => t('a);
+} = {
+  open Belt.Option;
+
+  type t('a) = option('a);
+
+  let (>>=) = flatMap;
+
+  let (>>|) = map;
+
+  let catch = (o, f) =>
+    switch (o) {
+    | None => f()
+    | _ => ()
+    };
+
+  let return = x => Some(x);
+};

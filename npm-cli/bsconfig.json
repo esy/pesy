@@ -12,11 +12,11 @@
     }
   ],
   "package-specs": {
-    "module": "commonjs",
-    "in-source": true
+    "module": "commonjs"
   },
   "suffix": ".bs.js",
   "bs-dependencies": [
+    "@glennsl/bs-json",
     "@glennsl/bs-jest",
     "tablecloth-bucklescript",
     "@prometheansacrifice/bs-cmdliner"
