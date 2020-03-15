@@ -52,6 +52,7 @@
   "license": "MIT",
   "devDependencies": {
     "@glennsl/bs-jest": "^0.4.9",
+    "@prometheansacrifice/bs-cmdliner": "1.0.4000",
     "bs-platform": "7.0.1",
     "prettier": "^1.19.1",
     "rollup": "^1.16.2",

@@ -294,6 +294,11 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
+"@prometheansacrifice/bs-cmdliner@1.0.4000":
+  version "1.0.4000"
+  resolved "https://registry.yarnpkg.com/@prometheansacrifice/bs-cmdliner/-/bs-cmdliner-1.0.4000.tgz#2e17c921bc626229f07d977443e9fa392626e6aa"
+  integrity sha512-zVNpxADVT4zyxjdVE6FeVScXbv+8cA6McQFQMO3CtgelY+SNsQL70yMYkgMPqQZ2xLRVtWQZY0Ik33c6SA4IXw==
+
 "@sindresorhus/is@^0.7.0":
   version "0.7.0"
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-0.7.0.tgz#9a06f4f137ee84d7df0460c1fdb1135ffa6c50fd"
