@@ -51,13 +51,13 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "@glennsl/bs-jest": "^0.4.9",
+    "@glennsl/bs-jest": "^0.5.0",
     "@prometheansacrifice/bs-cmdliner": "1.0.4000",
+    "@rollup/plugin-commonjs": "^11.0.2",
+    "@rollup/plugin-node-resolve": "^7.1.1",
     "bs-platform": "7.0.1",
     "prettier": "^1.19.1",
     "rollup": "^1.16.2",
-    "rollup-plugin-commonjs": "^10.0.0",
-    "rollup-plugin-node-resolve": "^5.0.4",
     "tablecloth-bucklescript": "0.0.6"
   },
   "bugs": {
@@ -69,5 +69,8 @@
     "download-git-repo": "^2.0.0",
     "source-map-support": "^0.5.16",
     "walk-sync": "^2.0.2"
+  },
+  "resolutions": {
+    "mkdirp": "1.0.3"
   }
 }
