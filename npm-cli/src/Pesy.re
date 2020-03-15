@@ -1,8 +1,11 @@
 Bindings.sourceMapSupportInstall();
 
+open Cmdliner;
 open Utils;
 open Bindings;
 open Js;
+
+[%raw "process.argv.shift()"];
 
 let projectPath = cwd();
 let packageNameKebab = kebab(basename(projectPath));
@@ -172,7 +175,7 @@ let spinnerEnabledPromise = (cmd, args, projectPath, message) => {
   });
 };
 
-let esyCommand = Sys.unix ? "esy": "esy.cmd";
+let esyCommand = Sys.unix ? "esy" : "esy.cmd";
 let setup = (template, projectPath) =>
   Promise.(
     bootstrap(projectPath, template)
@@ -263,56 +266,29 @@ let main = (template, useDefaultOptions) =>
     }
   };
 
-module CliOptions = {
-  let bootstrap = ref(true);
-
-  /* We presume that bootstrapping is the most likely action.
-     Other info retrieving commands with '--help' and '--version'
-     are less likely and turn the flag off */
-
-  module Template = {
-    let short = "-t";
-    let long = "--template";
-    let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
-    let v = ref(None);
-    let anonFun = Arg.String(template => v := Some(template));
-  };
-  module DefaultOptions = {
-    let short = "-y";
-    let long = "--yes";
-    let doc = "Use default options";
-    let v = ref(false);
-    let anonFun = Arg.Set(v);
-  };
-  module Version = {
-    let short = "-v";
-    let long = "--version";
-    let doc = "Prints version and exits";
-    let v = "0.5.0-alpha.11";
-    let anonFun =
-      Arg.Unit(
-        () => {
-          bootstrap := false;
-          print_endline(v);
-        },
-      );
-  };
+let version = "0.5.0-alpha.11";
+let template = {
+  let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
+  Arg.(
+    value
+    & opt(some(string), None)
+    & info(["t", "template"], ~docv="TEMPLATE_URL", ~doc)
+  );
 };
 
-open CliOptions;
-let specList = [
-  Template.(long, anonFun, doc),
-  Template.(short, anonFun, doc),
-  DefaultOptions.(long, anonFun, doc),
-  DefaultOptions.(short, anonFun, doc),
-  Version.(short, anonFun, doc),
-  Version.(long, anonFun, doc),
-];
-
-let usageMsg = "$ pesy [-t|--template <url>] [-y]";
-
-Arg.parse(specList, _ => (), usageMsg);
-
-if (bootstrap^) {
-  main(Template.v^, DefaultOptions.v^);
+let useDefaultOptions = {
+  let doc = "Use default options";
+  Arg.(value & flag & info(["y", "yes"], ~doc));
 };
+
+let cmd = {
+  open Cmdliner.Term;
+  let cmd = "pesy";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "Your Esy Assistant.";
+  let cmdT = Term.(const(main) $ template $ useDefaultOptions);
+  (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
+Term.eval(cmd);
