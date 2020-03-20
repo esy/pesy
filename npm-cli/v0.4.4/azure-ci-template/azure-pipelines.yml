@@ -23,7 +23,7 @@ jobs:
 - job: MacOS
   timeoutInMinutes: 0
   pool:
-    vmImage: 'macOS 10.13'
+    vmImage: 'macOS-latest'
 
   variables:
     ESY__CACHE_INSTALL_PATH: /Users/vsts/.esy/3____________________________________________________________________/i/
