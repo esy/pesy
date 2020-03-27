@@ -10,4 +10,6 @@ type rlType = {
   [@bs.meth] "on": (string, string => unit) => unit,
   [@bs.meth] "question": (string, string => unit) => unit,
 };
-[@bs.module "readline"] external createInterface: io => rlType = "";
+
+[@bs.module "readline"]
+external createInterface: io => rlType = "createInterface";

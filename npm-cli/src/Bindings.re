@@ -14,9 +14,11 @@ module Process = {
 };
 
 module Error = {
-  type t;
+  type t = {. "message": string};
   [@bs.new] external make: string => t = "Error";
 };
+
+module JsError = Error;
 
 [@bs.val] [@bs.module "path"] external basename: string => string = "basename";
 [@bs.val] [@bs.module "fs"] external makedirSync: string => unit = "mkdirSync";
@@ -77,38 +79,36 @@ module Stream =
 
 [@bs.module] external walk_sync: string => array(string) = "walk-sync";
 module ChildProcess: {
-  type t;
+  type t = {. "exitCode": int};
 
   module Options: {
     type t;
-    let make: (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t;
+    let make:
+      (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t;
   };
   exception ExecFailure((string, string, string));
 
   let spawn: (string, array(string), Options.t) => t;
   let onClose: (t, unit => unit) => unit;
   let exec:
-    (string, Options.t) =>
-    Js.Promise.t(
-      result((string, string, string), (string, string, string)),
-    );
+    (string, Options.t) => Js.Promise.t(result((int, string, string), unit));
 } = {
-  type t;
+  type t = {. "exitCode": int};
 
   exception ExecFailure((string, string, string));
 
   module Options = {
     type t;
     [@bs.obj]
-    external make: (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t =
+    external make:
+      (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t =
       "";
   };
 
   [@bs.module "child_process"]
   external spawn: (string, array(string), Options.t) => t = "spawn";
 
- [@bs.send]
-  external on': (t, string, unit => unit) => unit = "on";
+  [@bs.send] external on': (t, string, unit => unit) => unit = "on";
 
   let onClose = (t, cb) => on'(t, "close", cb);
 
@@ -118,33 +118,131 @@ module ChildProcess: {
     t /* This should have been `t` - ChildProcess object in Node.js TODO: figure a way to pass it to callback */ =
     "exec";
 
-  let spawn = spawn;
-
   let exec = (cmd, options) => {
-    Js.(
-      Promise.(
-        make((~resolve, ~reject) =>
-          ignore @@
+    Js.Promise.(
+      make((~resolve, ~reject as _) => {
+        let cp = ref({"exitCode": 0});
+        cp :=
           exec(cmd, options, (err, stdout, stderr) =>
             if (Js.Nullable.isNullable(err)) {
-              resolve(. Ok((cmd, stdout, stderr)));
+              resolve(. Ok(((cp^)##exitCode, stdout, stderr)));
             } else {
-              resolve(. Error((cmd, stdout, stderr)));
+              resolve(. Error());
             }
-          )
-        )
-      )
+          );
+        ();
+      })
     );
   };
+
+  let spawn = spawn;
+};
+
+module Response = {
+  type t = {
+    .
+    "statusCode": int,
+    "headers": Js.Dict.t(string),
+  };
+
+  [@bs.send] external setEncoding: (t, string) => unit = "setEncoding";
+
+  [@bs.send] external on: (t, string, Buffer.t => unit) => unit = "on";
+};
+
+module Request = {
+  [@bs.module] external request: string => Stream.t = "request";
+};
+
+module RequestProgress = {
+  type t;
+
+  type state = {
+    .
+    "percent": float,
+    "speed": int,
+    "size": {
+      .
+      "total": int,
+      "transferred": int,
+    },
+    "time": {
+      .
+      "elapsed": float,
+      "remaining": float,
+    },
+  };
+
+  [@bs.module] external requestProgress: Stream.t => t = "request-progress";
+
+  [@bs.send] external onData': (t, string, Buffer.t => unit) => unit = "on";
+
+  let onData = (t, cb) => onData'(t, "data", cb);
+
+  [@bs.send] external onProgress': (t, string, state => unit) => unit = "on";
+
+  let onProgress = (t, cb) => onProgress'(t, "progress", cb);
+
+  [@bs.send] external onError': (t, string, JsError.t => unit) => unit = "on";
+
+  let onError = (t, cb) => onError'(t, "error", cb);
+
+  [@bs.send] external onEnd': (t, string, unit => unit) => unit = "on";
+
+  let onEnd = (t, cb) => onEnd'(t, "end", cb);
+
+  [@bs.send] external pipe: (t, Stream.t) => unit = "pipe";
+};
+
+module Https = {
+  module E = {
+    type t =
+      | Failure(string);
+
+    let toString =
+      fun
+      | Failure(url) => {j|Failed to place request to $url|j};
+  };
+
+  [@bs.module "https"]
+  external get: (string, Response.t => unit) => unit = "get";
+
+  let getCompleteResponse = url =>
+    Promise.make((~resolve, ~reject as _) =>
+      get(
+        url,
+        response => {
+          let _statusCode = response##statusCode;
+          let responseText = ref("");
+          Response.on(response, "data", c =>
+            responseText := responseText^ ++ Buffer.toString(c)
+          );
+          Response.on(response, "end", _ => resolve(. Ok(responseText^)));
+          Response.on(response, "error", _err =>
+            resolve(.
+              Error(
+                E.Failure({j|Error occurred while placing request to $url|j}),
+              ),
+            )
+          );
+        },
+      )
+    );
 };
 
 module Fs = {
-  [@bs.module "../stubs/fs.js"]
+  [@bs.module "../../../stubs/fs.js"]
   external writeFile: (. string, Buffer.t) => Js.Promise.t(unit) =
     "writeFile";
 
-  [@bs.module "../stubs/fs.js"]
+  [@bs.module "../../../stubs/fs.js"]
   external readFile: (. string) => Js.Promise.t(Buffer.t) = "readFile";
+
+  [@bs.module "fs"]
+  external createWriteStream: string => Stream.t = "createWriteStream";
+
+  [@bs.module "../../../stubs/fs.js"]
+  external unlink: string => Js.Promise.t(bool) = "unlink";
 
   let copy = (~dryRun=?, ~src, ~dest, ()) => {
     Promise.(
@@ -176,9 +274,9 @@ module Fs = {
     external read: t => Promise.t(Js.Nullable.t(DirEnt.t)) = "read";
   };
 
-  [@bs.module "../stubs/fs"]
+  [@bs.module "../../../stubs/fs"]
   external opendir: string => Js.Promise.t(Dir.t) = "opendir";
-  [@bs.module "../stubs/fs"]
+  [@bs.module "../../../stubs/fs"]
   external readdir: string => Js.Promise.t(Js.Array.t(string)) = "readdir";
 
   module Stats = {
@@ -186,16 +284,16 @@ module Fs = {
     [@bs.send] external isDirectory: t => Js.Promise.t(bool) = "isDirectory";
   };
 
-  [@bs.module "../stubs/fs"]
+  [@bs.module "../../../stubs/fs"]
   external stat: string => Js.Promise.t(Stats.t) = "stat";
 
   let isDirectory = p =>
     Promise.(stat(p) |> then_(stats => Stats.isDirectory(stats)));
 
-  [@bs.module "../stubs/fs.js"]
+  [@bs.module "../../../stubs/fs.js"]
   external exists: string => Js.Promise.t(bool) = "exists";
 
-  [@bs.module "../stubs/fs.js"]
+  [@bs.module "../../../stubs/fs.js"]
   external mkdir': string => Js.Promise.t(unit) = "mkdir";
 
   let rec mkdir = (~dryRun=?, ~p=?, path) => {
@@ -247,11 +345,10 @@ let throwJSError = [%raw "e => { throw e; }"];
 
 [@bs.module]
 external handlePromiseRejectInJS: Js.Promise.error => Js.Promise.t(unit) =
-  "../stubs/handle-promise-rejection-in-js.js";
+  "../../../stubs/handle-promise-rejection-in-js.js";
 
 module Chalk = {
   // https://github.com/ecliptic/bucklescript-tools/blob/develop/packages/bs-chalk/src/Chalk.re
-
   module Level = {
     type t =
       | None
@@ -435,9 +532,33 @@ module Chalk = {
 };
 
 module Path = {
-  [@bs.module "path"] external dirname: string => string = "dirname";
   [@bs.module "path"] [@bs.variadic]
   external join: array(string) => string = "join";
+  [@bs.module "path"] external basename: string => string = "basename";
+  [@bs.module "path"] external extname: string => string = "extname";
+  [@bs.module "path"] external dirname: string => string = "dirname";
   [@bs.module "path"] [@bs.variadic]
   external resolve: array(string) => string = "resolve";
+};
+
+module Rimraf: {
+  type t;
+  /* Bindinds for https://www.npmjs.com/package/rimraf. rimraf is a
+     cross-platform utility library to delete a directory and all its contens */
+  let run: string => Js.Promise.t(result(unit, string));
+} = {
+  type t;
+
+  [@bs.module]
+  external run': (string, Js.Nullable.t('a) => unit) => unit = "rimraf";
+
+  let run = p =>
+    Js.Promise.make((~resolve, ~reject as _) =>
+      run'(p, err =>
+        switch (Js.Nullable.toOption(err)) {
+        | Some(err) => resolve(. Error(err##message))
+        | None => resolve(. Ok())
+        }
+      )
+    );
 };

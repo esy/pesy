@@ -214,6 +214,7 @@ let setup = (template, projectPath) =>
            ("Running" |> Chalk.dim) ++ (" esy install" |> Chalk.whiteBright),
          )
        })
+    |> then_(_ => Warmup.run(projectPath))
     |> then_(_ /* (_stdout, _stderr) */ => {
          spinnerEnabledPromise(
            esyCommand,
@@ -257,6 +258,16 @@ let main' = (template, useDefaultOptions) =>
     );
   };
 
+let warmup = () => {
+  Warmup.run(projectPath)
+  |> Js.Promise.then_(
+       fun
+       | Ok () => Js.Promise.resolve()
+       | Error(msg) => Js.log2("Error", msg) |> Js.Promise.resolve,
+     )
+  |> ignore;
+};
+
 let main = (template, useDefaultOptions) =>
   try(main'(template, useDefaultOptions)) {
   | Js.Exn.Error(e) =>
@@ -281,8 +292,8 @@ let useDefaultOptions = {
   Arg.(value & flag & info(["y", "yes"], ~doc));
 };
 
+open Cmdliner.Term;
 let cmd = {
-  open Cmdliner.Term;
   let cmd = "pesy";
   let envs: list(env_info) = [];
   let exits: list(exit_info) = [];
@@ -291,4 +302,13 @@ let cmd = {
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
-Term.eval(cmd);
+let warmupCmd = {
+  let cmd = "warmup";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "warmup - warms esy cache with prebuilts from CI";
+  let cmdT = Term.(const(warmup) $ const());
+  (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
+Term.eval_choice(cmd, [warmupCmd]);

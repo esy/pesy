@@ -6,5 +6,6 @@ let mkdir = promisify(fs.mkdir);
 let exists = promisify(fs.exists);
 let stat = promisify(fs.stat);
 let readdir = promisify(fs.readdir);
+let unlink = promisify(fs.unlink);
 
-module.exports = { readFile, writeFile, mkdir, exists, readdir, stat };
+module.exports = { readFile, writeFile, mkdir, exists, readdir, stat, unlink };
