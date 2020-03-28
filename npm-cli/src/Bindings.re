@@ -4,6 +4,7 @@ module Process = {
   type t;
   [@bs.val] external v: t = "process";
   [@bs.val] [@bs.scope "process"] external cwd: unit => string = "cwd";
+  [@bs.val] [@bs.scope "process"] external chdir: string => unit = "chdir";
   [@bs.val] [@bs.scope "process"] external platform: string = "platform";
   [@bs.val] [@bs.scope "process"] external env: Js.Dict.t(string) = "env";
   module Stdout = {
@@ -539,6 +540,7 @@ module Path = {
   [@bs.module "path"] external dirname: string => string = "dirname";
   [@bs.module "path"] [@bs.variadic]
   external resolve: array(string) => string = "resolve";
+  [@bs.module "path"] external isAbsolute: string => bool = "isAbsolute";
 };
 
 module Rimraf: {

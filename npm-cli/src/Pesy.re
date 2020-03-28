@@ -7,46 +7,62 @@ open Js;
 
 [%raw "process.argv.shift()"];
 
-let projectPath = cwd();
-let packageNameKebab = kebab(basename(projectPath));
-let packageNameKebabSansScope = removeScope(packageNameKebab);
-let packageNameUpperCamelCase = upperCamelCasify(packageNameKebabSansScope);
+let packageNameKebab = projectPath => kebab(basename(projectPath));
+let packageNameKebabSansScope = projectPath =>
+  projectPath |> packageNameKebab |> removeScope;
+let packageNameUpperCamelCase = projectPath =>
+  projectPath |> packageNameKebabSansScope |> upperCamelCasify;
 let templateVersion = "0.0.0";
-let packageLibName = packageNameKebabSansScope ++ "/library";
-let packageTestName = packageNameKebabSansScope ++ "/test";
+let packageLibName = projectPath =>
+  packageNameKebabSansScope(projectPath) ++ "/library";
+let packageTestName = projectPath =>
+  packageNameKebabSansScope(projectPath) ++ "/test";
 
-let substituteTemplateValues = s =>
+let substituteTemplateValues = (projectPath, s) =>
   s
   |> Js.String.replaceByRe(
        [%bs.re "/<PACKAGE_NAME_FULL>/g"],
-       packageNameKebab,
+       packageNameKebab(projectPath),
      )
   |> Js.String.replaceByRe([%bs.re "/<VERSION>/g"], templateVersion)
-  |> Js.String.replaceByRe([%bs.re "/<PUBLIC_LIB_NAME>/g"], packageLibName)
-  |> Js.String.replaceByRe([%bs.re "/<TEST_LIB_NAME>/g"], packageTestName)
-  |> Js.String.replaceByRe([%bs.re "/<PACKAGE_NAME>/g"], packageNameKebab)
+  |> Js.String.replaceByRe(
+       [%bs.re "/<PUBLIC_LIB_NAME>/g"],
+       packageLibName(projectPath),
+     )
+  |> Js.String.replaceByRe(
+       [%bs.re "/<TEST_LIB_NAME>/g"],
+       packageTestName(projectPath),
+     )
+  |> Js.String.replaceByRe(
+       [%bs.re "/<PACKAGE_NAME>/g"],
+       packageNameKebab(projectPath),
+     )
   |> Js.String.replaceByRe(
        [%bs.re "/<PACKAGE_NAME_UPPER_CAMEL>/g"],
-       packageNameUpperCamelCase,
+       packageNameUpperCamelCase(projectPath),
      );
 let stripTemplateExtension = s => {
   s |> Js.String.replace("-template", "");
 };
 
-let substituteFileNames = s =>
+let substituteFileNames = (projectPath, s) =>
   s
   |> Js.String.replaceByRe(
        [%bs.re "/__PACKAGE_NAME_FULL__/g"],
-       packageNameKebab,
+       packageNameKebab(projectPath),
      )
-  |> Js.String.replaceByRe([%bs.re "/__PACKAGE_NAME__/g"], packageNameKebab)
+  |> Js.String.replaceByRe(
+       [%bs.re "/__PACKAGE_NAME__/g"],
+       packageNameKebab(projectPath),
+     )
   |> Js.String.replaceByRe(
        [%bs.re "/__PACKAGE_NAME_UPPER_CAMEL__/g"],
-       packageNameUpperCamelCase,
+       packageNameUpperCamelCase(projectPath),
      );
 
 let isDirectoryEmpty = path =>
-  Belt.Array.length(Node.Fs.readdirSync(path)) == 0;
+  !Node.Fs.existsSync(path)
+  || Belt.Array.length(Node.Fs.readdirSync(path)) == 0;
 
 let rec askYesNoQuestion =
         (~rl: Readline.rlType, ~question, ~onYes, ~onNo=() => (), ()) => {
@@ -99,19 +115,19 @@ let rec scanDir = (dir, f) => {
   );
 };
 
-let copyBundledTemplate = () => {
+let copyBundledTemplate = projectPath => {
   let templatesDir =
     Path.resolve([|
       dirname,
       "templates",
       "pesy-reason-template-0.1.0-alpha.3",
     |]);
-
+  Process.chdir(projectPath);
   Promise.(
     scanDir(
       templatesDir,
       src => {
-        let dest = Js.String.replace(templatesDir, Process.cwd(), src);
+        let dest = Js.String.replace(templatesDir, projectPath, src);
         Fs.isDirectory(src)
         |> then_(isDir =>
              if (isDir) {
@@ -130,15 +146,15 @@ let copyBundledTemplate = () => {
 let bootstrap = projectPath =>
   fun
   | Some(template) => downloadGit(template, projectPath)
-  | None => copyBundledTemplate();
+  | None => copyBundledTemplate(projectPath);
 
-let subst = file => {
+let subst = (projectPath, file) => {
   Promise.(
     Fs.(
       readFile(. file)
       |> then_(b =>
            Buffer.toString(b)
-           |> substituteTemplateValues
+           |> substituteTemplateValues(projectPath)
            |> Buffer.from
            |> resolve
          )
@@ -146,7 +162,9 @@ let subst = file => {
       |> then_(() =>
            renameSync(
              file,
-             file |> substituteFileNames |> stripTemplateExtension,
+             file
+             |> substituteFileNames(projectPath)
+             |> stripTemplateExtension,
            )
            |> resolve
          )
@@ -157,7 +175,7 @@ let subst = file => {
 let substitute = projectPath => {
   walk_sync(projectPath)
   |> Array.filter(file_or_dir => statSync(file_or_dir)->isFile)
-  |> Array.map(subst)
+  |> Array.map(subst(projectPath))
   |> Promise.all;
 };
 
@@ -178,7 +196,8 @@ let spinnerEnabledPromise = (cmd, args, projectPath, message) => {
 let esyCommand = Sys.unix ? "esy" : "esy.cmd";
 let setup = (template, projectPath) =>
   Promise.(
-    bootstrap(projectPath, template)
+    Fs.mkdir(~p=true, projectPath)
+    |> then_(() => bootstrap(projectPath, template))
     |> then_(_ => {
          Js.log("");
          Js.log("Setting up");
@@ -192,9 +211,9 @@ let setup = (template, projectPath) =>
                   "test" / "TestFile.re",
                   "test" / "TestFramework.re",
                   "README.md",
-                  "bin" / (packageNameUpperCamelCase ++ "App.re"),
+                  "bin" / (packageNameUpperCamelCase(projectPath) ++ "App.re"),
                   "dune-project",
-                  packageNameKebab ++ ".opam",
+                  packageNameKebab(projectPath) ++ ".opam",
                   "package.json",
                 |]
                 |> Js.Array.forEach(file =>
@@ -241,7 +260,10 @@ let setup = (template, projectPath) =>
     |> catch(handlePromiseRejectInJS)
   );
 
-let main' = (template, useDefaultOptions) =>
+let main' = (projectPath, template, useDefaultOptions) => {
+  let projectPath =
+    Path.isAbsolute(projectPath)
+      ? projectPath : Path.join([|Process.cwd(), projectPath|]);
   if (isDirectoryEmpty(projectPath) || useDefaultOptions) {
     ignore @@ setup(template, projectPath);
   } else {
@@ -257,8 +279,10 @@ let main' = (template, useDefaultOptions) =>
       (),
     );
   };
+};
 
 let warmup = () => {
+  let projectPath = Process.cwd();
   Warmup.run(projectPath)
   |> Js.Promise.then_(
        fun
@@ -268,13 +292,21 @@ let warmup = () => {
   |> ignore;
 };
 
-let main = (template, useDefaultOptions) =>
-  try(main'(template, useDefaultOptions)) {
+let main = (projectPath, template, useDefaultOptions) =>
+  try(main'(projectPath, template, useDefaultOptions)) {
   | Js.Exn.Error(e) =>
-    switch (Js.Exn.message(e)) {
-    | Some(message) => Js.log({j|Error: $message|j})
-    | None => Js.log("An unknown error occurred")
-    }
+    let message =
+      switch (Js.Exn.message(e)) {
+      | Some(message) => message
+      | None => ""
+      };
+    let stack =
+      switch (Js.Exn.stack(e)) {
+      | Some(stack) => stack
+      | None => ""
+      };
+    Js.log(message);
+    Js.log(stack);
   };
 
 let version = "0.5.0-dev";
@@ -284,6 +316,13 @@ let template = {
     value
     & opt(some(string), None)
     & info(["t", "template"], ~docv="TEMPLATE_URL", ~doc)
+  );
+};
+
+let directory = {
+  let doc = "Initialises a new project at given directory";
+  Arg.(
+    value & opt(string, Process.cwd()) & info(["init"], ~docv="INIT", ~doc)
   );
 };
 
@@ -298,7 +337,7 @@ let cmd = {
   let envs: list(env_info) = [];
   let exits: list(exit_info) = [];
   let doc = "Your Esy Assistant.";
-  let cmdT = Term.(const(main) $ template $ useDefaultOptions);
+  let cmdT = Term.(const(main) $ directory $ template $ useDefaultOptions);
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
