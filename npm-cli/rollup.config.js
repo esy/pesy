@@ -7,7 +7,8 @@ export default {
   input: "lib/js/src/Pesy.bs.js",
   output: {
     file: "pesy.bundle.js",
-    format: "cjs"
+    format: "cjs",
+    sourcemap: true
   },
   plugins: [
     nodeResolve({ preferBuiltins: true }),
