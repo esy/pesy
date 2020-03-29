@@ -309,7 +309,7 @@ let main = (projectPath, template, useDefaultOptions) =>
     Js.log(stack);
   };
 
-let version = "0.5.0-alpha.14";
+let version = "0.5.0-dev";
 let template = {
   let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
   Arg.(
