@@ -45,7 +45,7 @@ let stripTemplateExtension = s => {
   s |> Js.String.replace("-template", "");
 };
 
-let substituteFileNames = (projectPath, s) =>
+let substituteFileNames = (projectPath, s) => {
   s
   |> Js.String.replaceByRe(
        [%bs.re "/__PACKAGE_NAME_FULL__/g"],
@@ -59,6 +59,7 @@ let substituteFileNames = (projectPath, s) =>
        [%bs.re "/__PACKAGE_NAME_UPPER_CAMEL__/g"],
        packageNameUpperCamelCase(projectPath),
      );
+};
 
 let isDirectoryEmpty = path =>
   !Node.Fs.existsSync(path)
@@ -88,8 +89,8 @@ let rec askYesNoQuestion =
 let forEachDirEnt = (dir, f) => {
   Js.Promise.(
     Fs.readdir(dir)
-    |> then_(files => Promise.all(Array.map(file => f(file), files)))
-    |> then_(_ => resolve(Result.Ok()))
+    |> then_(files => files |> Array.map(f) |> Promise.all)
+    |> then_(_ => resolve(Ok()))
   );
 };
 
@@ -106,7 +107,7 @@ let rec scanDir = (dir, f) => {
                   if (isDir) {
                     scanDir(entryPath, f);
                   } else {
-                    resolve(Result.Ok());
+                    resolve(Ok());
                   }
                 )
            );
@@ -122,7 +123,6 @@ let copyBundledTemplate = projectPath => {
       "templates",
       "pesy-reason-template-0.1.0-alpha.3",
     |]);
-  Process.chdir(projectPath);
   Promise.(
     scanDir(
       templatesDir,
@@ -136,7 +136,7 @@ let copyBundledTemplate = projectPath => {
                Fs.copy(~src, ~dest, ~dryRun=false, ());
              }
            )
-        |> then_(_ => resolve(Result.Ok()));
+        |> then_(_ => resolve(Ok()));
       },
     )
   );
@@ -145,7 +145,22 @@ let copyBundledTemplate = projectPath => {
 /* Belt seems unnecessary */
 let bootstrap = projectPath =>
   fun
-  | Some(template) => downloadGit(template, projectPath)
+  | Some(template) =>
+    downloadGit(template, projectPath)
+    |> Js.Promise.then_(_ => {
+         // TODO: Hacky! Streamline what stays and what doesn't. Maybe add a ignore field to pesy config so that we know what to copy and what shouldn't be?
+         Rimraf.run(
+           Utils.Path.(projectPath / ".ci-self"),
+         )
+       })
+    |> Js.Promise.then_(
+         fun
+         | Error(msg) => Error(msg) |> Js.Promise.resolve
+         | Ok(x) => {
+             Js.Promise.resolve(Ok());
+           },
+       )
+
   | None => copyBundledTemplate(projectPath);
 
 let subst = (projectPath, file) => {
@@ -174,7 +189,8 @@ let subst = (projectPath, file) => {
 
 let substitute = projectPath => {
   walk_sync(projectPath)
-  |> Array.filter(file_or_dir => statSync(file_or_dir)->isFile)
+  |> Array.map(file_or_dir => Utils.Path.(projectPath / file_or_dir))
+  |> Array.filter(file_or_dir => {statSync(file_or_dir)->isFile})
   |> Array.map(subst(projectPath))
   |> Promise.all;
 };
@@ -197,7 +213,10 @@ let esyCommand = Sys.unix ? "esy" : "esy.cmd";
 let setup = (template, projectPath) =>
   Promise.(
     Fs.mkdir(~p=true, projectPath)
-    |> then_(() => bootstrap(projectPath, template))
+    |> then_(() => {
+         Process.chdir(projectPath);
+         bootstrap(projectPath, template);
+       })
     |> then_(_ => {
          Js.log("");
          Js.log("Setting up");
