@@ -5,7 +5,7 @@ module Caml = {
 };
 
 module Path = {
-  let (/) = Filename.concat;
+  let (/) = (x, y) => Bindings.Path.resolve([|x, y|]);
 };
 
 let spf = Printf.sprintf;
