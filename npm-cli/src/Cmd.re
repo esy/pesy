@@ -12,7 +12,7 @@ type stderr = string;
 
 let pathMissingFromEnv = "'PATH' variable not found in the environment";
 
-let env_sep = Sys.unix ? ":" : ";";
+let env_sep = () => Sys.unix ? ":" : ";";
 let binPath = c => c.cmd;
 
 let make = (~env, ~cmd) =>
@@ -23,7 +23,7 @@ let make = (~env, ~cmd) =>
 
     cmds
     |> Array.map(cmd =>
-         Js.String.split(env_sep, path)
+         Js.String.split(env_sep(), path)
          |> Js.Array.map(p => Filename.concat(p, cmd))
        )
     |> Js.Array.reduce(Js.Array.concat, [||])
