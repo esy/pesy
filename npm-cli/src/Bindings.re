@@ -90,11 +90,11 @@ module ChildProcess: {
   exception ExecFailure((string, string, string));
 
   let spawn: (string, array(string), Options.t) => t;
-  let onClose: (t, unit => unit) => unit;
+  let onClose: (t, int => unit) => unit;
   let exec:
     (string, Options.t) => Js.Promise.t(result((int, string, string), unit));
 } = {
-  type t = {. "exitCode": int};
+  type t = {. "exitCode": int}; // FIXME: async processes dont set exitCode
 
   exception ExecFailure((string, string, string));
 
@@ -110,8 +110,9 @@ module ChildProcess: {
   external spawn: (string, array(string), Options.t) => t = "spawn";
 
   [@bs.send] external on': (t, string, unit => unit) => unit = "on";
+  [@bs.send] external onClose': (t, string, int => unit) => unit = "on";
 
-  let onClose = (t, cb) => on'(t, "close", cb);
+  let onClose = (t, cb) => onClose'(t, "close", cb);
 
   [@bs.module "child_process"]
   external exec:

@@ -65,8 +65,12 @@ let isDirectoryEmpty = path =>
   !Node.Fs.existsSync(path)
   || Belt.Array.length(Node.Fs.readdirSync(path)) == 0;
 
-let rec askYesNoQuestion =
-        (~rl: Readline.rlType, ~question, ~onYes, ~onNo=() => (), ()) => {
+let rec askYesNoQuestion = (~question, ~onYes, ~onNo, ()) => {
+  let rl =
+    Readline.createInterface({
+      "input": [%raw "process.stdin"],
+      "output": [%raw "process.stdout"],
+    });
   rl##question(
     question ++ " [y/n] ",
     input => {
@@ -80,7 +84,7 @@ let rec askYesNoQuestion =
       | "no" =>
         onNo();
         rl##close();
-      | _ => askYesNoQuestion(~rl, ~question, ~onYes, ~onNo, ())
+      | _ => askYesNoQuestion(~question, ~onYes, ~onNo, ())
       };
     },
   );
@@ -195,109 +199,126 @@ let substitute = projectPath => {
   |> Promise.all;
 };
 
-let spinnerEnabledPromise = (cmd, args, projectPath, message) => {
+let runCommand = (cmd, args, projectPath, message) => {
   Js.log("");
   Js.log(message);
-  Js.Promise.make((~resolve, ~reject as _) => {
-    let process =
-      ChildProcess.spawn(
-        cmd,
-        args,
-        ChildProcess.Options.make(~cwd=projectPath, ~stdio="inherit", ()),
-      );
-    ChildProcess.onClose(process, () => resolve(. "dummy"));
-  });
+  Cmd.spawn(~args, ~cwd=projectPath, ~cmd);
 };
 
-let esyCommand = Sys.unix ? "esy" : "esy.cmd";
-let setup = (template, projectPath) =>
-  Promise.(
+let setup = (esy, template, projectPath) =>
+  ResultPromise.(
     Fs.mkdir(~p=true, projectPath)
-    |> then_(() => {
+    |> Js.Promise.then_(() => {
          Process.chdir(projectPath);
          bootstrap(projectPath, template);
        })
-    |> then_(_ => {
-         Js.log("");
-         Js.log("Setting up");
-         substitute(projectPath)
-         |> then_(_arrayOfCompletions => {
-              Js.log("");
-              Utils.Path.(
-                [|
-                  "azure-pipelines.yml",
-                  "library" / "Util.re",
-                  "test" / "TestFile.re",
-                  "test" / "TestFramework.re",
-                  "README.md",
-                  "bin" / (packageNameUpperCamelCase(projectPath) ++ "App.re"),
-                  "dune-project",
-                  packageNameKebab(projectPath) ++ ".opam",
-                  "package.json",
-                |]
-                |> Js.Array.forEach(file =>
-                     ("    created " |> Chalk.green)
-                     ++ (file |> Chalk.whiteBright)
-                     |> Js.log
-                   )
-              );
-              resolve();
-            });
-       })
-    |> then_(() => {
-         spinnerEnabledPromise(
-           esyCommand,
-           [|"i"|],
-           projectPath,
-           ("Running" |> Chalk.dim) ++ (" esy install" |> Chalk.whiteBright),
-         )
-       })
-    |> then_(_ => Warmup.run(projectPath))
-    |> then_(_ /* (_stdout, _stderr) */ => {
-         spinnerEnabledPromise(
-           esyCommand,
-           [|"pesy"|],
-           projectPath,
-           ("Running" |> Chalk.dim)
-           ++ (" esy pesy" |> Chalk.whiteBright)
-           ++ (" and " |> Chalk.dim)
-           ++ ("building project dependencies" |> Chalk.whiteBright),
-         )
-       })
-    |> then_(_ /* (_stdout, _stderr) */ => {
-         spinnerEnabledPromise(
-           esyCommand,
-           [|"b"|],
-           projectPath,
-           ("Running" |> Chalk.dim) ++ (" esy build" |> Chalk.whiteBright),
-         )
-       })
-    |> then_(_ /* (_stdout, _stderr) */ => {
-         "Ready for development!" |> Chalk.green |> Js.log;
-         resolve();
-       })
-    |> catch(handlePromiseRejectInJS)
+    >>= (
+      _ => {
+        Js.log("");
+        Js.log("Setting up");
+        substitute(projectPath)
+        |> Js.Promise.then_(_arrayOfCompletions => {
+             Js.log("");
+             Utils.Path.(
+               [|
+                 "azure-pipelines.yml",
+                 "library" / "Util.re",
+                 "test" / "TestFile.re",
+                 "test" / "TestFramework.re",
+                 "README.md",
+                 "bin" / (packageNameUpperCamelCase(projectPath) ++ "App.re"),
+                 "dune-project",
+                 packageNameKebab(projectPath) ++ ".opam",
+                 "package.json",
+               |]
+               |> Js.Array.forEach(file =>
+                    ("    created " |> Chalk.green)
+                    ++ (file |> Chalk.whiteBright)
+                    |> Js.log
+                  )
+             );
+             Js.Promise.resolve(Ok());
+           });
+      }
+    )
+    >>= (
+      () => {
+        runCommand(
+          esy,
+          [|"i"|],
+          projectPath,
+          ("Running" |> Chalk.dim) ++ (" esy install" |> Chalk.whiteBright),
+        );
+      }
+    )
+    >>= (() => Warmup.run(projectPath))
+    >>= (
+      () /* (_stdout, _stderr) */ => {
+        runCommand(
+          esy,
+          [|"pesy"|],
+          projectPath,
+          ("Running" |> Chalk.dim)
+          ++ (" esy pesy" |> Chalk.whiteBright)
+          ++ (" and " |> Chalk.dim)
+          ++ ("building project dependencies" |> Chalk.whiteBright),
+        );
+      }
+    )
+    >>= (
+      () /* (_stdout, _stderr) */ => {
+        runCommand(
+          esy,
+          [|"b"|],
+          projectPath,
+          ("Running" |> Chalk.dim) ++ (" esy build" |> Chalk.whiteBright),
+        );
+      }
+    )
+    >>| (
+      () /* (_stdout, _stderr) */ => {
+        "Ready for development!" |> Chalk.green |> Js.log;
+      }
+    )
   );
 
-let main' = (projectPath, template, useDefaultOptions) => {
-  let projectPath =
-    Path.isAbsolute(projectPath)
-      ? projectPath : Path.join([|Process.cwd(), projectPath|]);
-  if (isDirectoryEmpty(projectPath) || useDefaultOptions) {
-    ignore @@ setup(template, projectPath);
-  } else {
-    let rl =
-      Readline.createInterface({
-        "input": [%raw "process.stdin"],
-        "output": [%raw "process.stdout"],
-      });
+let promptEmptyDirectory = () =>
+  Js.Promise.make((~resolve, ~reject as _) => {
     askYesNoQuestion(
-      ~rl,
       ~question="Current directory is not empty. Are you sure to continue?",
-      ~onYes=() => ignore @@ setup(template, projectPath),
+      ~onYes=() => ResultPromise.ok(),
+      ~onNo=() => ResultPromise.fail(),
       (),
-    );
-  };
+    )
+  });
+let handleEmptyDirectory =
+  (. path, force) =>
+    if (isDirectoryEmpty(path) || force) {
+      ResultPromise.ok();
+    } else {
+      promptEmptyDirectory();
+    };
+
+let main' = (projectPath, template, useDefaultOptions) => {
+  ResultPromise.(
+    Cmd.make(~cmd="esy", ~env=Process.env)
+    >>= (
+      esy =>
+        {
+          let projectPath =
+            Path.isAbsolute(projectPath)
+              ? projectPath : Path.join([|Process.cwd(), projectPath|]);
+          handleEmptyDirectory(. projectPath, useDefaultOptions);
+        }
+        >>= (() => setup(esy, template, projectPath))
+    )
+  )
+  |> Js.Promise.then_(
+       fun
+       | Ok () => Js.Promise.resolve()
+       | Error(msg) => Js.log(msg) |> Js.Promise.resolve,
+     )
+  |> Js.Promise.catch(handlePromiseRejectInJS);
 };
 
 let warmup = () => {
@@ -307,8 +328,7 @@ let warmup = () => {
        fun
        | Ok () => Js.Promise.resolve()
        | Error(msg) => Js.log2("Error", msg) |> Js.Promise.resolve,
-     )
-  |> ignore;
+     );
 };
 
 let main = (projectPath, template, useDefaultOptions) =>
@@ -326,6 +346,7 @@ let main = (projectPath, template, useDefaultOptions) =>
       };
     Js.log(message);
     Js.log(stack);
+    Js.Promise.resolve();
   };
 
 let version = "0.5.0-dev";
