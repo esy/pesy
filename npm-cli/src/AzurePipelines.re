@@ -75,8 +75,8 @@ $str
     | Some(resource) => Ok(resource.downloadUrl)
     | None =>
       Error(
-        {|getDownloadURL(): responseObject.resource as not of the form { downloadURL: "..." }. Instead got
-$responseText |},
+        {j|getDownloadURL(): responseObject.resource as not of the form { downloadURL: "..." }. Instead got
+$responseText |j},
       )
     };
   };
