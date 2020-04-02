@@ -51,6 +51,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@glennsl/bs-json": "^5.0.2",
     "@glennsl/bs-jest": "^0.5.0",
     "@prometheansacrifice/bs-cmdliner": "1.0.4000",
     "@rollup/plugin-commonjs": "^11.0.2",
@@ -66,7 +67,6 @@
   },
   "homepage": "https://github.com/esy/pesy#readme",
   "dependencies": {
-    "@glennsl/bs-json": "^5.0.2",
     "chalk": "^3.0.0",
     "download-git-repo": "^2.0.0",
     "request": "^2.88.2",
