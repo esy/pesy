@@ -6,7 +6,8 @@ root=$PWD
 custom_registry_url=http://localhost:4873
 original_npm_registry_url=https://registry.npmjs.org # `npm get registry`
 original_yarn_registry_url=https://registry.yarnpkg.com # `yarn config get registry`
-version=0.5.0-dev.15
+version=0.5.0-alpha.16
+
 
 function cleanup {
 
