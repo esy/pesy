@@ -74,10 +74,11 @@ $str
     switch (json |> optional(field("resource", downloadUrlObject))) {
     | Some(resource) => Ok(resource.downloadUrl)
     | None =>
+      let responseText = Json.stringify(json);
       Error(
         {j|getDownloadURL(): responseObject.resource as not of the form { downloadURL: "..." }. Instead got
 $responseText |j},
-      )
+      );
     };
   };
 
