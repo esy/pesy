@@ -41,30 +41,6 @@ let prepareAzureCacheURL = projStr => {
      );
 };
 
-module ResultPromise: {
-  type t('a, 'b) = Js.Promise.t(result('a, 'b));
-  let (>>=): (t('a, 'b), 'a => t('c, 'b)) => t('c, 'b);
-  let (>>|): (t('a, 'b), 'a => 'c) => t('c, 'b);
-} = {
-  type t('a, 'b) = Js.Promise.t(result('a, 'b));
-  let (>>=) = (rp, f) => {
-    rp
-    |> Js.Promise.then_(
-         fun
-         | Ok(x) => f(x)
-         | Error(msg) => Js.Promise.resolve(Error(msg)),
-       );
-  };
-  let (>>|) = (rp, f) => {
-    rp
-    |> Js.Promise.then_(
-         fun
-         | Error(msg) => Js.Promise.resolve(Error(msg))
-         | Ok(x) => f(x) |> R.return |> Js.Promise.resolve,
-       );
-  };
-};
-
 module EsyStatus: {
   type t;
   let make: string => result(t, string);

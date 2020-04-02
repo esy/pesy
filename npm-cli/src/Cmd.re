@@ -72,3 +72,24 @@ stderr: $stderr
        Js.Promise.resolve(r);
      });
 };
+
+let spawn = (~args, ~cwd, ~cmd) => {
+  let {cmd, env} = cmd;
+  Js.Promise.make((~resolve, ~reject as _) => {
+    let process =
+      ChildProcess.spawn(
+        cmd,
+        args,
+        ChildProcess.Options.make(~cwd, ~stdio="inherit", ()),
+      );
+    ChildProcess.onClose(process, exitCode =>
+      if (exitCode == 0) {
+        resolve(. Ok());
+      } else {
+        resolve(.
+          Error(Js.Array.concat(args, [|cmd|]) |> Js.Array.joinWith(" ")),
+        );
+      }
+    );
+  });
+};
