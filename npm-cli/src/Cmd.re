@@ -12,19 +12,21 @@ type stderr = string;
 
 let pathMissingFromEnv = "'PATH' variable not found in the environment";
 
-let env_sep = () => Sys.unix ? ":" : ";";
+let env_sep = Process.platform == "win32" ? ";" : ":";
 let binPath = c => c.cmd;
 
 let make = (~env, ~cmd) =>
   switch (Js.Dict.get(env, "PATH")) {
   | None => Error(pathMissingFromEnv) |> Js.Promise.resolve
   | Some(path) =>
-    let cmds = Sys.unix ? [|cmd|] : [|cmd ++ ".exe", cmd ++ ".cmd"|];
+    let cmds =
+      Process.platform == "win32"
+        ? [|cmd ++ ".exe", cmd ++ ".cmd"|] : [|cmd|];
 
     cmds
     |> Array.map(cmd =>
-         Js.String.split(env_sep(), path)
-         |> Js.Array.map(p => Filename.concat(p, cmd))
+         Js.String.split(env_sep, path)
+         |> Js.Array.map(p => Path.join([|p, cmd|]))
        )
     |> Js.Array.reduce(Js.Array.concat, [||])
     |> Js.Array.map(p =>

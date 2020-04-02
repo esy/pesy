@@ -4,10 +4,6 @@ module Caml = {
   module String = String;
 };
 
-module Path = {
-  let (/) = (x, y) => Bindings.Path.resolve([|x, y|]);
-};
-
 let spf = Printf.sprintf;
 
 let parent = Filename.dirname;

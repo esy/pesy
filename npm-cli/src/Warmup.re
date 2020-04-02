@@ -194,7 +194,10 @@ let run = projectPath =>
                      >>= (
                        _stdout =>
                          Esy.importDependencies(
-                           Path.(projectPath / "cache-Darwin-install-v1"),
+                           Path.join([|
+                             projectPath,
+                             "cache-Darwin-install-v1",
+                           |]),
                            esy,
                          )
                      )
@@ -212,13 +215,16 @@ let run = projectPath =>
                            Process.Stdout.v,
                            stderr |> Chalk.dim,
                          );
-                         Rimraf.run(Path.(projectPath / "cache.zip"));
+                         Rimraf.run(Path.join([|projectPath, "cache.zip"|]));
                        }
                      )
                      >>= (
                        () =>
                          Rimraf.run(
-                           Path.(projectPath / "cache-Darwin-install-v1"),
+                           Path.join([|
+                             projectPath,
+                             "cache-Darwin-install-v1",
+                           |]),
                          )
                      );
                    }

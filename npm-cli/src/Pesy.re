@@ -154,7 +154,7 @@ let bootstrap = projectPath =>
     |> Js.Promise.then_(_ => {
          // TODO: Hacky! Streamline what stays and what doesn't. Maybe add a ignore field to pesy config so that we know what to copy and what shouldn't be?
          Rimraf.run(
-           Utils.Path.(projectPath / ".ci-self"),
+           Path.join([|projectPath, ".ci-self"|]),
          )
        })
     |> Js.Promise.then_(
@@ -193,7 +193,7 @@ let subst = (projectPath, file) => {
 
 let substitute = projectPath => {
   walk_sync(projectPath)
-  |> Array.map(file_or_dir => Utils.Path.(projectPath / file_or_dir))
+  |> Array.map(file_or_dir => Path.join([|projectPath, file_or_dir|]))
   |> Array.filter(file_or_dir => {statSync(file_or_dir)->isFile})
   |> Array.map(subst(projectPath))
   |> Promise.all;
@@ -219,24 +219,25 @@ let setup = (esy, template, projectPath) =>
         substitute(projectPath)
         |> Js.Promise.then_(_arrayOfCompletions => {
              Js.log("");
-             Utils.Path.(
-               [|
-                 "azure-pipelines.yml",
-                 "library" / "Util.re",
-                 "test" / "TestFile.re",
-                 "test" / "TestFramework.re",
-                 "README.md",
-                 "bin" / (packageNameUpperCamelCase(projectPath) ++ "App.re"),
-                 "dune-project",
-                 packageNameKebab(projectPath) ++ ".opam",
-                 "package.json",
-               |]
-               |> Js.Array.forEach(file =>
-                    ("    created " |> Chalk.green)
-                    ++ (file |> Chalk.whiteBright)
-                    |> Js.log
-                  )
-             );
+             [|
+               "azure-pipelines.yml",
+               Path.join([|"library", "Util.re"|]),
+               Path.join([|"test", "TestFile.re"|]),
+               Path.join([|"test", "TestFramework.re"|]),
+               "README.md",
+               Path.join([|
+                 "bin",
+                 packageNameUpperCamelCase(projectPath) ++ "App.re",
+               |]),
+               "dune-project",
+               packageNameKebab(projectPath) ++ ".opam",
+               "package.json",
+             |]
+             |> Js.Array.forEach(file =>
+                  ("    created " |> Chalk.green)
+                  ++ (file |> Chalk.whiteBright)
+                  |> Js.log
+                );
              Js.Promise.resolve(Ok());
            });
       }
@@ -251,7 +252,21 @@ let setup = (esy, template, projectPath) =>
         );
       }
     )
-    >>= (() => Warmup.run(projectPath))
+    >>= (
+      () => {
+        Js.log(
+          ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
+        );
+        Warmup.run(projectPath)
+        |> Js.Promise.then_(warmupResult => {
+             switch (warmupResult) {
+             | Ok () => ()
+             | Error(msg) => Js.log2("Skipping warmup because: ", msg)
+             };
+             ResultPromise.ok();
+           });
+      }
+    )
     >>= (
       () /* (_stdout, _stderr) */ => {
         runCommand(

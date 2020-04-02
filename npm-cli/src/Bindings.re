@@ -317,7 +317,10 @@ module Fs = {
                if (doesExist) {
                  resolve();
                } else {
-                 let homePath = Sys.getenv(Sys.unix ? "HOME" : "USERPROFILE");
+                 let homePath =
+                   Sys.getenv(
+                     Process.platform == "win32" ? "USERPROFILE" : "HOME",
+                   );
                  if (path == homePath) {
                    reject(
                      Failure(
