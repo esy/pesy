@@ -204,7 +204,7 @@ let run = projectPath =>
                      >>= (
                        ((stdout, stderr)) => {
                          Js.log(
-                           ("Running " |> Chalk.whiteBright)
+                           ("Running " |> Chalk.dim)
                            ++ ("esy import-dependencies" |> Chalk.bold),
                          );
                          Process.Stdout.write(

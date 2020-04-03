@@ -318,14 +318,13 @@ let main' = (projectPath, template, useDefaultOptions) => {
   ResultPromise.(
     Cmd.make(~cmd="esy", ~env=Process.env)
     >>= (
-      esy =>
-        {
-          let projectPath =
-            Path.isAbsolute(projectPath)
-              ? projectPath : Path.join([|Process.cwd(), projectPath|]);
-          handleEmptyDirectory(. projectPath, useDefaultOptions);
-        }
-        >>= (() => setup(esy, template, projectPath))
+      esy => {
+        let projectPath =
+          Path.isAbsolute(projectPath)
+            ? projectPath : Path.join([|Process.cwd(), projectPath|]);
+        handleEmptyDirectory(. projectPath, useDefaultOptions)
+        >>= (() => setup(esy, template, projectPath));
+      }
     )
   )
   |> Js.Promise.then_(
