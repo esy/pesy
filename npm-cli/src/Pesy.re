@@ -168,6 +168,8 @@ let bootstrap = projectPath =>
   | None => copyBundledTemplate(projectPath);
 
 let subst = (projectPath, file) => {
+  let substitutedName =
+    file |> substituteFileNames(projectPath) |> stripTemplateExtension;
   Promise.(
     Fs.(
       readFile(. file)
@@ -177,16 +179,13 @@ let subst = (projectPath, file) => {
            |> Buffer.from
            |> resolve
          )
-      |> then_(s => writeFile(. file, s))
-      |> then_(() =>
-           renameSync(
-             file,
-             file
-             |> substituteFileNames(projectPath)
-             |> stripTemplateExtension,
-           )
-           |> resolve
-         )
+      |> then_(s => writeFile(. substitutedName, s))
+      |> then_(_ => {
+           if (file != substitutedName) {
+             Node.Fs.unlinkSync(file);
+           };
+           resolve();
+         })
     )
   );
 };
