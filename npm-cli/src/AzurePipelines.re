@@ -95,7 +95,7 @@ let os =
   switch (Process.platform) {
   | "darwin" => Some("Darwin")
   | "linux" => Some("Linux")
-  | "win32" => Some("Windows")
+  | "win32" => Some("Windows_NT")
   | _ => None
   };
 
