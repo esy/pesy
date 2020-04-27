@@ -1,5 +1,0 @@
-EXCLUDE_QUERY_DIR
-B /Users/manas/development/esy/pesy/_esy/default/store/b/reason_native__s__console-e41aec4b/default/src/console/.Console.objs/byte
-S ../../shared-src/objectPrinter
-S .
-FLG -open Console__ -w -40
