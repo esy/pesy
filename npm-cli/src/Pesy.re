@@ -160,7 +160,7 @@ let bootstrap = projectPath =>
     |> Js.Promise.then_(
          fun
          | Error(msg) => Error(msg) |> Js.Promise.resolve
-         | Ok(x) => {
+         | Ok(_) => {
              Js.Promise.resolve(Ok());
            },
        )
@@ -204,104 +204,117 @@ let runCommand = (cmd, args, projectPath, message) => {
   Cmd.spawn(~args, ~cwd=projectPath, ~cmd);
 };
 
-let setup = (esy, template, projectPath) =>
+let setup = (esy, template, projectPath, bootstrapOnly) =>
   ResultPromise.(
-    Fs.mkdir(~p=true, projectPath)
-    |> Js.Promise.then_(() => {
-         Process.chdir(projectPath);
-         bootstrap(projectPath, template);
-       })
-    >>= (
-      _ => {
-        Js.log("");
-        Js.log("Setting up");
-        substitute(projectPath)
-        |> Js.Promise.then_(_arrayOfCompletions => {
-             Js.log("");
-             [|
-               "azure-pipelines.yml",
-               Path.join([|"library", "Util.re"|]),
-               Path.join([|"test", "TestFile.re"|]),
-               Path.join([|"test", "TestFramework.re"|]),
-               "README.md",
-               Path.join([|
-                 "bin",
-                 packageNameUpperCamelCase(projectPath) ++ "App.re",
-               |]),
-               "dune-project",
-               packageNameKebab(projectPath) ++ ".opam",
-               "package.json",
-             |]
-             |> Js.Array.forEach(file =>
-                  ("    created " |> Chalk.green)
-                  ++ (file |> Chalk.whiteBright)
-                  |> Js.log
-                );
-             Js.Promise.resolve(Ok());
-           });
-      }
-    )
-    >>= (
-      () => {
+    {
+      let bootstrapped =
+        Fs.mkdir(~p=true, projectPath)
+        |> Js.Promise.then_(() => {
+             Process.chdir(projectPath);
+             bootstrap(projectPath, template);
+           })
+        >>= (
+          _ => {
+            Js.log("");
+            Js.log("Setting up");
+            substitute(projectPath)
+            |> Js.Promise.then_(_arrayOfCompletions => {
+                 Js.log("");
+                 [|
+                   "azure-pipelines.yml",
+                   Path.join([|"library", "Util.re"|]),
+                   Path.join([|"test", "TestFile.re"|]),
+                   Path.join([|"test", "TestFramework.re"|]),
+                   "README.md",
+                   Path.join([|
+                     "bin",
+                     packageNameUpperCamelCase(projectPath) ++ "App.re",
+                   |]),
+                   "dune-project",
+                   packageNameKebab(projectPath) ++ ".opam",
+                   "package.json",
+                 |]
+                 |> Js.Array.forEach(file =>
+                      ("    created " |> Chalk.green)
+                      ++ (file |> Chalk.whiteBright)
+                      |> Js.log
+                    );
+                 Js.Promise.resolve(Ok());
+               });
+          }
+        );
+
+      let runningEsy = () =>
         runCommand(
           esy,
           [|"i"|],
           projectPath,
           ("Running" |> Chalk.dim) ++ (" esy install" |> Chalk.whiteBright),
+        )
+        >>= (
+          () => {
+            Js.log(
+              ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
+            );
+            Warmup.run(projectPath)
+            |> Js.Promise.then_(warmupResult => {
+                 switch (warmupResult) {
+                 | Ok () => ()
+                 | Error(msg) => Js.log2("Skipping warmup because: ", msg)
+                 };
+                 ResultPromise.ok();
+               });
+          }
+        )
+        >>= (
+          () /* (_stdout, _stderr) */ => {
+            runCommand(
+              esy,
+              [|"pesy"|],
+              projectPath,
+              ("Running" |> Chalk.dim)
+              ++ (" esy pesy" |> Chalk.whiteBright)
+              ++ (" and " |> Chalk.dim)
+              ++ ("building project dependencies" |> Chalk.whiteBright),
+            );
+          }
+        )
+        >>= (
+          () /* (_stdout, _stderr) */ => {
+            runCommand(
+              esy,
+              [|"b"|],
+              projectPath,
+              ("Running" |> Chalk.dim) ++ (" esy build" |> Chalk.whiteBright),
+            );
+          }
+        )
+        >>| (
+          () /* (_stdout, _stderr) */ => {
+            "Ready for development!" |> Chalk.green |> Js.log;
+          }
         );
-      }
-    )
-    >>= (
-      () => {
-        Js.log(
-          ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
-        );
-        Warmup.run(projectPath)
-        |> Js.Promise.then_(warmupResult => {
-             switch (warmupResult) {
-             | Ok () => ()
-             | Error(msg) => Js.log2("Skipping warmup because: ", msg)
-             };
-             ResultPromise.ok();
-           });
-      }
-    )
-    >>= (
-      () /* (_stdout, _stderr) */ => {
-        runCommand(
-          esy,
-          [|"pesy"|],
-          projectPath,
-          ("Running" |> Chalk.dim)
-          ++ (" esy pesy" |> Chalk.whiteBright)
-          ++ (" and " |> Chalk.dim)
-          ++ ("building project dependencies" |> Chalk.whiteBright),
-        );
-      }
-    )
-    >>= (
-      () /* (_stdout, _stderr) */ => {
-        runCommand(
-          esy,
-          [|"b"|],
-          projectPath,
-          ("Running" |> Chalk.dim) ++ (" esy build" |> Chalk.whiteBright),
-        );
-      }
-    )
-    >>| (
-      () /* (_stdout, _stderr) */ => {
-        "Ready for development!" |> Chalk.green |> Js.log;
-      }
-    )
+
+      bootstrapOnly
+        ? bootstrapped
+          >>| (
+            () => {
+              Js.log("");
+              "You may have to run " ++ Chalk.green("esy") |> Js.log;
+            }
+          )
+        : bootstrapped >>= runningEsy;
+    }
   );
 
 let promptEmptyDirectory = () =>
   Js.Promise.make((~resolve, ~reject as _) => {
     askYesNoQuestion(
       ~question="Current directory is not empty. Are you sure to continue?",
-      ~onYes=() => ResultPromise.ok(),
-      ~onNo=() => ResultPromise.fail(),
+      ~onYes=() => resolve(. Utils.Result.return()),
+      ~onNo=
+        () =>
+          resolve(. Utils.Result.fail("User responded no to the prompt")),
       (),
     )
   });
@@ -313,7 +326,7 @@ let handleEmptyDirectory =
       promptEmptyDirectory();
     };
 
-let main' = (projectPath, template, useDefaultOptions) => {
+let main' = (projectPath, template, useDefaultOptions, bootstrapOnly) => {
   ResultPromise.(
     Cmd.make(~cmd="esy", ~env=Process.env)
     >>= (
@@ -322,7 +335,7 @@ let main' = (projectPath, template, useDefaultOptions) => {
           Path.isAbsolute(projectPath)
             ? projectPath : Path.join([|Process.cwd(), projectPath|]);
         handleEmptyDirectory(. projectPath, useDefaultOptions)
-        >>= (() => setup(esy, template, projectPath));
+        >>= (() => setup(esy, template, projectPath, bootstrapOnly));
       }
     )
   )
@@ -344,8 +357,8 @@ let warmup = () => {
      );
 };
 
-let main = (projectPath, template, useDefaultOptions) =>
-  try(main'(projectPath, template, useDefaultOptions)) {
+let main = (projectPath, template, useDefaultOptions, bootstrapOnly) =>
+  try(main'(projectPath, template, useDefaultOptions, bootstrapOnly)) {
   | Js.Exn.Error(e) =>
     let message =
       switch (Js.Exn.message(e)) {
@@ -384,13 +397,21 @@ let useDefaultOptions = {
   Arg.(value & flag & info(["y", "yes"], ~doc));
 };
 
+let bootstrapOnly = {
+  let doc = "Only create initial set of files. Dont run esy commands on them.";
+  Arg.(value & flag & info(["-b", "bootstrap-only"], ~doc));
+};
+
 open Cmdliner.Term;
 let cmd = {
   let cmd = "pesy";
   let envs: list(env_info) = [];
   let exits: list(exit_info) = [];
   let doc = "Your Esy Assistant.";
-  let cmdT = Term.(const(main) $ directory $ template $ useDefaultOptions);
+  let cmdT =
+    Term.(
+      const(main) $ directory $ template $ useDefaultOptions $ bootstrapOnly
+    );
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
