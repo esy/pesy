@@ -72,3 +72,55 @@ let copy = (templatePath, projectPath) => {
     templatePath,
   );
 };
+
+let substitute = projectPath => {
+  walk_sync(projectPath)
+  |> Array.map(file_or_dir => Path.join([|projectPath, file_or_dir|]))
+  |> Js.Array.filter(file_or_dir => {statSync(file_or_dir)->isFile})
+  |> Array.map(file => {
+       let substitutedName =
+         file |> substituteFileNames(projectPath) |> stripTemplateExtension;
+       Js.Promise.(
+         Fs.(
+           readFile(. file)
+           |> then_(b =>
+                Buffer.toString(b)
+                |> substituteTemplateValues(projectPath)
+                |> Buffer.from
+                |> resolve
+              )
+           |> then_(s => writeFile(. substitutedName, s))
+           |> then_(_ => {
+                if (file != substitutedName) {
+                  Node.Fs.unlinkSync(file);
+                };
+                resolve();
+              })
+         )
+       );
+     })
+  |> Js.Promise.all
+  |> Js.Promise.then_(_arrayOfCompletions => {
+       Js.log("");
+       [|
+         "azure-pipelines.yml",
+         Path.join([|"library", "Util.re"|]),
+         Path.join([|"test", "TestFile.re"|]),
+         Path.join([|"test", "TestFramework.re"|]),
+         "README.md",
+         Path.join([|
+           "bin",
+           packageNameUpperCamelCase(projectPath) ++ "App.re",
+         |]),
+         "dune-project",
+         packageNameKebab(projectPath) ++ ".opam",
+         "package.json",
+       |]
+       |> Js.Array.forEach(file =>
+            ("    created " |> Chalk.green)
+            ++ (file |> Chalk.whiteBright)
+            |> Js.log
+          );
+       ResultPromise.ok();
+     });
+};

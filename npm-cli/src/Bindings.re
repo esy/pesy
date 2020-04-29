@@ -44,8 +44,8 @@ let downloadGit = (repo, path) =>
   Promise.make((~resolve, ~reject as _) => {
     downloadGit(repo, path, err => {
       switch (Nullable.toOption(err)) {
-      | Some(x) => resolve(. Result.Error(x))
-      | None => resolve(. Result.Ok())
+      | Some(e) => resolve(. Error(e##message))
+      | None => resolve(. Ok())
       }
     })
   });
@@ -100,7 +100,8 @@ module ChildProcess: {
 
   module Options = {
     type t;
-    [@bs.obj] external make:
+    [@bs.obj]
+    external make:
       (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t = "";
   };
 

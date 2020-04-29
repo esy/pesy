@@ -31,3 +31,5 @@ let substituteTemplateValues: (Path.t, string) => string;
 
 /** Copies a template */
 let copy: (Path.t, Path.t) => ResultPromise.t(unit, string);
+
+let substitute: Path.t => ResultPromise.t(unit, string);
