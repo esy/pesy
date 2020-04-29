@@ -100,16 +100,14 @@ module ChildProcess: {
 
   module Options = {
     type t;
-    [@bs.obj]
-    external make:
-      (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t =
-      "";
+    [@bs.obj] external make:
+      (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t = "";
   };
 
   [@bs.module "child_process"]
   external spawn: (string, array(string), Options.t) => t = "spawn";
 
-  [@bs.send] external on': (t, string, unit => unit) => unit = "on";
+  /* [@bs.send] external on': (t, string, unit => unit) => unit = "on"; */
   [@bs.send] external onClose': (t, string, int => unit) => unit = "on";
 
   let onClose = (t, cb) => onClose'(t, "close", cb);

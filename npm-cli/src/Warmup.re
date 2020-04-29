@@ -1,5 +1,4 @@
 open Bindings;
-open Utils;
 module R = Result;
 
 module PesyConfig: {
