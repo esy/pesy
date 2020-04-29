@@ -158,3 +158,21 @@ let rec askYesNoQuestion = (~question, ~onYes, ~onNo, ()) => {
     },
   );
 };
+
+let jsExnGuard = f =>
+  try(f()) {
+  | Js.Exn.Error(e) =>
+    let message =
+      switch (Js.Exn.message(e)) {
+      | Some(message) => message
+      | None => ""
+      };
+    let stack =
+      switch (Js.Exn.stack(e)) {
+      | Some(stack) => stack
+      | None => ""
+      };
+    Js.log(message);
+    Js.log(stack);
+    Js.Promise.resolve();
+  };

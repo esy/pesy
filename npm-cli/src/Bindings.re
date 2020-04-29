@@ -347,10 +347,6 @@ external sourceMapSupportInstall: unit => unit = "install";
 
 let throwJSError = [%raw "e => { throw e; }"];
 
-[@bs.module]
-external handlePromiseRejectInJS: Js.Promise.error => Js.Promise.t(unit) =
-  "../../../stubs/handle-promise-rejection-in-js.js";
-
 module Chalk = {
   // https://github.com/ecliptic/bucklescript-tools/blob/develop/packages/bs-chalk/src/Chalk.re
   module Level = {
@@ -567,3 +563,10 @@ module Rimraf: {
       )
     );
 };
+
+module Os: {
+  let tmpdir: unit => string;
+} = {
+  [@bs.module "os"] external tmpdir: unit => string = "tmpdir";
+}
+  

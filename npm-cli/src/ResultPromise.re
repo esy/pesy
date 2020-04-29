@@ -22,3 +22,11 @@ let fail = x => x |> Result.fail |> Js.Promise.resolve;
      let fail: '_weak1 => Js.Promise.t(Belt.Result.t('a, '_weak1))
      is not included in let fail: 'b => t('a, 'b)
    */;
+
+let catch = rp =>
+  rp
+  |> Js.Promise.then_(
+       fun
+       | Ok () => Js.Promise.resolve()
+       | Error(msg) => Js.log(msg) |> Js.Promise.resolve,
+     );

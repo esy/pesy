@@ -3,8 +3,7 @@ Bindings.sourceMapSupportInstall();
 open Cmdliner;
 open Utils;
 open Bindings;
-
-[%raw "process.argv.shift()"];
+open ResultPromise;
 
 let setup = (esy, template, projectPath, bootstrapOnly) =>
   Fs.mkdir(~p=true, projectPath)
@@ -31,54 +30,33 @@ let handleEmptyDirectory =
       promptEmptyDirectory();
     };
 
-let main' = (projectPath, template, useDefaultOptions, bootstrapOnly) => {
-  ResultPromise.(
-    Cmd.make(~cmd="esy", ~env=Process.env)
-    >>= (
-      esy => {
-        let projectPath =
-          Path.isAbsolute(projectPath)
-            ? projectPath : Path.join([|Process.cwd(), projectPath|]);
-        handleEmptyDirectory(. projectPath, useDefaultOptions)
-        >>= (() => setup(esy, template, projectPath, bootstrapOnly));
-      }
-    )
-  )
-  |> Js.Promise.then_(
-       fun
-       | Ok () => Js.Promise.resolve()
-       | Error(msg) => Js.log(msg) |> Js.Promise.resolve,
-     )
-  |> Js.Promise.catch(handlePromiseRejectInJS);
+let main = (projectPath, template, useDefaultOptions, bootstrapOnly) => {
+  let projectPath =
+    Path.isAbsolute(projectPath)
+      ? projectPath : Path.join([|Process.cwd(), projectPath|]);
+  handleEmptyDirectory(. projectPath, useDefaultOptions)
+  >>= (() => Cmd.make(~cmd="esy", ~env=Process.env))
+  >>= (esy => setup(esy, template, projectPath, bootstrapOnly))
+  |> catch;
 };
 
 let warmup = () => {
   let projectPath = Process.cwd();
-  Warmup.run(projectPath)
-  |> Js.Promise.then_(
-       fun
-       | Ok () => Js.Promise.resolve()
-       | Error(msg) => Js.log2("Error", msg) |> Js.Promise.resolve,
-     );
+  Warmup.run(projectPath) |> ResultPromise.catch;
 };
 
-let main = (projectPath, template, useDefaultOptions, bootstrapOnly) =>
-  try(main'(projectPath, template, useDefaultOptions, bootstrapOnly)) {
-  | Js.Exn.Error(e) =>
-    let message =
-      switch (Js.Exn.message(e)) {
-      | Some(message) => message
-      | None => ""
-      };
-    let stack =
-      switch (Js.Exn.stack(e)) {
-      | Some(stack) => stack
-      | None => ""
-      };
-    Js.log(message);
-    Js.log(stack);
-    Js.Promise.resolve();
-  };
+let testTemplate = templatePath => {
+  let tmpdir = Os.tmpdir();
+  let testTemplateDir = "test-pesy-template";
+  let testTemplatePath = Path.join([|tmpdir, testTemplateDir|]);
+  Rimraf.run(testTemplatePath)
+  >>= (
+    () =>
+      Fs.mkdir(~p=true, testTemplatePath)
+      |> Js.Promise.then_(() => Cmd.make(~cmd="esy", ~env=Process.env))
+  )
+  >>= (esy => setup(esy, Some(templatePath), testTemplatePath, false));
+};
 
 let version = "0.5.0-dev";
 let template = {
@@ -92,9 +70,7 @@ let template = {
 
 let directory = {
   let doc = "Initialises a new project at given directory";
-  Arg.(
-    value & opt(string, Process.cwd()) & info(["init"], ~docv="INIT", ~doc)
-  );
+  Arg.(value & opt(string, Process.cwd()) & info(["directory", "d"], ~doc));
 };
 
 let useDefaultOptions = {
@@ -104,7 +80,7 @@ let useDefaultOptions = {
 
 let bootstrapOnly = {
   let doc = "Only create initial set of files. Dont run esy commands on them.";
-  Arg.(value & flag & info(["-b", "bootstrap-only"], ~doc));
+  Arg.(value & flag & info(["b", "bootstrap-only"], ~doc));
 };
 
 open Cmdliner.Term;
@@ -129,4 +105,9 @@ let warmupCmd = {
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
-Term.eval_choice(cmd, [warmupCmd]);
+let main =
+  (. argv) =>
+    switch (Term.eval_choice(~argv, cmd, [warmupCmd])) {
+    | `Ok(p) => p |> Js.Promise.then_(() => Js.Promise.resolve(0))
+    | _ => Js.Promise.resolve(1)
+    };
