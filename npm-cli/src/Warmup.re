@@ -74,110 +74,108 @@ let run = projectPath =>
           >>= (
             rootPackageConfigPath =>
               Fs.readFile(. rootPackageConfigPath)
-              |> Js.Promise.then_(manifestBytes => {
-                   switch (PesyConfig.make(manifestBytes |> Buffer.toString)) {
-                   | Error(msg) => Error(msg) |> Js.Promise.resolve
-                   | Ok(pesyConfig) =>
-                     let azureProject =
-                       PesyConfig.getAzureProject(pesyConfig);
-                     Js.log2(
-                       "Fetching prebuilts for azure project" |> Chalk.dim,
-                       azureProject |> Chalk.whiteBright,
-                     );
-                     prepareAzureCacheURL(azureProject)
-                     >>= (
-                       downloadUrl =>
-                         Js.Promise.make((~resolve, ~reject as _) =>
-                           download(
-                             downloadUrl,
-                             "cache.zip",
-                             ~progress=
-                               bytes => {
-                                 bytes
-                                 |> toHumanReadableBytes
-                                 |> (
-                                   x =>
-                                     Process.Stdout.write(
-                                       Process.Stdout.v,
-                                       "Downloading "
-                                       ++ (x |> Chalk.green)
-                                       ++ "\r",
-                                     )
-                                 )
-                               },
-                             ~error=
-                               error => {
-                                 Js.log(error);
-                                 resolve(. Error("Download failed"));
-                               },
-                             ~end_=
-                               () => {
-                                 Js.log(
-                                   ("Downloaded. " |> Chalk.green)
-                                   ++ (
-                                     "Hydrating esy cache..."
-                                     |> Chalk.whiteBright
-                                   ),
-                                 );
-                                 resolve(. Ok());
-                               },
-                           )
-                         )
-                     )
-                     >>= (
-                       () =>
-                         Cmd.make(~env=Process.env, ~cmd="unzip")
-                         >>= (
-                           cmd =>
-                             Cmd.output(
-                               ~cwd=projectPath,
-                               ~cmd,
-                               ~args=[|"-o", "cache.zip"|],
-                             )
-                             >>| (_ => ())
-                         )
-                     )
-                     >>= (
-                       _stdout =>
-                         Esy.importDependencies(
-                           ~projectPath,
-                           ~exportsPath=
-                             Path.join([|
-                               projectPath,
-                               "cache-Darwin-install-v1",
-                               "_export",
-                             |]),
-                           esy,
-                         )
-                     )
-                     >>= (
-                       ((stdout, stderr)) => {
-                         Js.log(
-                           ("Running " |> Chalk.dim)
-                           ++ ("esy import-dependencies" |> Chalk.bold),
-                         );
-                         Process.Stdout.write(
-                           Process.Stdout.v,
-                           stdout |> Chalk.dim,
-                         );
-                         Process.Stdout.write(
-                           Process.Stdout.v,
-                           stderr |> Chalk.dim,
-                         );
-                         Rimraf.run(Path.join([|projectPath, "cache.zip"|]));
-                       }
-                     )
-                     >>= (
-                       () =>
-                         Rimraf.run(
-                           Path.join([|
-                             projectPath,
-                             "cache-Darwin-install-v1",
-                           |]),
-                         )
-                     );
-                   }
-                 })
+              |> Js.Promise.then_(bytes =>
+                   bytes |> Result.return |> Js.Promise.resolve
+                 )
+          )
+          >>= (
+            manifestBytes =>
+              PesyConfig.make(manifestBytes |> Buffer.toString)
+              |> Js.Promise.resolve
+          )
+          >>= (
+            pesyConfig => {
+              let azureProject = PesyConfig.getAzureProject(pesyConfig);
+              Js.log2(
+                "Fetching prebuilts for azure project" |> Chalk.dim,
+                azureProject |> Chalk.whiteBright,
+              );
+              prepareAzureCacheURL(azureProject)
+              >>= (
+                downloadUrl =>
+                  Js.Promise.make((~resolve, ~reject as _) =>
+                    download(
+                      downloadUrl,
+                      "cache.zip",
+                      ~progress=
+                        bytes => {
+                          bytes
+                          |> toHumanReadableBytes
+                          |> (
+                            x =>
+                              Process.Stdout.write(
+                                Process.Stdout.v,
+                                "Downloading " ++ (x |> Chalk.green) ++ "\r",
+                              )
+                          )
+                        },
+                      ~error=
+                        error => {
+                          Js.log(error);
+                          resolve(. Error("Download failed"));
+                        },
+                      ~end_=
+                        () => {
+                          Js.log(
+                            ("Downloaded. " |> Chalk.green)
+                            ++ ("Hydrating esy cache..." |> Chalk.whiteBright),
+                          );
+                          resolve(. Ok());
+                        },
+                    )
+                  )
+              )
+              >>= (
+                () =>
+                  Cmd.make(~env=Process.env, ~cmd="unzip")
+                  >>= (
+                    cmd =>
+                      Cmd.output(
+                        ~cwd=projectPath,
+                        ~cmd,
+                        ~args=[|"-o", "cache.zip"|],
+                      )
+                      >>| (_ => ())
+                  )
+              )
+              >>= (
+                _stdout =>
+                  switch (AzurePipelines.artifactName) {
+                  | None =>
+                    ResultPromise.fail(
+                      "Couldn't determine correct artifactName/os",
+                    )
+                  | Some(artifactName) =>
+                    Esy.importDependencies(
+                      ~projectPath,
+                      ~exportsPath=
+                        Path.join([|projectPath, artifactName, "_export"|]),
+                      esy,
+                    )
+                    >>= (
+                      ((stdout, stderr)) => {
+                        Js.log(
+                          ("Running " |> Chalk.dim)
+                          ++ ("esy import-dependencies" |> Chalk.bold),
+                        );
+                        Process.Stdout.write(
+                          Process.Stdout.v,
+                          stdout |> Chalk.dim,
+                        );
+                        Process.Stdout.write(
+                          Process.Stdout.v,
+                          stderr |> Chalk.dim,
+                        );
+                        Rimraf.run(Path.join([|projectPath, "cache.zip"|]));
+                      }
+                    )
+                    >>= (
+                      () =>
+                        Rimraf.run(Path.join([|projectPath, artifactName|]))
+                    )
+                  }
+              );
+            }
           )
       );
     }
