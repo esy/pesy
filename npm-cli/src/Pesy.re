@@ -50,7 +50,7 @@ let testTemplate = () => {
   )
   >>= (
     esy => {
-      Js.log({j| Creating test-project $testProjectPath |j});
+      Js.log({j|Creating test-project $testProjectPath |j});
       Bootstrapper.run(
         esy,
         testProjectPath,
