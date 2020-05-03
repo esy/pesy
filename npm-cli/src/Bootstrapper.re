@@ -72,6 +72,7 @@ let runningEsy = (~esy, ~projectPath, ()) => {
   )
   >>| (
     () /* (_stdout, _stderr) */ => {
+      Js.log("");
       "Ready for development!" |> Chalk.green |> Js.log;
     }
   );

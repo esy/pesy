@@ -50,7 +50,13 @@ let testTemplate = () => {
   )
   >>= (
     esy => {
-      Js.log({j|Creating test-project $testProjectPath |j});
+      Js.log("");
+      Js.log(
+        Chalk.dim("Creating ")
+        ++ Chalk.whiteBright("test-project")
+        ++ Chalk.dim(" at ")
+        ++ Chalk.whiteBright(testProjectPath),
+      );
       Bootstrapper.run(
         esy,
         testProjectPath,
