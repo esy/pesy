@@ -140,10 +140,13 @@ let run = projectPath =>
                      >>= (
                        _stdout =>
                          Esy.importDependencies(
-                           Path.join([|
-                             projectPath,
-                             "cache-Darwin-install-v1",
-                           |]),
+                           ~projectPath,
+                           ~exportsPath=
+                             Path.join([|
+                               projectPath,
+                               "cache-Darwin-install-v1",
+                               "_export",
+                             |]),
                            esy,
                          )
                      )
