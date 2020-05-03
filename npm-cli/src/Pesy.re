@@ -5,13 +5,6 @@ open Utils;
 open Bindings;
 open ResultPromise;
 
-let setup = (esy, template, projectPath, bootstrapOnly) =>
-  Fs.mkdir(~p=true, projectPath)
-  |> Js.Promise.then_(() => {
-       Process.chdir(projectPath);
-       Bootstrapper.run(esy, projectPath, template, bootstrapOnly);
-     });
-
 let promptEmptyDirectory = () =>
   Js.Promise.make((~resolve, ~reject as _) => {
     askYesNoQuestion(
@@ -36,7 +29,7 @@ let main = (projectPath, template, useDefaultOptions, bootstrapOnly) => {
       ? projectPath : Path.join([|Process.cwd(), projectPath|]);
   handleEmptyDirectory(. projectPath, useDefaultOptions)
   >>= (() => Cmd.make(~cmd="esy", ~env=Process.env))
-  >>= (esy => setup(esy, template, projectPath, bootstrapOnly))
+  >>= (esy => Bootstrapper.run(esy, projectPath, template, bootstrapOnly))
   |> catch;
 };
 
@@ -47,7 +40,7 @@ let warmup = () => {
 
 let testTemplate = templatePath => {
   let tmpdir = Os.tmpdir();
-  let testTemplateDir = "test-pesy-template";
+  let testTemplateDir = "test-template";
   let testTemplatePath = Path.join([|tmpdir, testTemplateDir|]);
   Rimraf.run(testTemplatePath)
   >>= (
@@ -55,7 +48,17 @@ let testTemplate = templatePath => {
       Fs.mkdir(~p=true, testTemplatePath)
       |> Js.Promise.then_(() => Cmd.make(~cmd="esy", ~env=Process.env))
   )
-  >>= (esy => setup(esy, Some(templatePath), testTemplatePath, false));
+  >>= (
+    esy => {
+      Js.log({j| Creating test-project $testTemplatePath |j});
+      Bootstrapper.run(
+        esy,
+        testTemplatePath,
+        Template.Kind.path(templatePath),
+        false,
+      );
+    }
+  );
 };
 
 let version = "0.5.0-dev";
@@ -63,7 +66,16 @@ let template = {
   let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
   Arg.(
     value
-    & opt(some(string), None)
+    & opt(
+        Template.Kind.cmdlinerConv,
+        Template.Kind.path(
+          Path.resolve([|
+            dirname,
+            "templates",
+            "pesy-reason-template-0.1.0-alpha.6",
+          |]),
+        ),
+      )
     & info(["t", "template"], ~docv="TEMPLATE_URL", ~doc)
   );
 };

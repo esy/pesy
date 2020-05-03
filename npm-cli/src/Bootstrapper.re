@@ -7,18 +7,7 @@ let runCommand = (cmd, args, projectPath, message) => {
   Cmd.spawn(~args, ~cwd=projectPath, ~cmd);
 };
 
-let bootstrap = projectPath =>
-  fun
-  | Some(template) => downloadGit(template, projectPath)
-  | None => {
-      let templatesDir =
-        Path.resolve([|
-          dirname,
-          "templates",
-          "pesy-reason-template-0.1.0-alpha.6",
-        |]);
-      Template.copy(templatesDir, projectPath);
-    };
+let bootstrap = Template.Kind.gen;
 
 let run = (esy, projectPath, template, bootstrapOnly) => {
   let bootstrapped =
@@ -99,4 +88,12 @@ let run = (esy, projectPath, template, bootstrapOnly) => {
         }
       )
     : bootstrapped >>= runningEsy;
+};
+
+let run = (esy, projectPath, template, bootstrapOnly) => {
+  Fs.mkdir(~p=true, projectPath)
+  |> Js.Promise.then_(() => {
+       Process.chdir(projectPath);
+       run(esy, projectPath, template, bootstrapOnly);
+     });
 };
