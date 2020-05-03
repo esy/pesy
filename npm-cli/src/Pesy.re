@@ -38,27 +38,28 @@ let warmup = () => {
   Warmup.run(projectPath) |> ResultPromise.catch;
 };
 
-let testTemplate = templatePath => {
+let testTemplate = () => {
+  let templatePath = Process.cwd();
   let tmpdir = Os.tmpdir();
-  let testTemplateDir = "test-template";
-  let testTemplatePath = Path.join([|tmpdir, testTemplateDir|]);
-  Rimraf.run(testTemplatePath)
+  let testProjectPath = Path.join([|tmpdir, "test-project"|]);
+  Rimraf.run(testProjectPath)
   >>= (
     () =>
-      Fs.mkdir(~p=true, testTemplatePath)
+      Fs.mkdir(~p=true, testProjectPath)
       |> Js.Promise.then_(() => Cmd.make(~cmd="esy", ~env=Process.env))
   )
   >>= (
     esy => {
-      Js.log({j| Creating test-project $testTemplatePath |j});
+      Js.log({j| Creating test-project $testProjectPath |j});
       Bootstrapper.run(
         esy,
-        testTemplatePath,
+        testProjectPath,
         Template.Kind.path(templatePath),
         false,
       );
     }
-  );
+  )
+  |> ResultPromise.catch;
 };
 
 let version = "0.5.0-dev";
@@ -117,9 +118,18 @@ let warmupCmd = {
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
+let testTemplateCmd = {
+  let cmd = "test-template";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "test-template - convenient subcommand to test your pesy template";
+  let cmdT = Term.(const(testTemplate) $ const());
+  (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
 let main =
   (. argv) =>
-    switch (Term.eval_choice(~argv, cmd, [warmupCmd])) {
+    switch (Term.eval_choice(~argv, cmd, [warmupCmd, testTemplateCmd])) {
     | exception (Invalid_argument(msg)) =>
       Js.log(msg);
       Js.Promise.resolve(1);

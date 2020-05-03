@@ -28,7 +28,7 @@ let runningEsy = (~esy, ~projectPath, ()) => {
       >>= (
         status =>
           if (!EsyStatus.isProjectReadyForDev(status)) {
-            Process.Stdout.write(Process.Stdout.v, "\r no\n" |> Chalk.red);
+            Js.log("no" |> Chalk.red);
             Js.log(
               ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
             );
@@ -41,7 +41,7 @@ let runningEsy = (~esy, ~projectPath, ()) => {
                  ResultPromise.ok();
                });
           } else {
-            Js.log(" yes!" |> Chalk.green);
+            Js.log("yes!" |> Chalk.green);
             ResultPromise.ok();
           }
       );
