@@ -1,5 +1,4 @@
 open Bindings;
-open Utils;
 module R = Result;
 
 module PesyConfig: {
@@ -41,59 +40,6 @@ let prepareAzureCacheURL = projStr => {
      );
 };
 
-module EsyStatus: {
-  type t;
-  let make: string => result(t, string);
-  let getRootPackageConfigPath: t => string;
-} = {
-  type t = {rootPackageConfigPath: string};
-  let make = statusOutput =>
-    switch (Json.parse(statusOutput)) {
-    | Some(json) =>
-      Json.Decode.(
-        try(
-          field("rootPackageConfigPath", string, json)
-          |> (
-            rootPackageConfigPath => {
-              rootPackageConfigPath: rootPackageConfigPath,
-            }
-          )
-          |> R.return
-        ) {
-        | DecodeError(msg) => Error(msg)
-        }
-      )
-    | None => Error({j| Json parser failed
-$statusOutput |j})
-    };
-
-  let getRootPackageConfigPath = config => config.rootPackageConfigPath;
-};
-
-module Esy: {
-  type t;
-  let make: unit => Js.Promise.t(result(t, string));
-  let manifestPath: (string, t) => Js.Promise.t(result(string, string));
-  let importDependencies:
-    (string, t) => Js.Promise.t(result((string, string), string));
-} = {
-  open ResultPromise;
-  type t = Cmd.t;
-  let make = () => Cmd.make(~cmd="esy", ~env=Process.env);
-  let manifestPath = (path, cmd) => {
-    Cmd.output(~cmd, ~cwd=path, ~args=[|"status"|])
-    >>= (
-      ((output, _stderr)) =>
-        Result.(
-          EsyStatus.make(output)
-          >>| (status => EsyStatus.getRootPackageConfigPath(status))
-        )
-        |> Js.Promise.resolve
-    );
-  };
-  let importDependencies = (path, cmd) =>
-    Cmd.output(~cmd, ~cwd=path, ~args=[|"import-dependencies"|]);
-};
 let download = (url, file, ~progress, ~end_, ~error) => {
   open Bindings;
   let stream = RequestProgress.requestProgress(Request.request(url));

@@ -44,8 +44,8 @@ let downloadGit = (repo, path) =>
   Promise.make((~resolve, ~reject as _) => {
     downloadGit(repo, path, err => {
       switch (Nullable.toOption(err)) {
-      | Some(x) => resolve(. Result.Error(x))
-      | None => resolve(. Result.Ok())
+      | Some(e) => resolve(. Error(e##message))
+      | None => resolve(. Ok())
       }
     })
   });
@@ -102,14 +102,13 @@ module ChildProcess: {
     type t;
     [@bs.obj]
     external make:
-      (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t =
-      "";
+      (~cwd: string=?, ~env: Js.Dict.t(string)=?, ~stdio: string=?, unit) => t = "";
   };
 
   [@bs.module "child_process"]
   external spawn: (string, array(string), Options.t) => t = "spawn";
 
-  [@bs.send] external on': (t, string, unit => unit) => unit = "on";
+  /* [@bs.send] external on': (t, string, unit => unit) => unit = "on"; */
   [@bs.send] external onClose': (t, string, int => unit) => unit = "on";
 
   let onClose = (t, cb) => onClose'(t, "close", cb);
@@ -348,10 +347,6 @@ external sourceMapSupportInstall: unit => unit = "install";
 
 let throwJSError = [%raw "e => { throw e; }"];
 
-[@bs.module]
-external handlePromiseRejectInJS: Js.Promise.error => Js.Promise.t(unit) =
-  "../../../stubs/handle-promise-rejection-in-js.js";
-
 module Chalk = {
   // https://github.com/ecliptic/bucklescript-tools/blob/develop/packages/bs-chalk/src/Chalk.re
   module Level = {
@@ -568,3 +563,10 @@ module Rimraf: {
       )
     );
 };
+
+module Os: {
+  let tmpdir: unit => string;
+} = {
+  [@bs.module "os"] external tmpdir: unit => string = "tmpdir";
+}
+  

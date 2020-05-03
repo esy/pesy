@@ -117,18 +117,6 @@ let renderAsciiTree = (dir, name, namespace, require, isLast) =>
 /*       renderAscTree(rest); */
 /*     }; */
 
-module Result = {
-  open Belt.Result;
-
-  let (>>=) = flatMap;
-
-  let (>>|) = map;
-
-  let return = x => Ok(x);
-
-  let fail = x => Error(x);
-};
-
 module Option: {
   type t('a) = option('a);
   let (>>=): (t('a), 'a => t('b)) => t('b);
@@ -143,43 +131,48 @@ module Option: {
 
   let (>>|) = map;
 
-  let catch = (o, f) =>
-    switch (o) {
-    | None => f()
-    | _ => ()
-    };
-
   let return = x => Some(x);
 };
-module ResultPromise: {
-  type t('a, 'b) = Js.Promise.t(result('a, 'b));
-  let (>>=): (t('a, 'b), 'a => t('c, 'b)) => t('c, 'b);
-  let (>>|): (t('a, 'b), 'a => 'c) => t('c, 'b);
-  let ok: 'a => t('a, 'b);
-  let fail: 'b => t('a, 'b);
-} = {
-  type t('a, 'b) = Js.Promise.t(result('a, 'b));
-  let (>>=) = (rp, f) => {
-    rp
-    |> Js.Promise.then_(
-         fun
-         | Ok(x) => f(x)
-         | Error(msg) => Js.Promise.resolve(Error(msg)),
-       );
-  };
-  let (>>|) = (rp, f) => {
-    rp
-    |> Js.Promise.then_(
-         fun
-         | Error(msg) => Js.Promise.resolve(Error(msg))
-         | Ok(x) => f(x) |> Result.return |> Js.Promise.resolve,
-       );
-  };
-  let ok = x => x |> Result.return |> Js.Promise.resolve; // Js.Promise.resolve << Result.return;
-  let fail = x => x |> Result.fail |> Js.Promise.resolve;
-  /**
-     Js.Promise.resolve << Result.fail;
-     let fail: '_weak1 => Js.Promise.t(Belt.Result.t('a, '_weak1))
-     is not included in let fail: 'b => t('a, 'b)
-   */;
+
+let rec askYesNoQuestion = (~question, ~onYes, ~onNo, ()) => {
+  let rl =
+    Readline.createInterface({
+      "input": [%raw "process.stdin"],
+      "output": [%raw "process.stdout"],
+    });
+  rl##question(
+    question ++ " [y/n] ",
+    input => {
+      let response = input->Js.String.trim->Js.String.toLowerCase;
+      switch (response) {
+      | "y"
+      | "yes" =>
+        onYes();
+        rl##close();
+      | "n"
+      | "no" =>
+        onNo();
+        rl##close();
+      | _ => askYesNoQuestion(~question, ~onYes, ~onNo, ())
+      };
+    },
+  );
 };
+
+let jsExnGuard = f =>
+  try(f()) {
+  | Js.Exn.Error(e) =>
+    let message =
+      switch (Js.Exn.message(e)) {
+      | Some(message) => message
+      | None => ""
+      };
+    let stack =
+      switch (Js.Exn.stack(e)) {
+      | Some(stack) => stack
+      | None => ""
+      };
+    Js.log(message);
+    Js.log(stack);
+    Js.Promise.resolve();
+  };

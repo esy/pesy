@@ -1,5 +1,4 @@
 open Bindings;
-open Utils;
 
 type t = {
   cmd: string,
@@ -76,7 +75,7 @@ stderr: $stderr
 };
 
 let spawn = (~args, ~cwd, ~cmd) => {
-  let {cmd, env} = cmd;
+  let {cmd, env: _} = cmd;
   Js.Promise.make((~resolve, ~reject as _) => {
     let process =
       ChildProcess.spawn(
