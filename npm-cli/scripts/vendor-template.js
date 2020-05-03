@@ -4,13 +4,13 @@ const path = require("path");
 const cp = require("child_process");
 const util = require("util");
 
-let url =
-  "https://github.com/esy/pesy-reason-template/archive/0.1.0-alpha.3.zip";
+let tag = "0.1.0-alpha.6";
+let url = `https://github.com/esy/pesy-reason-template/archive/${tag}.zip`;
 let downloadAs = "template.zip";
-let extractedDirName = "pesy-reason-template-0.1.0-alpha.3";
-let get = url =>
+let extractedDirName = `pesy-reason-template-${tag}`;
+let get = (url) =>
   new Promise((resolve, reject) => {
-    let request = https.get(url, function(response) {
+    let request = https.get(url, function (response) {
       resolve({ request, response });
     });
   });
@@ -21,7 +21,7 @@ let downloadFromHTTPStream = (response, p) =>
     response.on("end", resolve);
   });
 
-let fetch = url => {
+let fetch = (url) => {
   return get(url).then(({ response }) => {
     if (response.statusCode === 302) {
       let redirectUri = response.headers["location"];
@@ -39,7 +39,7 @@ let fetch = url => {
   });
 };
 
-let delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+let delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let templateDir = "templates";
 let zipTarget = path.resolve(__dirname, "..", templateDir, extractedDirName);
@@ -67,13 +67,13 @@ let main = () => {
         return Promise.resolve(
           cp
             .execSync("unzip template.zip", {
-              cwd: path.resolve(__dirname, "..", templateDir)
+              cwd: path.resolve(__dirname, "..", templateDir),
             })
             .toString()
         );
       }
     })
-    .catch(e => {
+    .catch((e) => {
       console.error(e);
       process.exit(-1);
     });

@@ -9,6 +9,74 @@ let runCommand = (cmd, args, projectPath, message) => {
 
 let bootstrap = Template.Kind.gen;
 
+let runningEsy = (~esy, ~projectPath, ()) => {
+  runCommand(
+    esy,
+    [|"i"|],
+    projectPath,
+    ("Running" |> Chalk.dim) ++ (" esy install" |> Chalk.whiteBright),
+  )
+  >>= (
+    () => {
+      Process.Stdout.write(
+        Process.Stdout.v,
+        "\n"
+        ++ ("Checking" |> Chalk.dim)
+        ++ " if project has all dependencies installed already => ",
+      );
+      Esy.status(projectPath, esy)
+      >>= (
+        status =>
+          if (!EsyStatus.isProjectReadyForDev(status)) {
+            Process.Stdout.write(Process.Stdout.v, "\r no\n" |> Chalk.red);
+            Js.log(
+              ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
+            );
+            Warmup.run(projectPath)
+            |> Js.Promise.then_(warmupResult => {
+                 switch (warmupResult) {
+                 | Ok () => ()
+                 | Error(msg) => Js.log2("Skipping warmup because: ", msg)
+                 };
+                 ResultPromise.ok();
+               });
+          } else {
+            Js.log(" yes!" |> Chalk.green);
+            ResultPromise.ok();
+          }
+      );
+    }
+  )
+  >>= (
+    () /* (_stdout, _stderr) */ => {
+      runCommand(
+        esy,
+        [|"pesy"|],
+        projectPath,
+        ("Running" |> Chalk.dim)
+        ++ (" esy pesy" |> Chalk.whiteBright)
+        ++ (" and " |> Chalk.dim)
+        ++ ("building project dependencies" |> Chalk.whiteBright),
+      );
+    }
+  )
+  >>= (
+    () /* (_stdout, _stderr) */ => {
+      runCommand(
+        esy,
+        [|"b"|],
+        projectPath,
+        ("Running" |> Chalk.dim) ++ (" esy build" |> Chalk.whiteBright),
+      );
+    }
+  )
+  >>| (
+    () /* (_stdout, _stderr) */ => {
+      "Ready for development!" |> Chalk.green |> Js.log;
+    }
+  );
+};
+
 let run = (esy, projectPath, template, bootstrapOnly) => {
   let bootstrapped =
     bootstrap(projectPath, template)
@@ -27,57 +95,6 @@ let run = (esy, projectPath, template, bootstrapOnly) => {
         Template.substitute(projectPath);
       }
     );
-  let runningEsy = () => {
-    runCommand(
-      esy,
-      [|"i"|],
-      projectPath,
-      ("Running" |> Chalk.dim) ++ (" esy install" |> Chalk.whiteBright),
-    )
-    >>= (
-      () => {
-        Js.log(
-          ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
-        );
-        Warmup.run(projectPath)
-        |> Js.Promise.then_(warmupResult => {
-             switch (warmupResult) {
-             | Ok () => ()
-             | Error(msg) => Js.log2("Skipping warmup because: ", msg)
-             };
-             ResultPromise.ok();
-           });
-      }
-    )
-    >>= (
-      () /* (_stdout, _stderr) */ => {
-        runCommand(
-          esy,
-          [|"pesy"|],
-          projectPath,
-          ("Running" |> Chalk.dim)
-          ++ (" esy pesy" |> Chalk.whiteBright)
-          ++ (" and " |> Chalk.dim)
-          ++ ("building project dependencies" |> Chalk.whiteBright),
-        );
-      }
-    )
-    >>= (
-      () /* (_stdout, _stderr) */ => {
-        runCommand(
-          esy,
-          [|"b"|],
-          projectPath,
-          ("Running" |> Chalk.dim) ++ (" esy build" |> Chalk.whiteBright),
-        );
-      }
-    )
-    >>| (
-      () /* (_stdout, _stderr) */ => {
-        "Ready for development!" |> Chalk.green |> Js.log;
-      }
-    );
-  };
 
   bootstrapOnly
     ? bootstrapped
@@ -87,7 +104,7 @@ let run = (esy, projectPath, template, bootstrapOnly) => {
           "You may have to run " ++ Chalk.green("esy") |> Js.log;
         }
       )
-    : bootstrapped >>= runningEsy;
+    : bootstrapped >>= runningEsy(~esy, ~projectPath);
 };
 
 let run = (esy, projectPath, template, bootstrapOnly) => {

@@ -86,8 +86,8 @@ let directory = {
 };
 
 let useDefaultOptions = {
-  let doc = "Use default options";
-  Arg.(value & flag & info(["y", "yes"], ~doc));
+  let doc = "Force generation of project files";
+  Arg.(value & flag & info(["finit", "force-init"], ~doc));
 };
 
 let bootstrapOnly = {
@@ -120,6 +120,9 @@ let warmupCmd = {
 let main =
   (. argv) =>
     switch (Term.eval_choice(~argv, cmd, [warmupCmd])) {
+    | exception (Invalid_argument(msg)) =>
+      Js.log(msg);
+      Js.Promise.resolve(1);
     | `Ok(p) => p |> Js.Promise.then_(() => Js.Promise.resolve(0))
     | _ => Js.Promise.resolve(1)
     };
