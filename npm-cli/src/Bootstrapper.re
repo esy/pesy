@@ -29,18 +29,36 @@ let runningEsy = (~esy, ~projectPath, ()) => {
         status =>
           if (!EsyStatus.isProjectReadyForDev(status)) {
             Js.log("No" |> Chalk.red);
-            Js.log(
-              ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
-            );
-            Project.ofPath(esy, projectPath)
-            >>= (project => Warmup.run(esy, project))
-            |> Js.Promise.then_(warmupResult => {
-                 switch (warmupResult) {
-                 | Ok () => ()
-                 | Error(msg) => Js.log2("Skipping warmup because: ", msg)
-                 };
-                 ResultPromise.ok();
-               });
+
+            Js.Promise.make((~resolve, ~reject as _) => {
+              Utils.askYesNoQuestion(
+                ~question="Warm up local cache from CI?",
+                ~onYes=
+                  () => {
+                    Js.log(
+                      ("Running" |> Chalk.dim)
+                      ++ (" pesy warm" |> Chalk.whiteBright),
+                    );
+                    Project.ofPath(esy, projectPath)
+                    >>= (project => Warmup.run(esy, project))
+                    |> Js.Promise.then_(warmupResult => {
+                         switch (warmupResult) {
+                         | Ok () => ()
+                         | Error(msg) =>
+                           Js.log2("Skipping warmup because: ", msg)
+                         };
+                         ResultPromise.ok();
+                       })
+                    |> catch
+                    |> Js.Promise.then_(() =>
+                         resolve(. Result.return()) |> Js.Promise.resolve
+                       )
+                    |> ignore;
+                  },
+                ~onNo=() => resolve(. Result.return()),
+                (),
+              )
+            });
           } else {
             Js.log("Yes!" |> Chalk.green);
             ResultPromise.ok();
@@ -94,6 +112,7 @@ let run = (esy, projectPath, template, bootstrapOnly) => {
       _ => {
         Js.log("");
         Js.log("Setting up");
+        Js.log("");
         Template.substitute(projectPath);
       }
     );
