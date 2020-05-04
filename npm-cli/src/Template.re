@@ -129,32 +129,31 @@ let substitute = projectPath => {
                 if (file != substitutedName) {
                   Node.Fs.unlinkSync(file);
                 };
-                resolve();
+                substitutedName
+                |> Js.String.replace(
+                     projectPath ++ (Process.platform == "win32" ? "\\" : "/"),
+                     "",
+                   )
+                |> resolve;
               })
          )
        );
      })
   |> Js.Promise.all
-  |> Js.Promise.then_(_arrayOfCompletions => {
-       Js.log("");
-       [|
-         "azure-pipelines.yml",
-         Path.join([|"library", "Util.re"|]),
-         Path.join([|"test", "TestFile.re"|]),
-         Path.join([|"test", "TestFramework.re"|]),
-         "README.md",
-         Path.join([|
-           "bin",
-           packageNameUpperCamelCase(projectPath) ++ "App.re",
-         |]),
-         "dune-project",
-         packageNameKebab(projectPath) ++ ".opam",
-         "package.json",
-       |]
-       |> Js.Array.forEach(file =>
-            ("    created " |> Chalk.green)
-            ++ (file |> Chalk.whiteBright)
-            |> Js.log
+  |> Js.Promise.then_(files => {
+       let shown = ref([]);
+       files
+       |> Array.to_list
+       |> List.iter(fileName =>
+            if (Js.String.search([%re "/\\.lock/"], fileName) == (-1)
+                && !List.exists(x => x == fileName, shown^)) {
+              ("    created " |> Chalk.green)
+              ++ (fileName |> Chalk.whiteBright)
+              |> Js.log;
+              shown := [fileName, ...shown^];
+            } else {
+              ();
+            }
           );
        ResultPromise.ok();
      });
