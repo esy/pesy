@@ -35,7 +35,8 @@ let main = (projectPath, template, useDefaultOptions, bootstrapOnly) => {
 
 let warmup = () => {
   let projectPath = Process.cwd();
-  Warmup.run(projectPath) |> ResultPromise.catch;
+  ResultPromise.all2((Esy.make(), Project.ofPath(projectPath)))
+  >>= (((esy, project)) => Warmup.run(esy, project) |> ResultPromise.catch);
 };
 
 let testTemplate = () => {

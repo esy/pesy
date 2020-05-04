@@ -30,3 +30,11 @@ let catch = rp =>
        | Ok () => Js.Promise.resolve()
        | Error(msg) => Js.log(msg) |> Js.Promise.resolve,
      );
+
+let all = rps =>
+  Js.Promise.all(rps)
+  |> Js.Promise.then_(rs => rs |> Result.allArray |> Js.Promise.resolve);
+
+let all2 = rps =>
+  Js.Promise.all2(rps)
+  |> Js.Promise.then_(rs => rs |> Result.all2 |> Js.Promise.resolve);

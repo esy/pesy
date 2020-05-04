@@ -64,119 +64,74 @@ let toHumanReadableBytes =
   | x when x > kilo => x |> divideBy(kilo) |> Printf.sprintf("%.2f KB  ")
   | x => (x |> string_of_int) ++ " bytes";
 
-let run = projectPath =>
-  ResultPromise.(
-    {
-      Esy.make()
-      >>= (
-        esy =>
-          Esy.manifestPath(projectPath, esy)
-          >>= (
-            rootPackageConfigPath =>
-              Fs.readFile(. rootPackageConfigPath)
-              |> Js.Promise.then_(bytes =>
-                   bytes |> Result.return |> Js.Promise.resolve
-                 )
-          )
-          >>= (
-            manifestBytes =>
-              PesyConfig.make(manifestBytes |> Buffer.toString)
-              |> Js.Promise.resolve
-          )
-          >>= (
-            pesyConfig => {
-              let azureProject = PesyConfig.getAzureProject(pesyConfig);
-              Js.log2(
-                "Fetching prebuilts for azure project" |> Chalk.dim,
-                azureProject |> Chalk.whiteBright,
-              );
-              prepareAzureCacheURL(azureProject)
-              >>= (
-                downloadUrl =>
-                  Js.Promise.make((~resolve, ~reject as _) =>
-                    download(
-                      downloadUrl,
-                      "cache.zip",
-                      ~progress=
-                        bytes => {
-                          bytes
-                          |> toHumanReadableBytes
-                          |> (
-                            x =>
-                              Process.Stdout.write(
-                                Process.Stdout.v,
-                                "Downloading " ++ (x |> Chalk.green) ++ "\r",
-                              )
-                          )
-                        },
-                      ~error=
-                        error => {
-                          Js.log(error);
-                          resolve(. Error("Download failed"));
-                        },
-                      ~end_=
-                        () => {
-                          Js.log(
-                            ("Downloaded. " |> Chalk.green)
-                            ++ ("Hydrating esy cache..." |> Chalk.whiteBright),
-                          );
-                          resolve(. Ok());
-                        },
-                    )
-                  )
-              )
-              >>= (
-                () =>
-                  Cmd.make(~env=Process.env, ~cmd="unzip")
-                  >>= (
-                    cmd =>
-                      Cmd.output(
-                        ~cwd=projectPath,
-                        ~cmd,
-                        ~args=[|"-o", "cache.zip"|],
-                      )
-                      >>| (_ => ())
-                  )
-              )
-              >>= (
-                _stdout =>
-                  switch (AzurePipelines.artifactName) {
-                  | None =>
-                    ResultPromise.fail(
-                      "Couldn't determine correct artifactName/os",
-                    )
-                  | Some(artifactName) =>
-                    Esy.importDependencies(
-                      ~projectPath,
-                      ~exportsPath=
-                        Path.join([|projectPath, artifactName, "_export"|]),
-                      esy,
-                    )
-                    >>= (
-                      ((stdout, stderr)) => {
-                        Js.log(
-                          ("Running " |> Chalk.dim)
-                          ++ ("esy import-dependencies" |> Chalk.bold),
-                        );
-                        Process.Stdout.write(
-                          Process.Stdout.v,
-                          stdout |> Chalk.dim,
-                        );
-                        Process.Stdout.write(
-                          Process.Stdout.v,
-                          stderr |> Chalk.dim,
-                        );
-                        Rimraf.run(Path.join([|projectPath, "cache.zip"|]));
-                      }
-                    )
-                    >>= (
-                      () =>
-                        Rimraf.run(Path.join([|projectPath, artifactName|]))
-                    )
-                  }
-              );
-            }
-          )
+open ResultPromise;
+
+let run = (esy, project) => {
+  Project.pesyConfig(project)
+  >>= (
+    pesyConfig => {
+      let azureProject = PesyConfig.getAzureProject(pesyConfig);
+      Js.log2(
+        "Fetching prebuilts for azure project" |> Chalk.dim,
+        azureProject |> Chalk.whiteBright,
       );
+      let projectHash = "-------";
+      let cacheDir = Path.join([|Os.tmpdir(), "pesy-" ++ projectHash|]);
+      let cachePath = Path.join([|cacheDir, "cache.zip"|]);
+      Fs.mkdir(~p=true, cacheDir)
+      |> Js.Promise.then_(() => prepareAzureCacheURL(azureProject));
     }
+  )
+  >>= (
+    downloadUrl =>
+      Js.Promise.make((~resolve, ~reject as _) => {
+        let progress = bytes => {
+          bytes
+          |> toHumanReadableBytes
+          |> (
+            x =>
+              Process.Stdout.(
+                write(v, "Downloading " ++ (x |> Chalk.green) ++ "\r")
+              )
+          );
+        };
+        let error = error => {
+          Js.log(error);
+          resolve(. Error("Download failed"));
+        };
+        let end_ = () => {
+          Js.log(
+            ("Downloaded. " |> Chalk.green)
+            ++ ("Hydrating esy cache..." |> Chalk.whiteBright),
+          );
+          resolve(. Ok());
+        };
+        download(downloadUrl, cachePath, ~progress, ~error, ~end_);
+      })
+  )
+  >>= (() => Cmd.make(~env=Process.env, ~cmd="unzip"))
+  >>= (cmd => Cmd.output(~cwd=cacheDir, ~cmd, ~args=[|"-o", cachePath|]))
+  >>= (
+    _stdout =>
+      switch (AzurePipelines.artifactName) {
+      | None =>
+        ResultPromise.fail("Couldn't determine correct artifactName/os")
+      | Some(artifactName) =>
+        Esy.importDependencies(
+          ~projectPath,
+          ~exportsPath=Path.join([|cacheDir, artifactName, "_export"|]),
+          esy,
+        )
+        >>= (
+          ((stdout, stderr)) => {
+            Js.log(
+              ("Running " |> Chalk.dim)
+              ++ ("esy import-dependencies" |> Chalk.bold),
+            );
+            Process.Stdout.(write(v, stdout |> Chalk.dim));
+            Process.Stdout.(write(v, stderr |> Chalk.dim));
+          }
+        )
+      }
   );
+};

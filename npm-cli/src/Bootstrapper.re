@@ -32,7 +32,8 @@ let runningEsy = (~esy, ~projectPath, ()) => {
             Js.log(
               ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
             );
-            Warmup.run(projectPath)
+            Project.ofPath(projectPath)
+            >>= (project => Warmup.run(esy, project))
             |> Js.Promise.then_(warmupResult => {
                  switch (warmupResult) {
                  | Ok () => ()
