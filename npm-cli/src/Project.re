@@ -26,12 +26,10 @@ let ofPath = (esy, projectPath) =>
           |> EsyLock.ofPath
           >>| (lock => EsyLock.checksum(lock))
           >>= (
-            checksum =>
-              ResultPromise.ok({
-                hash: checksum,
-                path: projectPath,
-                manifest: manifestBytes |> Bindings.Buffer.toString,
-              })
+            checksum => {
+              let manifest = manifestBytes |> Bindings.Buffer.toString;
+              ResultPromise.ok({hash: checksum, path: projectPath, manifest});
+            }
           );
         }
       )
@@ -40,3 +38,9 @@ let ofPath = (esy, projectPath) =>
 let lockFileHash = v => v.hash;
 let pesyConfig = v => PesyConfig.make(v.manifest);
 let path = v => v.path;
+
+let hasBuildDirsConfig = v =>
+  switch (PesyConfig.Build.ofString(v.manifest)) {
+  | Error(_) => false
+  | Ok(_) => true
+  };
