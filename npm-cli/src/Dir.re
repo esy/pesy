@@ -12,23 +12,26 @@ let forEachEnt = (f, dir) => {
   );
 };
 
-let rec scan = (f, dir) => {
+let rec scan = (ignoreDirsTbl, f, dir) => {
   Js.Promise.(
     forEachEnt(
-      entry => {
-        let entryPath = Path.join([|dir, entry|]);
-        f(entryPath)
-        |> then_(_ =>
-             Fs.isDirectory(entryPath)
-             |> then_(isDir =>
-                  if (isDir) {
-                    scan(f, entryPath);
-                  } else {
-                    ResultPromise.ok();
-                  }
-                )
-           );
-      },
+      entry =>
+        if (!Hashtbl.mem(ignoreDirsTbl, entry)) {
+          let entryPath = Path.join([|dir, entry|]);
+          f(entryPath)
+          |> then_(_ =>
+               Fs.isDirectory(entryPath)
+               |> then_(isDir =>
+                    if (isDir) {
+                      scan(ignoreDirsTbl, f, entryPath);
+                    } else {
+                      ResultPromise.ok();
+                    }
+                  )
+             );
+        } else {
+          ResultPromise.ok();
+        },
       dir,
     )
   );

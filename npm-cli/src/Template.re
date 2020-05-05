@@ -89,8 +89,14 @@ module Helpers: {
 };
 
 open Bindings;
-let copy = (templatePath, projectPath) => {
+let copy = (templatePath, projectPath, ignoreDirs) => {
+  let ignoreDirsTbl = Hashtbl.create(ignoreDirs |> List.length);
+  List.iter(
+    ignoreDir => Hashtbl.add(ignoreDirsTbl, ignoreDir, true),
+    ignoreDirs,
+  );
   Dir.scan(
+    ignoreDirsTbl,
     src => {
       let dest = Js.String.replace(templatePath, projectPath, src);
       Fs.isDirectory(src)
@@ -167,86 +173,119 @@ module Kind = {
   let gitRemote = x => GitRemote(x);
   let gen = dest =>
     fun
-    | GitRemote(remote) => downloadGit(remote, dest)
+    | GitRemote(remote) =>
+      /* TODO: sanitise remote templates */ downloadGit(remote, dest)
     | Path(source) => {
         /* Sanitisation. Checking if the source is a valid pesy
            project*/
-        let sanityCheck =
-          if (source != DefaultTemplate.path) {
-            /* We may not reliably be able to run 'esy status' in a
-               template project. Otherwise, we could have have simply obtained
-               rootPackageConfigPath from it */
-            // Checking if root as a json file
-            Fs.readdir(source)
-            |> Js.Promise.then_(directoryEntries =>
-                 Js.Array.reduce(
-                   (acc, directoryEntry) =>
-                     if (Js.Re.test_([%re "/\\.json$/"], directoryEntry)) {
-                       Js.Array.concat(
-                         acc,
-                         [|Path.join([|source, directoryEntry|])|],
-                       );
-                     } else {
-                       acc;
-                     },
-                   [||],
-                   directoryEntries,
-                 )
-                 |> Js.Promise.resolve
-               )
-            |> Js.Promise.then_(jsonFiles =>
-                 Array.map(jsonFile => Fs.readFile(. jsonFile), jsonFiles)
-                 |> Js.Promise.all
-                 |> Js.Promise.then_(jsons =>
-                      jsons
-                      |> Js.Array.map(Bindings.Buffer.toString)
-                      |> Js.Array.filter(jsonStr => {
-                           switch (jsonStr |> Json.parse) {
-                           | None => false
-                           | Some(json) =>
-                             let buildDirsExists =
-                               switch (
-                                 Json.Decode.(
-                                   (
-                                     field("buildDirs", id |> dict) |> optional
-                                   )(
-                                     json,
-                                   )
-                                 )
-                               ) {
-                               | Some(_) => true
-                               | None => false
-                               };
-                             let pesyConfigExists =
-                               switch (
-                                 Json.Decode.(
-                                   (field("pesy", id |> dict) |> optional)(
-                                     json,
-                                   )
-                                 )
-                               ) {
-                               | Some(_) => true
-                               | None => false
-                               };
-                             buildDirsExists || pesyConfigExists;
-                           }
-                         })
-                      |> Js.Promise.resolve
-                    )
-                 |> Js.Promise.then_(manifestsWithPesy =>
-                      if (Array.length(manifestsWithPesy) == 0) {
-                        ResultPromise.fail(
-                          "No esy manifest files found with pesy config (buildDirs or pesy)",
-                        );
-                      } else {
-                        ResultPromise.ok();
-                      }
-                    )
+        /* We may not reliably be able to run 'esy status' in a
+           template project. Otherwise, we could have have simply obtained
+           rootPackageConfigPath from it */
+        /* Checking if root as a json file. Pesy supports multiple esy sandboxes
+           Therefore, any one of them may contain a pesy config, for the whole
+           template to be considered a valid pesy template */
+        Fs.readdir(source)
+        |> Js.Promise.then_(directoryEntries =>
+             Js.Array.reduce(
+               (acc, directoryEntry) =>
+                 if (Js.Re.test_([%re "/\\.json$/"], directoryEntry)) {
+                   Js.Array.concat(
+                     acc,
+                     [|Path.join([|source, directoryEntry|])|],
+                   );
+                 } else {
+                   acc;
+                 },
+               [||],
+               directoryEntries,
+             )
+             |> Js.Promise.resolve
+           )
+        |> Js.Promise.then_(jsonFiles =>
+             if (Array.length(jsonFiles) == 0) {
+               ResultPromise.fail(
+                 {j|No esy manifest found in the template ($source) |j},
                );
-          } else {
-            ResultPromise.ok();
-          };
-        ResultPromise.(sanityCheck >>= (() => copy(source, dest)));
+             } else {
+               Js.Array.map(
+                 jsonFile => {
+                   Fs.readFile(. jsonFile)
+                   |> Js.Promise.then_(jsonBytes => {
+                        switch (
+                          jsonBytes |> Bindings.Buffer.toString |> Json.parse
+                        ) {
+                        | None =>
+                          ResultPromise.fail(
+                            {j| JSON file $jsonFile failed to parse |j},
+                          )
+                        | Some(json) =>
+                          let buildDirsExists =
+                            switch (PesyConfig.Build.ofJson(json)) {
+                            | Ok(_) => true
+                            | Error(_) => false
+                            };
+                          let (pesyConfigExists, explicitIgnoreDirs) =
+                            switch (PesyConfig.ofJson(json)) {
+                            | Ok(pesyConfig) =>
+                              switch (PesyConfig.getIgnoreDirs(pesyConfig)) {
+                              | Some(explicitIgnoreDirs) => (
+                                  true,
+                                  explicitIgnoreDirs,
+                                )
+                              | None => (true, [])
+                              }
+                            | Error(_msg) => (false, [])
+                            };
+                          if (buildDirsExists || pesyConfigExists) {
+                            ResultPromise.ok((jsonFile, explicitIgnoreDirs));
+                          } else {
+                            ResultPromise.fail(
+                              {j| Neither 'pesy' nor 'buildDirs' was found in $jsonFile |j},
+                            );
+                          };
+                        }
+                      })
+                 },
+                 jsonFiles,
+               )
+               |> Js.Promise.all
+               |> Js.Promise.then_(esyManifestFiles => {
+                    let (pesyManifests, errors, explicitIgnoreDirs) =
+                      Js.Array.reduce(
+                        ((pesyManifests, errors, accExplicitIgnoreDirs)) =>
+                          fun
+                          | Ok((jsonFile, explicitIgnoreDirs)) => (
+                              [jsonFile, ...pesyManifests],
+                              errors,
+                              explicitIgnoreDirs @ accExplicitIgnoreDirs,
+                            )
+                          | Error(msg) => (
+                              pesyManifests,
+                              [msg, ...errors],
+                              accExplicitIgnoreDirs,
+                            ),
+                        ([], [], []),
+                        esyManifestFiles,
+                      );
+                    if (List.length(pesyManifests) == 0) {
+                      let errors =
+                        Js.Array.joinWith("\n", Array.of_list(errors));
+                      ResultPromise.fail(
+                        {j|No esy manifest files found with pesy config (buildDirs or pesy).
+Errors:
+$errors
+|j},
+                      );
+                    } else {
+                      copy(
+                        source,
+                        dest,
+                        explicitIgnoreDirs @ ["node_modules", ".git", "_esy"],
+                      );
+                    };
+                  });
+             }
+           );
       };
   let ofString = str =>
     /* TODO: sanitisation. For instance, if git remotes with three components (foo/bar/baz) are meaningless */
