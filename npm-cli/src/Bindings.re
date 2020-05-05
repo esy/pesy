@@ -70,6 +70,8 @@ module StreamFunctor = (S: {type t;}) => {
   let onData = (t, cb) => onData'(t, "data", cb);
   [@bs.send] external onEnd': (t, string, unit => unit) => unit = "on";
   let onEnd = (t, cb) => onEnd'(t, "end", cb);
+  [@bs.send] external onError': (t, string, Error.t => unit) => unit = "on";
+  let onError = (t, cb) => onError'(t, "error", cb);
   let onClose = (t, cb) => onEnd'(t, "close", cb);
 };
 
@@ -206,11 +208,11 @@ module Https = {
   };
 
   [@bs.module "https"]
-  external get: (string, Response.t => unit) => unit = "get";
+  external get: (string, Response.t => unit) => Stream.t = "get";
 
   let getCompleteResponse = url =>
-    Promise.make((~resolve, ~reject as _) =>
-      get(
+    Promise.make((~resolve, ~reject as _) => {
+      let req = get(
         url,
         response => {
           let _statusCode = response##statusCode;
@@ -227,8 +229,9 @@ module Https = {
             )
           );
         },
-      )
-    );
+      );
+      Stream.onError(req, error => resolve(. Error(E.Failure(error##message))));
+    });
 };
 
 module Fs = {

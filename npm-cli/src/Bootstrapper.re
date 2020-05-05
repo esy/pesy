@@ -48,12 +48,31 @@ let runningEsy = (~esy, ~projectPath, ()) => {
                       ++ (" pesy warm" |> Chalk.whiteBright),
                     );
                     Project.ofPath(esy, projectPath)
-                    >>= (project => Warmup.run(esy, project))
+                    >>= (
+                      project =>
+                        try(Warmup.run(esy, project)) {
+                        | Js.Exn.Error(e) =>
+                          switch (Js.Exn.message(e)) {
+                          | Some(message) =>
+                            Js.Promise.resolve(Error({j|Error: $message|j}))
+                          | None =>
+                            Js.Promise.resolve(
+                              Error("An unknown error occurred"),
+                            )
+                          }
+                        | e =>
+                          Js.log(e);
+                          Js.Promise.resolve(
+                            Error("A network error occurred"),
+                          );
+                        }
+                    )
                     |> Js.Promise.then_(warmupResult => {
                          switch (warmupResult) {
                          | Ok () => ()
                          | Error(msg) =>
-                           Js.log2("Skipping warmup because: ", msg)
+                           Js.log("Skipping warmup because: ");
+                           Js.log(msg);
                          };
                          ResultPromise.ok();
                        })
