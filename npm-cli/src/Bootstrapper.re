@@ -11,6 +11,10 @@ let runCommand = (cmd, args, projectPath, message) => {
 the project of generating files and substituting values in them works fine and
 only them present the project to the user for further esy command.
 
+Bonus: Caching templates fetched from remote urls. This way, we make them
+hash addressable and cache them. We'll need to however first issue a request
+to github and check if the last commit hash at the repo has changed.
+
 Bonus: We don't overwrite if files of the same name exist and only append pesy
 config to package.json/esy.json. Why? So that users can easily upgrade to a pesy
 config. (Opposite of pesy eject) */
