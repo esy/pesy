@@ -7,6 +7,18 @@ let runCommand = (cmd, args, projectPath, message) => {
   Cmd.spawn(~args, ~cwd=projectPath, ~cmd);
 };
 
+/** TODO: Bootstrapper should ideally work in a temporary workspace, make sure
+the project of generating files and substituting values in them works fine and
+only them present the project to the user for further esy command.
+
+Bonus: Caching templates fetched from remote urls. This way, we make them
+hash addressable and cache them. We'll need to however first issue a request
+to github and check if the last commit hash at the repo has changed.
+
+Bonus: We don't overwrite if files of the same name exist and only append pesy
+config to package.json/esy.json. Why? So that users can easily upgrade to a pesy
+config. (Opposite of pesy eject) */
+
 let bootstrap = Template.Kind.gen;
 
 let runningEsy = (~esy, ~projectPath, ()) => {
@@ -29,17 +41,55 @@ let runningEsy = (~esy, ~projectPath, ()) => {
         status =>
           if (!EsyStatus.isProjectReadyForDev(status)) {
             Js.log("No" |> Chalk.red);
-            Js.log(
-              ("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright),
-            );
-            Warmup.run(projectPath)
-            |> Js.Promise.then_(warmupResult => {
-                 switch (warmupResult) {
-                 | Ok () => ()
-                 | Error(msg) => Js.log2("Skipping warmup because: ", msg)
-                 };
-                 ResultPromise.ok();
-               });
+
+            Js.Promise.make((~resolve, ~reject as _) => {
+              Utils.askYesNoQuestion(
+                ~question="Warm up local cache from CI?",
+                ~onYes=
+                  () => {
+                    Js.log(
+                      ("Running" |> Chalk.dim)
+                      ++ (" pesy warm" |> Chalk.whiteBright),
+                    );
+                    Project.ofPath(esy, projectPath)
+                    >>= (
+                      project =>
+                        try(Warmup.run(esy, project)) {
+                        | Js.Exn.Error(e) =>
+                          switch (Js.Exn.message(e)) {
+                          | Some(message) =>
+                            Js.Promise.resolve(Error({j|Error: $message|j}))
+                          | None =>
+                            Js.Promise.resolve(
+                              Error("An unknown error occurred"),
+                            )
+                          }
+                        | e =>
+                          Js.log(e);
+                          Js.Promise.resolve(
+                            Error("A network error occurred"),
+                          );
+                        }
+                    )
+                    |> Js.Promise.then_(warmupResult => {
+                         switch (warmupResult) {
+                         | Ok () => ()
+                         | Error(msg) =>
+                           Js.log("Skipping warmup because: ");
+                           Js.log(msg);
+                         };
+                         ResultPromise.ok();
+                       })
+                    |> catch
+                    |> Js.Promise.then_(() =>
+                         resolve(. Result.return()) |> Js.Promise.resolve
+                       )
+                    |> ignore;
+                  },
+                ~onNo=() => resolve(. Result.return()),
+                (),
+              )
+            });
           } else {
             Js.log("Yes!" |> Chalk.green);
             ResultPromise.ok();
@@ -93,6 +143,7 @@ let run = (esy, projectPath, template, bootstrapOnly) => {
       _ => {
         Js.log("");
         Js.log("Setting up");
+        Js.log("");
         Template.substitute(projectPath);
       }
     );

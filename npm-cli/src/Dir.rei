@@ -5,5 +5,9 @@ let forEachEnt:
   ResultPromise.t(unit, string);
 
 let scan:
-  (Path.t => ResultPromise.t(unit, string), Path.t) =>
+  (
+    Hashtbl.t(string, bool),
+    Path.t => ResultPromise.t(unit, string),
+    Path.t
+  ) =>
   ResultPromise.t(unit, string);

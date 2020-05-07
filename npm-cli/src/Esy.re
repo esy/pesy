@@ -11,5 +11,9 @@ let manifestPath = (path, cmd) =>
   status(path, cmd)
   >>| (esyStatus => EsyStatus.getRootPackageConfigPath(esyStatus));
 
-let importDependencies = (path, cmd) =>
-  Cmd.output(~cmd, ~cwd=path, ~args=[|"import-dependencies"|]);
+let importDependencies = (~projectPath, ~exportsPath, cmd) =>
+  Cmd.output(
+    ~cmd,
+    ~cwd=projectPath,
+    ~args=[|"import-dependencies " ++ exportsPath|],
+  );

@@ -35,7 +35,13 @@ let main = (projectPath, template, useDefaultOptions, bootstrapOnly) => {
 
 let warmup = () => {
   let projectPath = Process.cwd();
-  Warmup.run(projectPath) |> ResultPromise.catch;
+  Esy.make()
+  >>= (
+    esy =>
+      Project.ofPath(esy, projectPath)
+      >>= (project => Warmup.run(esy, project))
+  )
+  |> ResultPromise.catch;
 };
 
 let testTemplate = () => {
@@ -75,13 +81,7 @@ let template = {
     value
     & opt(
         Template.Kind.cmdlinerConv,
-        Template.Kind.path(
-          Path.resolve([|
-            dirname,
-            "templates",
-            "pesy-reason-template-0.1.0-alpha.6",
-          |]),
-        ),
+        Template.Kind.path(DefaultTemplate.path),
       )
     & info(["t", "template"], ~docv="TEMPLATE_URL", ~doc)
   );
