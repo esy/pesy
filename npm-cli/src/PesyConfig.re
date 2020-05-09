@@ -1,13 +1,15 @@
 type t = {
   azureProject: string,
+  github: string,
   ignoreDirs: option(list(string)),
 };
 
 let decoder = json => {
   open Json.Decode;
   let azureProject = json |> field("azure-project", string);
+  let github = json |> field("github", string);
   let ignoreDirs = json |> (field("ignore-dirs", list(string)) |> optional);
-  {ignoreDirs, azureProject};
+  {ignoreDirs, github, azureProject};
 };
 
 let ofJson = json =>
@@ -23,6 +25,7 @@ let make = manifest =>
   };
 
 let getAzureProject = config => config.azureProject;
+let getGithub = config => config.github;
 let getIgnoreDirs = config => config.ignoreDirs;
 
 module Build: {
