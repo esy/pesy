@@ -1,5 +1,5 @@
 {
-  "checksum": "a49681ccf63a68bbb4b1fdf6ebd91782",
+  "checksum": "56e8fe34b5e7bb186933658764337201",
   "root": "npm-cli@link-dev:./esy.json",
   "node": {
     "ocaml@4.6.1000@d41d8cd9": {
@@ -24,7 +24,7 @@
       "overrides": [],
       "dependencies": [
         "ocaml@4.6.1000@d41d8cd9", "@opam/odoc@opam:1.5.0@35218f5f",
-        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#f2bdbe9dd8926@d41d8cd9",
+        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#7aa196ffeb358b2916f425df4923b7431f7eaf51@d41d8cd9",
         "@opam/merlin@opam:3.3.4@5fcabf21",
         "@esy-ocaml/reason@3.5.2@d41d8cd9"
       ],
@@ -436,6 +436,33 @@
       ],
       "devDependencies": [ "ocaml@4.6.1000@d41d8cd9" ]
     },
+    "@opam/ocaml-syntax-shims@opam:1.0.0@a9aa3bfa": {
+      "id": "@opam/ocaml-syntax-shims@opam:1.0.0@a9aa3bfa",
+      "name": "@opam/ocaml-syntax-shims",
+      "version": "opam:1.0.0",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://opam.ocaml.org/cache/sha256/89/89b2e193e90a0c168b6ec5ddf6fef09033681bdcb64e11913c97440a2722e8c8#sha256:89b2e193e90a0c168b6ec5ddf6fef09033681bdcb64e11913c97440a2722e8c8",
+          "archive:https://github.com/ocaml-ppx/ocaml-syntax-shims/releases/download/1.0.0/ocaml-syntax-shims-1.0.0.tbz#sha256:89b2e193e90a0c168b6ec5ddf6fef09033681bdcb64e11913c97440a2722e8c8"
+        ],
+        "opam": {
+          "name": "ocaml-syntax-shims",
+          "version": "1.0.0",
+          "path": "esy.lock/opam/ocaml-syntax-shims.1.0.0"
+        }
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.6.1000@d41d8cd9",
+        "@opam/dune@archive:https://github.com/ocaml/dune/releases/download/2.3.1/dune-2.3.1.tbz#sha1:408307fb131d979658be51f23128a8ea76470915@2f03f381",
+        "@esy-ocaml/substs@0.0.1@d41d8cd9"
+      ],
+      "devDependencies": [
+        "ocaml@4.6.1000@d41d8cd9",
+        "@opam/dune@archive:https://github.com/ocaml/dune/releases/download/2.3.1/dune-2.3.1.tbz#sha1:408307fb131d979658be51f23128a8ea76470915@2f03f381"
+      ]
+    },
     "@opam/ocaml-secondary-compiler@github:esy-ocaml/ocaml#a5a77246b60f3@d41d8cd9": {
       "id":
         "@opam/ocaml-secondary-compiler@github:esy-ocaml/ocaml#a5a77246b60f3@d41d8cd9",
@@ -449,20 +476,20 @@
       "dependencies": [],
       "devDependencies": []
     },
-    "@opam/ocaml-migrate-parsetree@opam:1.7.2@bc8b618e": {
-      "id": "@opam/ocaml-migrate-parsetree@opam:1.7.2@bc8b618e",
+    "@opam/ocaml-migrate-parsetree@opam:1.7.3@dbcf3b47": {
+      "id": "@opam/ocaml-migrate-parsetree@opam:1.7.3@dbcf3b47",
       "name": "@opam/ocaml-migrate-parsetree",
-      "version": "opam:1.7.2",
+      "version": "opam:1.7.3",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/sha256/6a/6ae6753c3e632a63f76b031afc3eab74b209babdfdba4030060a934ce0660bd6#sha256:6ae6753c3e632a63f76b031afc3eab74b209babdfdba4030060a934ce0660bd6",
-          "archive:https://github.com/ocaml-ppx/ocaml-migrate-parsetree/releases/download/v1.7.2/ocaml-migrate-parsetree-v1.7.2.tbz#sha256:6ae6753c3e632a63f76b031afc3eab74b209babdfdba4030060a934ce0660bd6"
+          "archive:https://opam.ocaml.org/cache/sha256/6d/6d85717bcf476b87f290714872ed4fbde0233dc899c3158a27f439d70224fb55#sha256:6d85717bcf476b87f290714872ed4fbde0233dc899c3158a27f439d70224fb55",
+          "archive:https://github.com/ocaml-ppx/ocaml-migrate-parsetree/releases/download/v1.7.3/ocaml-migrate-parsetree-v1.7.3.tbz#sha256:6d85717bcf476b87f290714872ed4fbde0233dc899c3158a27f439d70224fb55"
         ],
         "opam": {
           "name": "ocaml-migrate-parsetree",
-          "version": "1.7.2",
-          "path": "esy.lock/opam/ocaml-migrate-parsetree.1.7.2"
+          "version": "1.7.3",
+          "path": "esy.lock/opam/ocaml-migrate-parsetree.1.7.3"
         }
       },
       "overrides": [],
@@ -478,15 +505,16 @@
         "@opam/dune@archive:https://github.com/ocaml/dune/releases/download/2.3.1/dune-2.3.1.tbz#sha1:408307fb131d979658be51f23128a8ea76470915@2f03f381"
       ]
     },
-    "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#f2bdbe9dd8926@d41d8cd9": {
+    "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#7aa196ffeb358b2916f425df4923b7431f7eaf51@d41d8cd9": {
       "id":
-        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#f2bdbe9dd8926@d41d8cd9",
+        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#7aa196ffeb358b2916f425df4923b7431f7eaf51@d41d8cd9",
       "name": "@opam/ocaml-lsp-server",
-      "version": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#f2bdbe9dd8926",
+      "version":
+        "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#7aa196ffeb358b2916f425df4923b7431f7eaf51",
       "source": {
         "type": "install",
         "source": [
-          "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#f2bdbe9dd8926"
+          "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#7aa196ffeb358b2916f425df4923b7431f7eaf51"
         ]
       },
       "overrides": [],
@@ -495,6 +523,7 @@
         "@opam/stdlib-shims@opam:0.1.0@d957c903",
         "@opam/ppx_yojson_conv_lib@opam:v0.13.0@97a4cb97",
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
+        "@opam/ocaml-syntax-shims@opam:1.0.0@a9aa3bfa",
         "@opam/menhir@opam:20200211@26571604",
         "@opam/dune@archive:https://github.com/ocaml/dune/releases/download/2.3.1/dune-2.3.1.tbz#sha1:408307fb131d979658be51f23128a8ea76470915@2f03f381",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
@@ -504,6 +533,7 @@
         "@opam/stdlib-shims@opam:0.1.0@d957c903",
         "@opam/ppx_yojson_conv_lib@opam:v0.13.0@97a4cb97",
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
+        "@opam/ocaml-syntax-shims@opam:1.0.0@a9aa3bfa",
         "@opam/menhir@opam:20200211@26571604",
         "@opam/dune@archive:https://github.com/ocaml/dune/releases/download/2.3.1/dune-2.3.1.tbz#sha1:408307fb131d979658be51f23128a8ea76470915@2f03f381"
       ]
@@ -960,7 +990,7 @@
       "dependencies": [
         "ocaml@4.6.1000@d41d8cd9", "@opam/result@opam:1.5@6b753c82",
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
-        "@opam/ocaml-migrate-parsetree@opam:1.7.2@bc8b618e",
+        "@opam/ocaml-migrate-parsetree@opam:1.7.3@dbcf3b47",
         "@opam/merlin-extend@opam:0.5@a5dd7d4b",
         "@opam/menhir@opam:20200211@26571604",
         "@opam/dune@archive:https://github.com/ocaml/dune/releases/download/2.3.1/dune-2.3.1.tbz#sha1:408307fb131d979658be51f23128a8ea76470915@2f03f381"

@@ -112,10 +112,29 @@ let filter = "deletedFilter=excludeDeleted&statusFilter=completed&resultFilter=s
 let latest = "queryOrder=finishTimeDescending&$top=1";
 let restBase = "https://dev.azure.com";
 
-let getBuildID = projName => {
+let getDefinitionID = (projName, github) => {
+  let proj = projName |> ProjectName.toString;
+  let definition = Js.String.replace("/", ".", github);
+  Https.getCompleteResponse(
+    {j|$restBase/$proj/_apis/build/definitions?name=$definition&api-version=4.1|j},
+  )
+  |> P.then_(r =>
+       P.resolve(
+         switch (r) {
+         | Ok(response) => RESTResponse.getBuildId(response)
+         | Error(e) =>
+           switch (e) {
+           | Https.E.Failure(url) => Error({j| Could not download $url |j})
+           }
+         },
+       )
+     );
+};
+
+let getBuildID = (projName, definitionID) => {
   let proj = projName |> ProjectName.toString;
   Https.getCompleteResponse(
-    {j|$restBase/$proj/_apis/build/builds?$filter&$master&$latest&api-version=4.1|j},
+    {j|$restBase/$proj/_apis/build/builds?$filter&$master&$latest&definitions=$definitionID&api-version=4.1|j},
   )
   |> P.then_(r =>
        P.resolve(

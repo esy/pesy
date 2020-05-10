@@ -3,7 +3,7 @@
     "ocaml": "4.6.x",
     "@esy-ocaml/reason": "<= 3.5.2",
     "@opam/odoc": "*",
-    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam#f2bdbe9dd8926",
+    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam#7aa196ffeb358b2916f425df4923b7431f7eaf51",
     "@opam/merlin": "*"
   },
   "resolutions": {

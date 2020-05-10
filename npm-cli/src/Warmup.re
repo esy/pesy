@@ -1,12 +1,13 @@
 open Bindings;
 open ResultPromise;
 
-let prepareAzureCacheURL = projStr => {
+let prepareAzureCacheURL = (projStr, github) => {
   let proj =
     projStr
     |> AzurePipelines.ProjectName.ofString
     |> AzurePipelines.ProjectName.validate;
-  AzurePipelines.getBuildID(proj)
+  AzurePipelines.getDefinitionID(proj, github)
+  >>= (definitionID => AzurePipelines.getBuildID(proj, definitionID))
   >>= (id => AzurePipelines.getDownloadURL(proj, id));
 };
 
@@ -49,12 +50,13 @@ let run = (esy, project) => {
          >>= (
            pesyConfig => {
              let azureProject = PesyConfig.getAzureProject(pesyConfig);
+             let github = PesyConfig.getGithub(pesyConfig)
              Js.log2(
                "Fetching prebuilts for azure project" |> Chalk.dim,
                azureProject |> Chalk.whiteBright,
              );
              Fs.mkdir(~p=true, cacheDir)
-             |> Js.Promise.then_(() => prepareAzureCacheURL(azureProject));
+             |> Js.Promise.then_(() => prepareAzureCacheURL(azureProject, github));
            }
          )
          >>= (
@@ -76,7 +78,7 @@ let run = (esy, project) => {
                };
                let end_ = () => {
                  Js.log(
-                   ("Downloaded. " |> Chalk.green)
+                   ("\nDownloaded. " |> Chalk.green)
                    ++ ("Hydrating esy cache..." |> Chalk.whiteBright),
                  );
                  resolve(. Ok());
