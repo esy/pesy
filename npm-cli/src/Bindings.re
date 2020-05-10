@@ -212,7 +212,6 @@ module Https = {
 
   let getCompleteResponse = url =>
     Promise.make((~resolve, ~reject as _) => {
-      Js.log2(">>>>>>", url);
       let req = get(
         url,
         response => {
