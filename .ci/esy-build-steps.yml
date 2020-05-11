@@ -13,6 +13,8 @@ steps:
   - template: utils/create-docs.yml
   - script: "esy test"
     displayName: "Test command"
+  - script: " esy b dune build -p PesyE2E"
+    displayName: "Building e2e runner ( esy b dune build -p PesyE2E)"
   - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
     displayName: 'Creating temporary workspace for tests'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
