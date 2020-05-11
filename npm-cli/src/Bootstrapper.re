@@ -21,7 +21,46 @@ config. (Opposite of pesy eject) */
 
 let bootstrap = Template.Kind.gen;
 
-let runningEsy = (~esy, ~projectPath, ()) => {
+let warmup = (~projectPath, ~esyCmd as esy, ()) => {
+  Js.log(("Running" |> Chalk.dim) ++ (" pesy warm" |> Chalk.whiteBright));
+  Project.ofPath(esy, projectPath)
+  >>= (
+    project =>
+      try(Warmup.run(esy, project)) {
+      | Js.Exn.Error(e) =>
+        switch (Js.Exn.message(e)) {
+        | Some(message) => Js.Promise.resolve(Error({j|Error: $message|j}))
+        | None => Js.Promise.resolve(Error("An unknown error occurred"))
+        }
+      | e =>
+        Js.log(e);
+        Js.Promise.resolve(Error("A network error occurred"));
+      }
+  )
+  |> Js.Promise.then_(warmupResult => {
+       switch (warmupResult) {
+       | Ok () => ()
+       | Error(msg) =>
+         Js.log("Skipping warmup because: ");
+         Js.log(msg);
+       };
+       ResultPromise.ok();
+     })
+  |> catch
+  |> Js.Promise.then_(() => ResultPromise.ok());
+};
+
+let warmupPrompt = () =>
+  Js.Promise.make((~resolve, ~reject as _) => {
+    Utils.askYesNoQuestion(
+      ~question="Warm up local cache from CI?",
+      ~onYes=() => resolve(. true),
+      ~onNo=() => resolve(. false),
+      (),
+    )
+  });
+
+let runningEsy = (~esy, ~projectPath, ~forceCacheFetch, ()) => {
   runCommand(
     esy,
     [|"i"|],
@@ -41,55 +80,16 @@ let runningEsy = (~esy, ~projectPath, ()) => {
         status =>
           if (!EsyStatus.isProjectReadyForDev(status)) {
             Js.log("No" |> Chalk.red);
-
-            Js.Promise.make((~resolve, ~reject as _) => {
-              Utils.askYesNoQuestion(
-                ~question="Warm up local cache from CI?",
-                ~onYes=
-                  () => {
-                    Js.log(
-                      ("Running" |> Chalk.dim)
-                      ++ (" pesy warm" |> Chalk.whiteBright),
-                    );
-                    Project.ofPath(esy, projectPath)
-                    >>= (
-                      project =>
-                        try(Warmup.run(esy, project)) {
-                        | Js.Exn.Error(e) =>
-                          switch (Js.Exn.message(e)) {
-                          | Some(message) =>
-                            Js.Promise.resolve(Error({j|Error: $message|j}))
-                          | None =>
-                            Js.Promise.resolve(
-                              Error("An unknown error occurred"),
-                            )
-                          }
-                        | e =>
-                          Js.log(e);
-                          Js.Promise.resolve(
-                            Error("A network error occurred"),
-                          );
-                        }
-                    )
-                    |> Js.Promise.then_(warmupResult => {
-                         switch (warmupResult) {
-                         | Ok () => ()
-                         | Error(msg) =>
-                           Js.log("Skipping warmup because: ");
-                           Js.log(msg);
-                         };
-                         ResultPromise.ok();
-                       })
-                    |> catch
-                    |> Js.Promise.then_(() =>
-                         resolve(. Result.return()) |> Js.Promise.resolve
-                       )
-                    |> ignore;
-                  },
-                ~onNo=() => resolve(. Result.return()),
-                (),
-              )
-            });
+            let toRunWarmup =
+              forceCacheFetch ? Js.Promise.resolve(true) : warmupPrompt();
+            toRunWarmup
+            |> Js.Promise.then_(toWarmup =>
+                 if (toWarmup) {
+                   warmup(~esyCmd=esy, ~projectPath, ());
+                 } else {
+                   ResultPromise.ok();
+                 }
+               );
           } else {
             Js.log("Yes!" |> Chalk.green);
             ResultPromise.ok();
@@ -128,7 +128,7 @@ let runningEsy = (~esy, ~projectPath, ()) => {
   );
 };
 
-let run = (esy, projectPath, template, bootstrapOnly) => {
+let run = (esy, projectPath, template, bootstrapOnly, forceCacheFetch) => {
   let bootstrapped =
     bootstrap(projectPath, template)
     >>= (
@@ -156,13 +156,13 @@ let run = (esy, projectPath, template, bootstrapOnly) => {
           "You may have to run " ++ Chalk.green("esy") |> Js.log;
         }
       )
-    : bootstrapped >>= runningEsy(~esy, ~projectPath);
+    : bootstrapped >>= runningEsy(~esy, ~projectPath, ~forceCacheFetch);
 };
 
-let run = (esy, projectPath, template, bootstrapOnly) => {
+let run = (esy, projectPath, template, bootstrapOnly, forceCacheFetch) => {
   Fs.mkdir(~p=true, projectPath)
   |> Js.Promise.then_(() => {
        Process.chdir(projectPath);
-       run(esy, projectPath, template, bootstrapOnly);
+       run(esy, projectPath, template, bootstrapOnly, forceCacheFetch);
      });
 };
