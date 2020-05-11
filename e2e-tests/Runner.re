@@ -342,7 +342,7 @@ let checkPesyConfig = (msg, editPesyConfig, ()) =>
 
 let checkBootstrapper = cwd => {
   OS.Cmd.(run_status(Cmd.v(pesyBinPath)))
-  >>= failIfNotZeroExit("pesy")
+  >>= failIfNotZeroExit("pesy --force-cache-fetch")
   >>= checkProject("checking if bootstrapper works")
   >>= (
     () =>
