@@ -30,7 +30,6 @@
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
-    "@opam/bos": "0.2.0",
     "@opam/cmdliner": "*",
     "@opam/dune": "*",
     "@opam/ocamlfind": "*",
