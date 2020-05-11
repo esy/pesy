@@ -7,6 +7,9 @@
     "build": [
       "dune build -p pesy--esy-pesy"
     ],
+    "install": [
+      "esy-installer pesy--esy-pesy.install"
+    ],
     "buildDev": [
       "refmterr dune build --root . --only-package pesy--esy-pesy"
     ],
