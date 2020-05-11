@@ -752,5 +752,7 @@ switch (
   )
 ) {
 | Ok () => ()
-| Error(`Msg(msg)) => print_endline("checkBootstrapper failed with: " ++ msg)
+| Error(`Msg(msg)) =>
+  print_endline("Runner failed with: " ++ msg);
+  exit(-1);
 };
