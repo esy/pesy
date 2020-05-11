@@ -1,5 +1,5 @@
 {
-
+(* Originally from https://github.com/ocamllabs/vscode-ocaml-platform/blob/0a62fd9a0b1a1898e288df4c3ee7293d62e11f78/src/sexp.mll#L1 *)
 exception Error of string
 
 let err m = raise (Error m)
@@ -67,5 +67,13 @@ and escape_sequence = parse
     in
     list 0 []
 
-  let to_string_hum ~indent: _ _  =  "TODO"
+  let rec print_string ppf x = Format.pp_print_string ppf x
+  and print_list ppf = function
+    | [] -> ()
+    | a::[] -> Format.fprintf ppf "%a" print_sexp a
+    | a::b -> Format.fprintf ppf "@[%a @; %a @]" print_sexp a print_list b;
+  and print_sexp ppf = function
+    | Atom a -> Format.fprintf ppf "%a" print_string a
+    | List l -> Format.fprintf ppf "(%a)" print_list l
+  let to_string_hum x = print_sexp Format.str_formatter x; Format.flush_str_formatter ()
 }

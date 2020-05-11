@@ -8,7 +8,7 @@ let toString = (stanzas: list(Stanza.t)) =>
       Str.global_replace(
         Str.regexp("\"\\\\\\\\\""),
         "\\\\",
-        to_string_hum(~indent=4, Stanza.toSexp(s)),
+        to_string_hum(Stanza.toSexp(s)),
       )
       ++ "\n"
       ++ acc,
