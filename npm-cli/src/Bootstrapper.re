@@ -81,7 +81,10 @@ let runningEsy = (~esy, ~projectPath, ~forceCacheFetch, ()) => {
           if (!EsyStatus.isProjectReadyForDev(status)) {
             Js.log("No" |> Chalk.red);
             let toRunWarmup =
-              forceCacheFetch ? Js.Promise.resolve(true) : warmupPrompt();
+              switch (forceCacheFetch) {
+              | Some(toRunOrNot) => Js.Promise.resolve(toRunOrNot)
+              | None => warmupPrompt()
+              };
             toRunWarmup
             |> Js.Promise.then_(toWarmup =>
                  if (toWarmup) {

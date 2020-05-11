@@ -77,7 +77,7 @@ let testTemplate = () => {
         testProjectPath,
         Template.Kind.path(templatePath),
         false,
-        false,
+        None,
       );
     }
   )
@@ -108,8 +108,8 @@ let forceInit = {
 };
 
 let forceCacheFetch = {
-  let doc = "Force fetching of relocatable assets from CI";
-  Arg.(value & flag & info(["fcache", "force-cache-fetch"], ~doc));
+  let doc = "Whether to fetch relocatable assets from CI. When absent, a prompt will be presented.";
+  Arg.(value & opt(some(bool), None) & info(["fetch-cache"], ~doc));
 };
 
 let bootstrapOnly = {
