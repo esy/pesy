@@ -27,10 +27,17 @@ let () = {
     | (_, WSTOPPED(c)) => c
     };
   };
-  let run = (cmd, args) =>
-    if (run(cmd, args) != 0) {
-      printf("%s failed\n", cmd);
+  let run = (cmd, args) => {
+    let exitCode = run(cmd, args);
+    if (exitCode != 0) {
+      printf(
+        "%s failed. Exit code relayed to the shell\n Exiting with (%d)...\n",
+        cmd,
+        exitCode,
+      );
+      exit(exitCode);
     };
+  };
   let cwd = Sys.getcwd();
   printf("Running bootstrapper test");
   print_newline();
