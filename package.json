@@ -42,6 +42,7 @@
   "devDependencies": {
     "ocaml": "4.8.x",
     "@opam/dune": "2.0.1",
+    "@opam/bos": "0.2.0",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
     "@opam/merlin": "*",
