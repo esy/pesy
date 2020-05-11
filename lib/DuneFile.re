@@ -1,5 +1,5 @@
 module Utils = PesyEsyPesyUtils.Utils;
-open Sexplib.Sexp;
+open Sexp;
 open Printf;
 exception InvalidDuneFile(unit);
 let toString = (stanzas: list(Stanza.t)) =>
@@ -17,13 +17,12 @@ let toString = (stanzas: list(Stanza.t)) =>
   );
 
 let ofFile = n => {
-  open Sexplib;
   let contentStr =
-    try (Utils.readFile(n)) {
+    try(Utils.readFile(n)) {
     | _ => ""
     };
   Sexp.(
-    switch (Sexp.of_string(sprintf("(%s)", contentStr))) {
+    switch (Sexp.parse_string(sprintf("(%s)", contentStr))) {
     | List(l) => List.map(Stanza.ofSexp, l)
     | _ => raise(InvalidDuneFile())
     }
