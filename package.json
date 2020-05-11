@@ -11,7 +11,7 @@
       "esy-installer pesy--esy-pesy.install"
     ],
     "buildDev": [
-      "refmterr dune build --root . --only-package pesy--esy-pesy"
+      "refmterr dune build --root . --only-packages pesy--esy-pesy,PesyE2E"
     ],
     "buildEnv": {
       "ODOC_SYNTAX": "re"

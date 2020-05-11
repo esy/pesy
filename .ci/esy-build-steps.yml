@@ -8,13 +8,11 @@ steps:
   - script: "esy install"
     displayName: "esy install"
   - template: utils/restore-build-cache.yml # Run this to make sure cached prebuilts work. 
-  - script: "esy build"
+  - script: "esy b dune build -p pesy--esy-pesy,PesyE2E"
     displayName: "esy build"
   - template: utils/create-docs.yml
   - script: "esy test"
     displayName: "Test command"
-  - script: " esy b dune build -p PesyE2E"
-    displayName: "Building e2e runner ( esy b dune build -p PesyE2E)"
   - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
     displayName: 'Creating temporary workspace for tests'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
