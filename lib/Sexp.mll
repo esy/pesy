@@ -67,11 +67,11 @@ and escape_sequence = parse
     in
     list 0 []
 
-  let rec print_string ppf x = Format.pp_print_string ppf x
+  let rec print_string ppf x = if String.contains x ' ' then Format.ppf "\"%s\"" x else  Format.pp_print_string ppf x
   and print_list ppf = function
     | [] -> ()
     | a::[] -> Format.fprintf ppf "%a" print_sexp a
-    | a::b -> Format.fprintf ppf "@[%a @; %a @]" print_sexp a print_list b;
+    | a::b -> Format.fprintf ppf "@[%a@;%a@]" print_sexp a print_list b;
   and print_sexp ppf = function
     | Atom a -> Format.fprintf ppf "%a" print_string a
     | List l -> Format.fprintf ppf "(%a)" print_list l
