@@ -29,10 +29,10 @@
     "rollup:watch": "rollup -c rollup.config.js -w",
     "docs": "bsdoc build pesy",
     "bsb": "bsb -make-world",
-    "build": "npm run bsb && npm run rollup",
-    "package": "node scripts/vendor-template.js && npm run build",
+    "build": "yarn run bsb && yarn run rollup",
+    "package": "node scripts/vendor-template.js && yarn run build",
     "prettier": "prettier --single-quote --trailing-comma es5 --write src/**.js",
-    "test": "npm run build && jest --coverage",
+    "test": "yarn run build && jest --coverage",
     "bsb:watch": "bsb -make-world -w",
     "bsb:clean": "bsb -clean-world"
   },

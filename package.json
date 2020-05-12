@@ -7,8 +7,11 @@
     "build": [
       "dune build -p pesy--esy-pesy"
     ],
+    "install": [
+      "esy-installer pesy--esy-pesy.install"
+    ],
     "buildDev": [
-      "refmterr dune build --root . --only-package pesy--esy-pesy"
+      "refmterr dune build --root . --only-packages pesy--esy-pesy,PesyE2E"
     ],
     "buildEnv": {
       "ODOC_SYNTAX": "re"
@@ -23,14 +26,13 @@
     }
   },
   "scripts": {
-    "doc": "esy dune build @doc -p pesy--esy-pesy",
+    "doc": "esy dune build @doc -p pesy--esy-pesy,PesyE2E",
     "test:unit": "esy b dune exec ./unit-tests/runner/RunUnitTests.exe",
     "test:e2e": "./_build/default/e2e-tests/Runner.exe",
     "test": "esy run-script test:unit"
   },
   "dependencies": {
     "@esy-ocaml/reason": "*",
-    "@opam/bos": "0.2.0",
     "@opam/cmdliner": "*",
     "@opam/dune": "*",
     "@opam/ocamlfind": "*",
@@ -43,6 +45,7 @@
   "devDependencies": {
     "ocaml": "4.8.x",
     "@opam/dune": "2.0.1",
+    "@opam/bos": "0.2.0",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
     "@opam/merlin": "*",

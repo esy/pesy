@@ -23,13 +23,22 @@ let handleEmptyDirectory =
       promptEmptyDirectory();
     };
 
-let main = (projectPath, template, useDefaultOptions, bootstrapOnly) => {
+let main = (projectPath, template, forceInit, forceCacheFetch, bootstrapOnly) => {
   let projectPath =
     Path.isAbsolute(projectPath)
       ? projectPath : Path.join([|Process.cwd(), projectPath|]);
-  handleEmptyDirectory(. projectPath, useDefaultOptions)
+  handleEmptyDirectory(. projectPath, forceInit)
   >>= (() => Cmd.make(~cmd="esy", ~env=Process.env))
-  >>= (esy => Bootstrapper.run(esy, projectPath, template, bootstrapOnly))
+  >>= (
+    esy =>
+      Bootstrapper.run(
+        esy,
+        projectPath,
+        template,
+        bootstrapOnly,
+        forceCacheFetch,
+      )
+  )
   |> catch;
 };
 
@@ -68,6 +77,7 @@ let testTemplate = () => {
         testProjectPath,
         Template.Kind.path(templatePath),
         false,
+        None,
       );
     }
   )
@@ -92,9 +102,14 @@ let directory = {
   Arg.(value & opt(string, Process.cwd()) & info(["directory", "d"], ~doc));
 };
 
-let useDefaultOptions = {
+let forceInit = {
   let doc = "Force generation of project files";
   Arg.(value & flag & info(["finit", "force-init"], ~doc));
+};
+
+let forceCacheFetch = {
+  let doc = "Whether to fetch relocatable assets from CI. When absent, a prompt will be presented.";
+  Arg.(value & opt(some(bool), None) & info(["fetch-cache"], ~doc));
 };
 
 let bootstrapOnly = {
@@ -110,7 +125,12 @@ let cmd = {
   let doc = "Your Esy Assistant.";
   let cmdT =
     Term.(
-      const(main) $ directory $ template $ useDefaultOptions $ bootstrapOnly
+      const(main)
+      $ directory
+      $ template
+      $ forceInit
+      $ forceCacheFetch
+      $ bootstrapOnly
     );
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };

@@ -1,2 +1,3 @@
 let run:
-  (Cmd.t, Path.t, Template.Kind.t, bool) => ResultPromise.t(unit, string);
+  (Cmd.t, Path.t, Template.Kind.t, bool, option(bool)) =>
+  ResultPromise.t(unit, string);

@@ -1,5 +1,6 @@
 (executable
  (name Runner)
+ (package PesyE2E)
  (public_name Runner.exe)
- (libraries unix bos pesy--esy-pesy.lib))
+ (libraries unix bos yojson str))
 

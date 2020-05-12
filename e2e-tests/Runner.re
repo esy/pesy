@@ -27,10 +27,17 @@ let () = {
     | (_, WSTOPPED(c)) => c
     };
   };
-  let run = (cmd, args) =>
-    if (run(cmd, args) != 0) {
-      printf("%s failed\n", cmd);
+  let run = (cmd, args) => {
+    let exitCode = run(cmd, args);
+    if (exitCode != 0) {
+      printf(
+        "%s failed. Exit code relayed to the shell\n Exiting with (%d)...\n",
+        cmd,
+        exitCode,
+      );
+      exit(exitCode);
     };
+  };
   let cwd = Sys.getcwd();
   printf("Running bootstrapper test");
   print_newline();
@@ -334,8 +341,8 @@ let checkPesyConfig = (msg, editPesyConfig, ()) =>
   >>= checkProject(msg);
 
 let checkBootstrapper = cwd => {
-  OS.Cmd.(run_status(Cmd.v(pesyBinPath)))
-  >>= failIfNotZeroExit("pesy")
+  OS.Cmd.(run_status(Cmd.(v(pesyBinPath) % "--fetch-cache=false")))
+  >>= failIfNotZeroExit("pesy --force-cache-fetch")
   >>= checkProject("checking if bootstrapper works")
   >>= (
     () =>
@@ -745,5 +752,7 @@ switch (
   )
 ) {
 | Ok () => ()
-| Error(`Msg(msg)) => print_endline("checkBootstrapper failed with: " ++ msg)
+| Error(`Msg(msg)) =>
+  print_endline("Runner failed with: " ++ msg);
+  exit(-1);
 };

@@ -8,22 +8,22 @@ steps:
   - script: "esy install"
     displayName: "esy install"
   - template: utils/restore-build-cache.yml # Run this to make sure cached prebuilts work. 
-  - script: "esy build"
+  - script: "esy b dune build --only-packages pesy--esy-pesy,PesyE2E"
     displayName: "esy build"
+  - bash: "ls -lR _build"
+    displayName: "Contents of _build"
   - template: utils/create-docs.yml
-  - script: "esy test"
-    displayName: "Test command"
   - script: mkdir $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
     displayName: 'Creating temporary workspace for tests'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
-  - script: .\_build\install\default\bin\Runner.exe
+  - script: .\_build\default\e2e-tests\Runner.exe
     displayName: 'Running e2e tests'
     condition: eq(variables['Agent.OS'], 'Windows_NT')
     env:
       OCAMLRUNPARAM: 'b'
       PESY_CLONE_PATH: $(Build.SourcesDirectory)
       TEMP: $(System.DefaultWorkingDirectory)\..\tests-tmp-dir
-  - script: ./_build/install/default/bin/Runner.exe
+  - script: ./_build/default/e2e-tests/Runner.exe
     displayName: 'Running e2e tests'
     condition: ne(variables['Agent.OS'], 'Windows_NT')
     env:
@@ -31,6 +31,8 @@ steps:
       OCAMLRUNPARAM: 'b'
   # - script: "esy release"
   #   displayName: "esy release"
+  - script: "esy test"
+    displayName: "Test command"
   - bash: rm -rf ~/.esy/3/b
     displayName: 'Emptying ~/.esy/3/b to clear up space'
   - template: utils/publish-build-cache.yml
