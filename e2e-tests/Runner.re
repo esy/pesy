@@ -47,7 +47,7 @@ let () = {
   run(makeCommand("yarn"), [||]);
   run(makeCommand("yarn"), [|"run", "package"|]);
   run(makeCommand("npm"), [|"pack"|]);
-  run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-dev.18.tgz"|]);
+  run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-alpha.18.tgz"|]);
   chdir(cwd);
 };
 
@@ -313,13 +313,6 @@ let checkProject = (msg, ()) =>
   L.withLog(Printf.sprintf("esy start (%s)", msg), () =>
     OS.Cmd.run_status(Cmd.(v(esyBinPath) % "start"))
     >>= failIfNotZeroExit("esy start: " ++ msg)
-  )
-  >>= (
-    () =>
-      L.withLog(Printf.sprintf("esy test (%s)", msg), () =>
-        OS.Cmd.run_status(Cmd.(v(esyBinPath) % "test"))
-        >>= failIfNotZeroExit("esy test: " ++ msg)
-      )
   );
 
 let checkPesyConfig = (msg, editPesyConfig, ()) =>
@@ -379,26 +372,6 @@ let checkBootstrapper = cwd => {
           Config.ofString(
             {|
 {
-    "test": {
-      "imports": [
-        "Library = require('test-project/library')",
-        "Rely = require('rely/lib')"
-      ],
-      "flags": [
-        "-linkall",
-        "-g",
-        "-w",
-        "-9"
-      ]
-    },
-    "testExe": {
-      "imports": [
-        "Test = require('test-project/test')"
-      ],
-      "bin": {
-        "RunTestProjectTests.exe": "RunTestProjectTests.re"
-      }
-    },
     "library": {
       "require": [
         "console.lib",
@@ -451,26 +424,6 @@ caml_foo(value a) {
           Config.ofString(
             {|
 {
-    "test": {
-      "imports": [
-        "Library = require('test-project/library')",
-        "Rely = require('rely/lib')"
-      ],
-      "flags": [
-        "-linkall",
-        "-g",
-        "-w",
-        "-9"
-      ]
-    },
-    "testExe": {
-      "imports": [
-        "Test = require('test-project/test')"
-      ],
-      "bin": {
-        "RunTestProjectTests.exe": "RunTestProjectTests.re"
-      }
-    },
     "library": {
       "require": [
         "console.lib",
@@ -497,33 +450,6 @@ caml_foo(value a) {
           Config.ofString(
             {|
 {
-    "test": {
-      "imports": [
-        "Library = require('test-project/library')",
-        "Rely = require('rely/lib')"
-      ],
-      "flags": [
-        "-linkall",
-        "-g",
-        "-w",
-        "-9"
-      ],
-      "modes": [
-        "byte"
-      ]
-    },
-    "testExe": {
-      "imports": [
-        "Test = require('test-project/test')"
-      ],
-      "bin": {
-        "RunTestProjectTests.exe": "RunTestProjectTests.re"
-      },
-      "modes": [
-        "byte",
-        "exe"
-      ]
-    },
     "library": {
       "require": [
         "console.lib",
