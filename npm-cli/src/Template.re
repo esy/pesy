@@ -240,7 +240,9 @@ module Kind = {
                             ResultPromise.ok((jsonFile, explicitIgnoreDirs));
                           } else {
                             ResultPromise.fail(
-                              {j| Neither 'pesy' nor 'buildDirs' was found in $jsonFile |j},
+                              {j|Neither 'pesy' nor 'buildDirs' was found in $jsonFile.
+'pesy' must contain 'github' and 'azure-project'.
+'buildDirs' must be key-value object of build directories and their config  |j},
                             );
                           };
                         }
