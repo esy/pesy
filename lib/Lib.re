@@ -124,7 +124,8 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
   List.iter(
     dpkg => {
       let (path, duneFile) = dpkg;
-      if (path |> normalize == (subpackagePath |> normalize)) {
+      if (path
+          |> normalize == (Path.(projectPath / subpackagePath) |> normalize)) {
         print_endline(DuneFile.toString(duneFile));
       } else {
         ();
