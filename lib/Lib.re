@@ -108,28 +108,88 @@ let generateBuildFiles = projectRoot => {
 
 let build = manifestFile => PesyConf.get(manifestFile) |> PesyConf.rootName;
 
+let normalize = x =>
+  x
+  |> Str.global_replace(Str.regexp("\\"), "/")
+  |> Str.global_replace(Str.regexp("[/|\\]$"), "")
+  |> (x => Sys.unix ? x : String.lowercase_ascii(x));
+
+exception InvalidPackagePath(string);
 let duneFile = (projectPath, manifestFile, subpackagePath) => {
+  let normalizedSubpackagePath = normalize(subpackagePath);
   let conf = PesyConf.get(manifestFile);
   let pkgs = PesyConf.pkgs(conf);
+
   let rootName = PesyConf.rootName(conf);
   let pesyPackages =
-    List.map(PesyConf.toPesyConf(projectPath, rootName), pkgs);
-  let dunePackages =
-    PesyConf.toDunePackages(projectPath, rootName, pesyPackages);
-  let normalize = x =>
-    x
-    |> Str.global_replace(Str.regexp("\\"), "/")
-    |> Str.global_replace(Str.regexp("[/|\\]$"), "")
-    |> (x => Sys.unix ? x : String.lowercase_ascii(x))
-  List.iter(
-    dpkg => {
-      let (path, duneFile) = dpkg;
-      if (path |> normalize == (subpackagePath |> normalize)) {
-        print_endline(DuneFile.toString(duneFile));
-      } else {
-        ();
-      };
-    },
-    dunePackages,
+    pkgs |> List.map(PesyConf.toPesyConf(projectPath, rootName));
+
+  PesyConf.(
+    switch (
+      pesyPackages
+      |> List.find_opt(pesyPackage =>
+           pesyPackage.pkg_path == normalizedSubpackagePath
+         )
+    ) {
+    | None =>
+      raise(
+        InvalidPackagePath(
+          "No package found with path: " ++ normalizedSubpackagePath,
+        ),
+      )
+    | Some(pesyPackage) =>
+      let (_, duneFile) =
+        PesyConf.toDunePackages(projectPath, rootName, pesyPackage);
+      print_endline(DuneFile.toString(duneFile));
+    }
   );
+};
+let duneEject = (projectPath, manifestFile, subpackagePath) => {
+  let normalizedSubpackagePath = normalize(subpackagePath);
+  let conf = PesyConf.get(manifestFile);
+  let pkgs = PesyConf.pkgs(conf);
+
+  let rootName = PesyConf.rootName(conf);
+  let pesyPackages =
+    pkgs
+    |> List.map(((pkgName, _) as pkg) =>
+         (pkgName, PesyConf.toPesyConf(projectPath, rootName, pkg))
+       );
+
+  switch (
+    pesyPackages
+    |> List.find_opt(((_, pesyPackage)) =>
+         PesyConf.(pesyPackage.pkg_path == normalizedSubpackagePath)
+       )
+  ) {
+  | None =>
+    raise(
+      InvalidPackagePath(
+        "No package found with path: " ++ normalizedSubpackagePath,
+      ),
+    )
+  | Some((pkgNameToEject, pesyPackage)) =>
+    let (_, duneFile) =
+      PesyConf.toDunePackages(projectPath, rootName, pesyPackage);
+    let newPkgs =
+      pkgs |> List.filter(((pkgName, _)) => pkgName != pkgNameToEject);
+    let newConf =
+      switch (conf) {
+      | `Assoc(newJson) =>
+        `Assoc(
+          newJson
+          |> List.map(((fieldName, _) as field) =>
+               fieldName != "buildDirs"
+                 ? field : (fieldName, `Assoc(newPkgs))
+             ),
+        )
+      | _ => conf
+      };
+
+    write(
+      Path.(projectPath / "package.json"),
+      JSON.pretty_to_string(newConf),
+    );
+    write(Path.(pesyPackage.pkg_path / "dune"), DuneFile.toString(duneFile));
+  };
 };

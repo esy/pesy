@@ -1,5 +1,5 @@
 /* TODO: Making parsing more lenient? Eg. allow string where single element list is valid */
-
+include Yojson.Basic;
 open Printf;
 open Yojson.Basic;
 type t = Yojson.Basic.t;

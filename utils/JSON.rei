@@ -1,4 +1,5 @@
-type t;
+include (module type of Yojson.Basic);
+type t = Yojson.Basic.t;
 exception NullJSONValue(unit);
 exception InvalidJSONValue(string);
 let ofString: string => t;

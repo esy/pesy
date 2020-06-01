@@ -574,16 +574,12 @@ let toPesyConf = (projectPath, rootName, pkg) => {
   };
 };
 
-let toDunePackages = (_prjPath, _rootName, pkgs) => {
-  List.map(
-    pkg =>
-      switch (pkg.pkgType) {
-      | LibraryPackage(l) => Library.toDuneStanza(pkg.common, l)
-      | ExecutablePackage(e) => Executable.toDuneStanza(pkg.common, e)
-      | TestPackage(e) => Test.toDuneStanza(pkg.common, e)
-      },
-    pkgs,
-  );
+let toDunePackages = (_prjPath, _rootName, pkg) => {
+  switch (pkg.pkgType) {
+  | LibraryPackage(l) => Library.toDuneStanza(pkg.common, l)
+  | ExecutablePackage(e) => Executable.toDuneStanza(pkg.common, e)
+  | TestPackage(e) => Test.toDuneStanza(pkg.common, e)
+  };
 };
 
 /* TODO: Figure better test setup */

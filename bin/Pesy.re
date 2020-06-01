@@ -288,6 +288,40 @@ let pesy_dune_file = () => {
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
+let pesy_eject = dir => {
+  switch (Sys.getenv_opt("cur__root")) {
+  | None =>
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red>
+            "'pesy eject' must be run the build environment only\n"
+          </Pastel>
+        </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
+  | Some(curRoot) => duneEject(curRoot, getManifestFile(curRoot), dir)
+  };
+};
+
+let eject = () => {
+  open Cmdliner.Term;
+  let subpkgTerm =
+    Arg.(
+      required
+      & pos(0, some(string), None)
+      & info([], ~doc="Subpackage which needs to get ejected", ~docv="SUBPACKAGE")
+    );
+
+  let cmd = "eject";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "eject - eject dune file for a given dir/subpackage";
+  let build_t = Term.(const(pesy_eject) $ subpkgTerm);
+  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
 let lsLibs = () => {
   open Cmdliner.Term;
   let cmd = "ls-libs";
@@ -298,4 +332,5 @@ let lsLibs = () => {
   (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
-Term.exit @@ Term.eval_choice(cmd(), [build(), pesy_dune_file(), lsLibs()]);
+Term.exit @@
+Term.eval_choice(cmd(), [build(), pesy_dune_file(), lsLibs(), eject()]);
