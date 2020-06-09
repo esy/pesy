@@ -128,7 +128,7 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
     switch (
       pesyPackages
       |> List.find_opt(pesyPackage =>
-           pesyPackage.pkg_path == normalizedSubpackagePath
+           normalize(pesyPackage.pkg_path) == normalizedSubpackagePath
          )
     ) {
     | None =>
@@ -159,7 +159,9 @@ let duneEject = (projectPath, manifestFile, subpackagePath) => {
   switch (
     pesyPackages
     |> List.find_opt(((_, pesyPackage)) =>
-         PesyConf.(pesyPackage.pkg_path == normalizedSubpackagePath)
+         PesyConf.(
+           normalize(pesyPackage.pkg_path) == normalizedSubpackagePath
+         )
        )
   ) {
   | None =>
