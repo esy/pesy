@@ -144,8 +144,9 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
     }
   );
 };
-let duneEject = (projectPath, manifestFile, subpackagePath) => {
-  let normalizedSubpackagePath = normalize(subpackagePath);
+
+let duneEject = (projectPath, manifestFile, subpackageNameOrPath) => {
+  let normalizedSubpackageNameOrPath = normalize(subpackageNameOrPath);
   let conf = PesyConf.get(manifestFile);
   let pkgs = PesyConf.pkgs(conf);
 
@@ -158,16 +159,18 @@ let duneEject = (projectPath, manifestFile, subpackagePath) => {
 
   switch (
     pesyPackages
-    |> List.find_opt(((_, pesyPackage)) =>
+    |> List.find_opt(((pkgName, pesyPackage)) => {
          PesyConf.(
-           normalize(pesyPackage.pkg_path) == normalizedSubpackagePath
+           normalize(pesyPackage.pkg_path) == normalizedSubpackageNameOrPath
+           || pkgName == normalizedSubpackageNameOrPath
          )
-       )
+       })
   ) {
   | None =>
     raise(
       InvalidPackagePath(
-        "No package found with path: " ++ normalizedSubpackagePath,
+        "No package found with path or name: "
+        ++ normalizedSubpackageNameOrPath,
       ),
     )
   | Some((pkgNameToEject, pesyPackage)) =>
