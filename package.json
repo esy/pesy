@@ -43,14 +43,14 @@
     "refmterr": "^3.3.0"
   },
   "devDependencies": {
-    "ocaml": "4.8.x",
-    "@opam/dune": "2.0.1",
+    "ocaml": "4.9.x",
+    "@opam/dune": "2.6.0",
     "@opam/bos": "0.2.0",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
     "@opam/merlin": "*",
     "@opam/ocamlformat": "0.12",
-    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam#f2bdbe9dd8926"
+    "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam"
   },
   "resolutions": {
     "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
