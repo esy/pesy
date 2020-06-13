@@ -85,7 +85,7 @@ let testToPackages = jsonStr => {
   let json = JSON.ofString(jsonStr);
   let pkgs = PesyConf.pkgs(json);
   let pesyPackages = List.map(toPesyConf("", ""), pkgs);
-  let dunePackages = toDunePackages("", "", pesyPackages);
+  let dunePackages = List.map(toDunePackages("", ""), pesyPackages);
   List.map(
     p => {
       let (_, d) = p;
