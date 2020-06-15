@@ -39,7 +39,7 @@
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
     "@reason-native/pastel": "*",
-    "ocaml": "4.6.10 - 4.8",
+    "ocaml": "4.6.10 - 4.9",
     "refmterr": "^3.3.0"
   },
   "devDependencies": {
