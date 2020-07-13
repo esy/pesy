@@ -50,13 +50,15 @@ let run = (esy, project) => {
          >>= (
            pesyConfig => {
              let azureProject = PesyConfig.getAzureProject(pesyConfig);
-             let github = PesyConfig.getGithub(pesyConfig)
+             let github = PesyConfig.getGithub(pesyConfig);
              Js.log2(
                "Fetching prebuilts for azure project" |> Chalk.dim,
                azureProject |> Chalk.whiteBright,
              );
              Fs.mkdir(~p=true, cacheDir)
-             |> Js.Promise.then_(() => prepareAzureCacheURL(azureProject, github));
+             |> Js.Promise.then_(() =>
+                  prepareAzureCacheURL(azureProject, github)
+                );
            }
          )
          >>= (
@@ -88,7 +90,43 @@ let run = (esy, project) => {
          );
        }
      )
-  >>= (() => Cmd.make(~env=Process.env, ~cmd="unzip"))
+  >>= (
+    () => {
+      Process.platform == "win32"
+        ? Cmd.ofPathStr(
+            Path.resolve([|
+              dirname,
+              "..",
+              "esy",
+              "node_modules",
+              "esy-bash",
+              ".cygwin",
+              "bin",
+              "unzip.exe",
+            |]),
+          )
+          |> Js.Promise.then_(cmd => {
+               switch (cmd) {
+               | Ok(cmd) => Ok(cmd) |> Js.Promise.resolve
+               | Error(_) =>
+                 Cmd.ofPathStr(
+                   Path.resolve([|
+                     dirname,
+                     "..",
+                     "@esy-nightly",
+                     "esy",
+                     "node_modules",
+                     "esy-bash",
+                     ".cygwin",
+                     "bin",
+                     "unzip.exe",
+                   |]),
+                 )
+               }
+             })
+        : Cmd.make(~cmd="unzip", ~env=Process.env);
+    }
+  )
   >>= (cmd => Cmd.output(~cwd=cacheDir, ~cmd, ~args=[|"-o", cachePath|]))
   >>= (
     _stdout =>
@@ -101,6 +139,18 @@ let run = (esy, project) => {
           ~exportsPath=Path.join([|cacheDir, artifactName, "_export"|]),
           esy,
         )
+        |> Js.Promise.then_(
+             fun
+             | Ok(r) => ResultPromise.ok(r)
+             | Error(_) =>
+               /* import-dependencies can sometimes fail on individual cache entries which is fail. We can simply retry */
+               Esy.importDependencies(
+                 ~projectPath,
+                 ~exportsPath=
+                   Path.join([|cacheDir, artifactName, "_export"|]),
+                 esy,
+               ),
+           )
         >>| (
           ((stdout, stderr)) => {
             Js.log(
