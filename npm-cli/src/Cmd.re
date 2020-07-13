@@ -48,6 +48,17 @@ let make = (~env, ~cmd) =>
        });
   };
 
+let ofPathStr = path => {
+  Fs.exists(path)
+  |> Js.Promise.then_(exists =>
+       if (exists) {
+         Ok({cmd: path, env: Process.env}) |> Js.Promise.resolve;
+       } else {
+         Error({j| Command ($path) not found |j}) |> Js.Promise.resolve;
+       }
+     );
+};
+
 let output = (~args, ~cwd, ~cmd) => {
   let {cmd, env} = cmd;
   let shellString =
