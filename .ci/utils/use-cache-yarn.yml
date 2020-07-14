@@ -1,0 +1,19 @@
+steps:
+- task: Cache@2
+  inputs:
+    key: 'npm | "$(Agent.OS)" | "$(Build.SourcesDirectory)/npm-cli/yarn.lock"'
+    restoreKeys: |
+       npm | "$(Agent.OS)"
+       npm
+    path: $(HOME)/.yarn
+  displayName: Cache yarn
+  condition: ne(variables['AGENT.OS'], 'Windows_NT')
+- task: Cache@2
+  inputs:
+    key: 'npm | "$(Agent.OS)" | "$(Build.SourcesDirectory)/npm-cli/yarn.lock"'
+    restoreKeys: |
+       npm | "$(Agent.OS)"
+       npm
+    path: $(AppData)\Local\Yarn\Cache\v2
+  displayName: Cache yarn
+  condition: eq(variables['AGENT.OS'], 'Windows_NT')

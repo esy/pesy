@@ -2,7 +2,7 @@
 
 steps:
   - template: utils/use-node.yml
-  - template: utils/use-cache-npm.yml
+  - template: utils/use-cache-yarn.yml
   - template: utils/use-esy.yml
   - template: utils/use-cache-esy.yml
   - script: "esy install"
