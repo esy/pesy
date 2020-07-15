@@ -245,7 +245,7 @@ let pesyLsLibs = () => {
     pkgs,
   );
 };
-let version = "0.1.0-dev";
+let version = "0.1.0-dev.12";
 
 let cmd = () => {
   open Cmdliner.Term;
@@ -311,7 +311,11 @@ let eject = () => {
     Arg.(
       required
       & pos(0, some(string), None)
-      & info([], ~doc="Subpackage which needs to get ejected", ~docv="SUBPACKAGE")
+      & info(
+          [],
+          ~doc="Subpackage which needs to get ejected",
+          ~docv="SUBPACKAGE",
+        )
     );
 
   let cmd = "eject";
