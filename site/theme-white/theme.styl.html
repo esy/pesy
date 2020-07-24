@@ -1,0 +1,905 @@
+<script src="../Refresh.js"> </script>
+support-for-ie = true
+
+// Fonts
+$body-font = PrivateWordFont, WordFont, Helvetica Neue, Open Sans, sans-serif
+$mono-font = PrivateCodingFont, CodingFont, Menlo, monospace
+
+// Margins
+$pad = 40px      // Space between things
+$sidepad = 30px  // Padding to the left of the sidebar
+$minipad = 20px  // Space for mobile
+$vmargin = 16px  // Margin between blocks
+
+// Colors
+$offwhite = #fafafa
+$codebg = #f7fafc
+$codeborder = #eceff3
+$grey = #909090
+$txt = #444444
+$txtlight = #555555
+$accent = #556cd6 * 0.85
+$line = #e3e8ee 
+$headerbg = #fafafa 
+
+// Misc
+$shadow-str = 0.1
+
+// Dimensions
+$sidebar-width = 230px
+$content-width = 550px
+$pre-width = 380px
+
+global-reset()
+  h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+  html, body, div, span, applet, object, iframe,
+  del, dfn, em, img, ins, kbd, q, s, samp,
+  dl, dt, dd, ol, ul, li,
+  a, small, abbr, acronym, address, big, cite, code, caption, tbody, table, tfoot, thead, tr, th, td,
+  fieldset, form, label, legend,
+  strike, strong, sub, sup, tt, var
+    font-weight: inherit
+    font-style: inherit
+    font-family: inherit
+    font-size: 100%
+    vertical-align: baseline
+    margin: 0
+    padding: 0
+    border: 0
+    outline: 0
+  body
+    line-height: 1
+    color: black
+    background: white
+  ol, ul
+    list-style: none
+  table
+    border-spacing: 0
+    border-collapse: separate
+    vertical-align: middle
+  caption, th, td
+    text-align: left
+    vertical-align: middle
+    font-weight: normal
+  a img
+    border: none
+
+clearfix()
+  &:before
+  &:after
+    content: ""
+    display: table
+  &:after
+    clear: both
+  zoom: 1 if support-for-ie
+
+// ----------------------------------------------------------------------------
+// Mixins
+
+scrollbar($bg=white)
+  &
+    -webkit-overflow-scrolling: touch
+  &::-webkit-scrollbar
+    width: 15px
+    height: 15px
+  &::-webkit-scrollbar-thumb
+    background: #ddd
+    border-radius: 8px
+    border: solid 4px $bg
+  &:hover::-webkit-scrollbar-thumb
+    background: #999
+    box-shadow: inset 2px 2px 3px rgba(0, 0, 0, 0.2)
+
+antialias()
+  -webkit-font-smoothing: antialiased
+  text-rendering: optimizeLegibility
+
+/* ----------------------------------------------------------------------------
+ * Base
+ */
+
+global-reset()
+
+html, body
+  height: 100%
+
+body
+  overflow-y:scroll
+  overflow-x:hidden
+
+/*
+ * jordwalke: Continues left parallel with a right docking, until the next
+ * right docking. Requires a JS shim at document load time to
+ * fix up the elements that occur before that next right docking,
+ * because there is no CSS selector for "comes before".
+ * 
+ * document.querySelectorAll(
+ *    '.content > p + pre,' +
+ *    '.content > p + blockquote,' +
+ *    '.content > ul + pre,' +
+ *    '.content > ul + blockquote,' +
+ *    '.content > ol + pre,' +
+ *    '.content > ol + blockquote,' +
+ *    '.content > h1 + pre,' +
+ *    '.content > h1 + blockquote,' +
+ *    '.content > h2 + pre,' +
+ *    '.content > h2 + blockquote,' +
+ *    '.content > h3 + pre,' +
+ *    '.content > h3 + blockquote,' +
+ *    '.content > h4 + pre,' +
+ *    '.content > h4 + blockquote,' +
+ *    '.content > h5 + pre,' +
+ *    '.content > h5 + blockquote,' +
+ *    '.content > h6 + pre,' +
+ *    '.content > h6 + blockquote,' +
+ *    '.content > table + pre,' +
+ *    '.content > table + blockquote'
+ *  ).forEach(function(e) {e.previousSibling ? (e.previousSibling.style="clear:both") : null;})
+ */
+continueRight
+ clear:left
+ float:left
+
+html
+  overflow-x: hidden
+
+body, td, textarea, input
+  font-family: $body-font
+  line-height: 1.6
+  font-size: 16px
+  color:$txt
+
+  @media (max-width: 480px) /* Mobile */
+    font-size: 12px
+
+a
+  color: $accent
+  text-decoration: none
+  &:hover
+    color: $accent * 0.8
+
+/* ----------------------------------------------------------------------------
+ * Content styling
+ */
+
+.content
+  p, ul, ol, h1, h2, h3, h4, h5, h6, pre, blockquote
+    padding: $vmargin 0
+    box-sizing: border-box
+
+  h1, h2, h3, h4, h5, h6
+    font-weight: bold
+    antialias()
+
+  pre
+    font-family: $mono-font
+
+  ul > li
+    list-style-type: disc
+
+  ol > li
+    list-style-type: decimal
+
+  ul, ol
+    margin-left: 20px
+    /* jordwalke: This margin-right is needed to allow lists to "dock" to the
+     * left of a right block that spans multiple left blocks. The padding-right
+     * is needed regardless to get the right boundary of text to be a perfect box.
+     */
+    margin-right: -20px
+
+  ul > li
+    list-style-type: none
+    position: relative
+    &:before
+      content: ''
+      display: block
+      position: absolute
+      left: -17px
+      top: 7px
+      width: 5px
+      height: 5px
+      border-radius: 4px
+      box-sizing: border-box
+      background: white
+      border: solid 1px $grey
+
+  li > :first-child
+    padding-top: 0
+
+  strong, b
+    font-weight: bold
+
+  i, em
+    font-style: italic
+    /*color: $grey*/
+
+  p > code
+    background: $codebg
+    border-radius: 2px;
+    border: 1px solid $codeborder
+  
+  table > code, li > code, tr > code, td > code, th > code
+    background: $codebg
+    border-radius: 2px;
+    border: 1px solid $codeborder
+    
+  code
+    font-family: $mono-font
+    padding: 1px 3px
+    font-size: 0.90em
+
+  pre > code
+    border: none;
+    background: $codebg
+    display: block
+    background: transparent
+    font-size: 0.90em
+    letter-spacing: 0px
+
+  blockquote
+    :first-child
+      padding-top: 0
+    :last-child
+      padding-bottom: 0
+
+  table
+
+    margin-top: $vmargin
+    margin-bottom: $vmargin
+    padding: 0
+    border-collapse: collapse
+    /* Tables in non split mode should not have any clearing */
+    /* clear: both */
+    /* float: left */
+
+    tbody
+      > :nth-child(2n)
+        background-color: $offwhite
+
+    tr
+      border-top: 1px solid $line
+      background-color: white
+      margin: 0
+      padding: 0
+
+      th
+        background-color: $offwhite
+        text-align: auto;
+        font-weight: bold
+        border: 1px solid $line
+        margin: 0
+        padding: 6px 13px
+
+      td
+        text-align: auto;
+        border: 1px solid $line
+        margin: 0
+        padding: 6px 13px
+
+      th, td
+        :first-child
+
+          margin-top: 0;
+        :last-child
+          margin-bottom: 0;
+
+
+
+    
+
+/* ----------------------------------------------------------------------------
+ * Content
+ */
+
+.content-root
+  min-height: 90%
+  position: relative
+
+.content
+  padding-top: $pad - $vmargin
+  padding-bottom: $pad
+  padding-left: $pad
+  padding-right: $pad
+  clearfix()
+
+  max-width: 700px
+
+  blockquote
+    color: $grey
+    /* text-shadow: 0 1px 0 rgba(white, 0.5) */
+
+  h1, h2, h3
+    antialias()
+    font-family: WordFont
+    padding-bottom: 0
+
+    + p, ul, ol
+      padding-top: 10px
+
+  h1, h2
+    text-transform: uppercase
+    letter-spacing: 1px
+    font-size: 1.5em
+
+  h3
+    font-size: 1.2em
+
+  // Lines
+  h1, h2, .big-heading
+    padding-top: $pad * 2
+    &:before
+      display: block
+      content: ''
+      background: linear-gradient(left, rgba($line, 1.0) 80%, rgba($line, 0.0))
+      box-shadow: 0 1px 0 rgba(white, 0.4)
+      height: 1px
+      position: relative
+      top: $pad * -1
+      left: $pad * -1
+      /* width: 100% */
+
+    @media (max-width: 768px) /* Mobile and tablet */
+      padding-top: $minipad * 2
+      &:before
+        background: $line
+        left: $pad * -1
+        top: $minipad * -1
+        width: 120%
+
+  // Small headings
+  h4, h5, .small-heading
+    border-bottom: solid 1px rgba(black, 0.07)
+    color: $grey
+    padding-top: $vmargin * 3
+    padding-bottom: 10px
+
+  body:not(.big-h3) & h3
+    @extends .content .small-heading
+    font-size: 0.9em
+
+  body.big-h3 & h3
+    @extends .content .big-heading
+
+  h1:first-child
+    padding-top: 0
+    &, a, a:visited
+      color: $txt
+    &:before
+      display: none
+
+@media (max-width: 768px) /* Tablet */
+  .content
+    h4, h5, .small-heading, body:not(.big-h3) & h3
+      padding-top: $vmargin * 2
+
+@media (max-width: 480px) /* Mobile */
+  .content
+    padding: $minipad
+    padding-top: $minipad * 2
+
+    h4, h5, .small-heading, body:not(.big-h3) & h3
+      padding-top: $vmargin
+
+// ----------------------------------------------------------------------------
+// Code blocks
+
+inset-box()
+  background: $offwhite
+  /* border: solid 1px $offwhite*0.95 */
+  /* border-top: solid 1px $offwhite*0.9 */
+  /* border-left: solid 1px $offwhite*0.93 */
+  display: block
+  padding: 10px
+  border-radius: 2px
+
+  overflow: auto
+  scrollbar($offwhite)
+
+body.no-literate .content pre > code
+  inset-box()
+
+@media (max-width: 1180px) /* Small desktop */
+  .content pre > code
+    inset-box()
+    
+/* Hide scrollbar but keep functionality */
+pre > code
+  &::-webkit-scrollbar
+    display: none
+  
+/* Hide scrollbar for IE, Edge and Firefox */
+pre > code
+  overflow-x:scroll
+  -ms-overflow-style: none  /* IE and Edge */
+  scrollbar-width: none  /* Firefox */
+
+// ----------------------------------------------------------------------------
+// Buttons
+
+.button
+  antialias()
+  font-family: WordFont, sans-serif
+  letter-spacing: 0px
+  font-weight: bold
+
+  display: inline-block
+  padding: 3px 25px
+
+  border: solid 2px $accent
+  border-radius: 20px
+
+  margin-right: 15px
+
+  &, &:visited
+    background: $accent
+    color: white
+    text-shadow: none
+
+  &:hover
+    border-color: #111
+    background: #111
+    color: white
+
+  &.light
+    &, &:visited
+      background: transparent
+      color: $grey
+      border-color: $grey
+      text-shadow: none
+
+    &:hover
+      border-color: $grey
+      background: $grey
+      color: white
+    
+.content
+  .button + em
+    color: $grey
+
+
+// ----------------------------------------------------------------------------
+// Literate mode content
+
+@media (min-width: 1180px) /* Big desktop */
+  body:not(.no-literate)
+    .content-root
+      background-color: $offwhite
+      $w = ($sidebar-width + $content-width)
+      /* Fix major perf issue on firefox by commenting this out: https://github.com/zachlatta/reason/commit/787b8f783288d0337a3fab5b71c54d6d5630ef6e */
+      box-shadow: inset $w 0 white, inset ($w + 1) 0 $line, inset ($w + 10) 0 5px -10px rgba(black, $shadow-str)
+
+// Literate mode
+@media (min-width: 1180px) /* Big desktop */
+  small-heading()
+    margin-left: $pad
+    width: $content-width - $pad * 2
+    margin-bottom: 3px
+
+    padding-left: 0
+    padding-right: 0
+
+  body:not(.no-literate)
+    .content
+      padding-left: 0
+      padding-right: 0
+
+      width: $content-width + $pre-width
+      max-width: none
+
+      >
+        .flatdoc-synced-up-left
+          clear: both
+        /*.flatdoc-synced-up-right
+          margin-top:$pad */
+        p, ul, ol, h1, h2, h3, h4, h5, h6, pre, blockquote
+          width: $content-width
+          box-sizing: border-box
+          padding-right: $pad
+          padding-left: $pad
+        h1, h2, h3
+          clear: both
+          /* width: 100% */
+        pre, blockquote
+          width: $pre-width
+          padding-left: ($pad/2)
+          padding-right: ($pad/2)
+          float: right
+          clear: right
+          +
+            p, ul, ol, h4, h5, h6
+              clear: both
+        p, ul, ol, h4, h5, h6
+          float: left
+          clear: left
+
+        h4, h5, .small-heading, body:not(.big-h3) & h3
+          small-heading()
+
+        table
+          /* jordwalke: Moved the clearing only to here instead of the general table rule.
+           * Otherwise, the following layout is messed up when resizing the window to be narrow:
+           *
+           *    `type Unix.error`
+           *    : Error codes for specific `Unix` module errors.
+           *
+           *    Value                | Meaning                                    
+           *    :------------------- |:------------------------------------------
+           *    `EACCES`           | Permission denied                          
+           *    `EAGAIN`           | Resource temporarily unavailable; try again
+           *    `EBADF`            | Bad file descriptor
+           *    `EBUSY`            | Resource unavailable
+           *    `EEXISTS`          | File already exists
+           *    `EISDIR`           | Is a directory
+           *    `ENOENT`           | No such file or directory
+           *    `ENOTDIR`          | Not a directory
+           *    `ENOTEMPTY`        | Directory not empty
+           *    [See all](https://caml.inria.fr/pub/docs/manual-ocaml/libref/Unix.html#TYPEerror) | 
+           *
+           *
+           *    `fun Unix.dup` : `(~cloexec:bool=?, ` `file_descr` `) => ` `file_descr`
+           *    : Return a new file descriptor referencing the same file as the given
+           *      descriptor. See `Unix.set_close_on_exec` for documentation on the `cloexec`
+           *      optional argument.
+           *      (Copied from stdlib docs)
+           */
+          clear: left
+          float: left
+          margin-left: $pad
+          margin-right: $pad
+          max-width: $content-width - $pad*2
+
+  body:not(.no-literate):not(.big-h3)
+    .content > h3
+      small-heading()
+
+// ----------------------------------------------------------------------------
+// Header
+
+.header
+  background: $headerbg
+  z-index:999
+  /* text-shadow: 0 1px 0 rgba(white, 0.5) */
+  border-bottom: solid 1px $line
+  padding: 15px 15px 15px $sidepad
+  position: -webkit-sticky
+  position: sticky
+  top: 0px;
+  clearfix()
+
+  line-height: 20px
+
+  .left
+    float: left
+
+  .right
+    text-align: right
+    position: absolute
+    right: 15px
+    top: 15px
+
+    iframe
+      display: inline-block
+      vertical-align: middle
+
+  h1
+    antialias()
+    font-weight: bold
+    font-family: WordFont, sans-serif
+    font-size: 1em
+
+    &, a, a:visited
+      color: $grey
+    a:hover
+      color: $txt
+
+  li a
+    font-size: 1em
+    color: $grey
+    display: block
+
+    &:hover
+      color: $grey*0.4
+
+  @media (min-width: 480px) /* Tablet & Desktop */
+    h1
+      float: left
+
+    ul, li
+      display: block
+      float: left
+
+    ul
+      margin-left: -15px
+
+    h1 + ul
+      border-left: solid 1px $line
+      margin-left: 15px
+
+    li
+      border-left: solid 1px rgba(white, 0.5)
+      border-right: solid 1px $line
+      &:last-child
+        border-right: 0
+
+    li a
+      padding: 0 15px
+
+@media (max-width: 480px) /* Mobile */
+  // Hide extra stuff on mobile
+  .right
+    display: none
+
+// ----------------------------------------------------------------------------
+// Sidebar
+
+.menubar
+  antialias()
+  .section
+    padding: $sidepad $sidepad
+    box-sizing: border-box
+
+  .section + .section
+    border-top: solid 1px $line
+
+  .section.no-line
+    border-top: 0
+    padding-top: 0
+
+a.big.button
+  display: block
+  box-sizing: border-box
+  width: 100%
+  padding: 10px 20px
+  text-align: center
+
+  font-weight: bold
+  font-size: 1.1em
+
+  background: transparent
+  border: solid 3px $accent
+  border-radius: 30px
+  font-family: WordFont, sans-serif
+
+  &, &:visited
+    color: $accent
+    text-decoration: none
+
+  &:hover
+    background: $accent
+    &, &:visited
+      color: white
+
+@media (max-width: 480px) /* Mobile */
+  .menubar
+    padding: $minipad
+    border-bottom: solid 1px $line
+
+@media (max-width: 768px) /* Mobile and tablet */
+  .menubar
+    display: none
+
+@media (min-width: 768px) /* Desktop */
+  .content-root
+    padding-left: $sidebar-width
+
+  .menubar
+    position: absolute
+    left: 0
+    top: 0
+    bottom: 0
+    width: $sidebar-width
+    border-right: solid 1px $line
+
+  .menubar.fixed
+    position: fixed
+
+    scrollbar()
+    overflow-y: auto
+
+.menubar
+  font-size: 0.9em
+
+// Sticky left menu:
+.menu.section
+  position: -webkit-sticky
+  position: sticky
+  /* header height */
+  top: 35px
+.bottom.section
+  position: -webkit-sticky
+  position: sticky
+  /* header height */
+  top: 35px
+
+.noselect
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Old versions of Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+
+// Menu items
+.menu
+  ul.level-1 > li + li
+    margin-top: 20px
+
+  a
+    box-sizing: border-box
+    position: relative
+
+    display: block
+    padding-top: 4px
+    padding-bottom: 4px
+    margin-right: ($sidepad * -1)
+
+    color: $txtlight
+    &:hover
+      color: $accent*0.8
+
+  a.level-1
+    font-family: WordFont, sans-serif
+    text-transform: uppercase
+    font-size: 1em
+    font-weight: bold
+    &, &:visited
+      color: $grey
+    &:hover
+      color: $grey*0.6
+
+  a.level-2
+    font-size: 1em
+    font-weight: normal
+
+  a.level-3
+    font-weight: normal
+    font-size: 1em
+    padding-left: 10px
+
+  a.active
+    &, &:visited, &:hover
+      color: $accent
+    
+    // Indicator
+    &:after
+      visibility: hidden
+      content: ''
+      display: block
+      box-sizing: border-box
+
+      position: absolute
+      top: 10px
+      right: $sidepad
+
+      width: 9px
+      height: 3px
+      border-radius: 2px
+      background: $accent
+
+// ----------------------------------------------------------------------------
+// Syntax highlighting
+
+code
+  .string, .number
+    color: #3ac
+  .init
+    color: #383
+  .keyword
+    font-weight: bold
+  .comment
+    color: $grey * 1.2
+
+// ----------------------------------------------------------------------------
+
+.content
+  .large-brief & > h1:first-child + p,
+  > p.brief
+    font-size: 1.3em
+    font-family: Open Sans, sans-serif
+    font-weight: 300
+
+
+// ----------------------------------------------------------------------------
+
+.title-area
+  min-height: 100px
+  box-sizing: border-box
+  antialias()
+  text-align: center
+  border-bottom: solid 1px $line
+  overflow: hidden
+
+  > img.bg
+    z-index: 0
+
+    // Start it off screen
+    position: absolute
+    left: -9999px
+
+  > div
+    position: relative
+    z-index: 1
+  
+
+// ----------------- Styles just for "this page" -----------------------------
+.title-card
+  text-rendering: optimizeLegibility !important
+  -webkit-font-smoothing: antialiased !important
+  -moz-osx-font-smoothing: grayscale
+
+.title-card
+  /* background: #1d3b47; */
+  /* background-position: center center; */
+  /* background-size: cover; */
+  color: #ccc
+  text-align: center
+
+  position: relative
+  z-index: 1
+
+  width: 100%
+  display: table
+
+.title-card > .in
+  display: table-cell
+  vertical-align: middle
+
+.title-card .headline
+  vertical-align: middle
+  display: inline-block
+  -webkit-box-sizing: border-box
+  box-sizing: border-box
+
+  /* text-shadow: 0 0 4px rgba(0, 0, 0, 0.5); */
+
+  padding-left: 40px
+  padding-right: 40px
+  max-width: 800px
+  line-height: 1.7
+
+.title-card h1
+  font-family: 'Open Sans', sans-serif
+  font-size: 6em
+  font-weight: 600
+  line-height: 1.1
+  margin-bottom: 0.5em
+  color: #333
+
+.title-card p
+  font-family: WordFont, sans-serif
+  color: #777
+  font-weight: bold
+  font-size: 1.5em
+
+.title-card h5
+  margin-top: 50px
+  margin-bottom: 50px
+  font-family: WordFont, sans-serif
+  color: #777
+  letter-spacing: 2px
+  font-size: 1.8em
+
+.title-card h5 span
+  display: inline-block
+  padding: 5px 20px
+  border: solid 3px #fff
+
+@media (max-width: 768px) /* Tablet */
+  .title-card h5
+    margin-top: 100px
+
+@media (max-width: 480px) /* Mobile */
+  .title-card
+    padding: 50px 0
+  .title-card .headline
+    padding-left: 10px
+    padding-right: 10px
+    min-height: none
+  .title-card h1
+    font-size: 2.2em
+  .title-card p
+    font-size: 1.1em
+  .title-card h5
+    margin-top: 40px
+    font-size: 0.9em

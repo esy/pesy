@@ -14,3 +14,5 @@ scripts/storage
 vendor
 coverage/
 *.bs.js
+site/index.html
+site/index.rendered.html
