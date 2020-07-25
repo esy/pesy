@@ -574,6 +574,7 @@ Foo.foo();
               Fpath.(v(cwd) / "executable-with-lwt-preprocess" / "Main.re"),
               {|
 open Lwt;
+Console.log("Testing..");
 let foo = {
   let%lwt foo = Lwt.return("hello world from lwt");
   Lwt.return(foo ++ " blah");
@@ -590,8 +591,9 @@ print_endline(Lwt_main.run(foo));
                            {
                                "executable-with-lwt-preprocess": {
                                  "imports": [
+                                   "Console = require('@reason-native/console/lib')",
                                    "Lwt = require('lwt')",
-       "LwtUnix = require('lwt/unix')"
+                                   "LwtUnix = require('lwt/unix')"
                                  ],
                                 "preprocess": [
                                     "pps",

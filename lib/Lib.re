@@ -123,7 +123,7 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
   let rootName = PesyConf.rootName(conf);
   let pesyPackages =
     pkgs |> List.map(PesyConf.toPesyConf(projectPath, rootName));
-
+  /** TODO: Why compute for every subpackage? */
   PesyConf.(
     switch (
       pesyPackages
@@ -140,7 +140,7 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
     | Some(pesyPackage) =>
       let (_, duneFile) =
         PesyConf.toDunePackages(projectPath, rootName, pesyPackage);
-      print_endline(DuneFile.toString(duneFile));
+      DuneFile.toString(duneFile) |> print_endline;
     }
   );
 };
