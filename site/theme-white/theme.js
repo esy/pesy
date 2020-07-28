@@ -2,18 +2,91 @@
   var $window = $(window);
   var $document = $(document);
 
- /*
-  * Scrollspy.
-  */
+  /*
+   * Scrollspy.
+   */
+  $document.on('flatdoc:ready', function() {
+    /**
+     * Remove any nodes that are not needed once rendered. This way when generating
+     * a pre-rendered `.rendered.html`, they won't become part of the bundle, when
+     * that rendered page is turned into a `.html` bundle. They have served their
+     * purpose. Add `class='removeFromRenderedPage'` to anything you want removed
+     * once used to render the page. (Don't use for script tags that are needed for
+     * interactivity).
+     */
+    $('.removeFromRenderedPage').each(function(i, e) {
+      e.parentNode.removeChild(e);
+    });
+    
+    /**
+     * See documentation for `continueRight` css class in style.styl.
+     */
+    document.querySelectorAll(
+       '.content > img + pre,' +
+       '.content > img + blockquote,' +
+       '.content > p + pre,' +
+       '.content > p + blockquote,' +
+       '.content > ul + pre,' +
+       '.content > ul + blockquote,' +
+       '.content > ol + pre,' +
+       '.content > ol + blockquote,' +
+       '.content > h1 + pre,' +
+       '.content > h1 + blockquote,' +
+       '.content > h2 + pre,' +
+       '.content > h2 + blockquote,' +
+       '.content > h3 + pre,' +
+       '.content > h3 + blockquote,' +
+       '.content > h4 + pre,' +
+       '.content > h4 + blockquote,' +
+       '.content > h5 + pre,' +
+       '.content > h5 + blockquote,' +
+       '.content > h6 + pre,' +
+       '.content > h6 + blockquote,' +
+       '.content > table + pre,' +
+       '.content > table + blockquote'
+     ).forEach(function(e) {
+       // Annotate classes for the left and right items that are "resynced".
+       // This allows styling them differently. Maybe more top margins.
+       e.className += 'flatdoc-synced-up-right';
+       if(e.previousSibling) {
+          e.previousSibling.className += 'flatdoc-synced-up-left';
+       }
+     })
+    var onAllImagesLoaded = function() {
+      $("h2, h3").scrollagent( function(cid, pid, currentElement, previousElement) {
+        if (pid) {
+         $("[href='#"+pid+"']").removeClass('active');
+        }
+        if (cid) {
+         $("[href='#"+cid+"']").addClass('active');
+        }
+      });
+      $('.menu a').anchorjump();
+      // Rejump after images have loaded
+      $.anchorjump(window.location.hash, {speed: 0});
+      /**
+       * If you add a style="visibility:hidden" to your document body, we will clear
+       * the style after the styles have been injected. This avoids a flash of
+       * unstyled content.
+       * Only after scrolling and loading a stable page with all styles, do we
+       * reenable visibility.
+       */
+      document.body.style="";
+    };
 
- $document.on('flatdoc:ready', function() {
-    $("h2, h3").scrollagent({parent: $(document.body)}, function(cid, pid, currentElement, previousElement) {
-      if (pid) {
-       $("[href='#"+pid+"']").removeClass('active');
+    var imageCount = $('img').length;
+    var nImagesLoaded = 0;
+    // Wait for all images to be loaded by cloning and checking:
+    // https://cobwwweb.com/wait-until-all-images-loaded
+    // Thankfully browsers cache images.
+    function onOneImageLoaded(loadedEl) {
+      nImagesLoaded++;
+      if (nImagesLoaded == imageCount) {
+        onAllImagesLoaded();
       }
-      if (cid) {
-       $("[href='#"+cid+"']").addClass('active');
-      }
+    }
+    $('img').each(function(_i, imgEl) {
+      $('<img>').on('load', onOneImageLoaded).attr('src', $(imgEl).attr('src'));
     });
   });
 
@@ -21,8 +94,29 @@
    * Anchor jump links.
    */
   $document.on('flatdoc:ready', function() {
-    $('.menu a').anchorjump();
+    // $('.menu a').anchorjump();
   });
+
+  $document.on('flatdoc:ready', function() {
+    if (typeof mediumZoom !== 'undefined') {
+      mediumZoom(document.querySelectorAll('.content img'), {
+        scrollOffset: 20,
+        container: document.body,
+        margin: 24,
+        background: '#ffffff',
+      });
+      document.querySelectorAll('.content img').forEach(function(img) {
+        var parent = img.parentElement;
+        if (parent && parent.tagName.toUpperCase() === 'P') {
+          // Allows targeting css for containers of images
+          // since has() selector is not yet supported in css
+          parent.className += ' imageContainer';
+        }
+      });
+    }
+  });
+
+
 
   /*
    * Title card.
@@ -48,75 +142,7 @@
        .trigger('resize.title-card');
   });
 
-   
-  /**
-   * Remove any nodes that are not needed once rendered. This way when generating
-   * a pre-rendered `.rendered.html`, they won't become part of the bundle, when
-   * that rendered page is turned into a `.html` bundle. They have served their
-   * purpose. Add `class='removeFromRenderedPage'` to anything you want removed
-   * once used to render the page. (Don't use for script tags that are needed for
-   * interactivity).
-   */
-  $document.on('flatdoc:ready', function() {
-    $('.removeFromRenderedPage').each(function(i, e) {
-      e.parentNode.removeChild(e);
-    });
-  });
-   
-  /**
-   * If you add a style="visibility:hidden" to your document body, we will clear
-   * the style after the styles have been injected. This avoids a flash of
-   * unstyled content.
-   */
-  $document.on('flatdoc:ready', function() {
-    document.body.style="";
-  });
 
-  /**
-   * If you add a style="visibility:hidden" to your document body, we will clear
-   * the style after the styles have been injected. This avoids a flash of
-   * unstyled content.
-   */
-  $document.on('flatdoc:ready', function() {
-    document.body.style="";
-  });
-
-   
-  /**
-   * See documentation for `continueRight` css class in style.styl.
-   */
-  $document.on('flatdoc:ready', function() {
-     document.querySelectorAll(
-        '.content > p + pre,' +
-        '.content > p + blockquote,' +
-        '.content > ul + pre,' +
-        '.content > ul + blockquote,' +
-        '.content > ol + pre,' +
-        '.content > ol + blockquote,' +
-        '.content > h1 + pre,' +
-        '.content > h1 + blockquote,' +
-        '.content > h2 + pre,' +
-        '.content > h2 + blockquote,' +
-        '.content > h3 + pre,' +
-        '.content > h3 + blockquote,' +
-        '.content > h4 + pre,' +
-        '.content > h4 + blockquote,' +
-        '.content > h5 + pre,' +
-        '.content > h5 + blockquote,' +
-        '.content > h6 + pre,' +
-        '.content > h6 + blockquote,' +
-        '.content > table + pre,' +
-        '.content > table + blockquote'
-      ).forEach(function(e) {
-        // Annotate classes for the left and right items that are "resynced".
-        // This allows styling them differently. Maybe more top margins.
-        e.className += 'flatdoc-synced-up-right';
-        if(e.previousSibling) {
-           e.previousSibling.className += 'flatdoc-synced-up-left';
-        }
-      })
-  });
-  
   $(document).on('flatdoc:ready', function() {
     $("#misc, #basic").remove();
 
@@ -136,7 +162,7 @@
       }
     });
   });
-  
+
 
   /*
    * Sidebar stick.
@@ -232,7 +258,7 @@
           var el = offset.el;
           var relToViewport = offset.el.getBoundingClientRect().top;
           if(relToViewport > 0 && relToViewport < height / 2) {
-            latest = offset; 
+            latest = offset;
             break;
           }
         }
@@ -294,7 +320,9 @@
 
     function onClick(e) {
       var $a = $(e.target).closest('a');
-      if (e.ctrlKey || e.metaKey || e.altKey || $a.attr('target')) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || $a.attr('target')) {
+        return;
+      }
 
       e.preventDefault();
       var href = $a.attr('href');

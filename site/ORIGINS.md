@@ -47,4 +47,7 @@ Flatdoc vendors marked (markdown parsing library) inside of flatdoc.js
 https://github.com/markedjs/marked
 It is licensed under MIT (see the repo for license).
 
-
+# Beach Images:
+Credit Lance Aspser:
+https://unsplash.com/photos/W785zpEXZZo
+https://unsplash.com/photos/woDxDNvpmdk

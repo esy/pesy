@@ -1,5 +1,5 @@
 {
-  "name": "Refresh",
+  "name": "Reload",
   "description": "Fork of the wonderful Flatdoc",
   "keywords": [
     "documentation",
@@ -13,14 +13,14 @@
   },
   "scripts": {
     "test": "mocha",
-    "bundle": "node ./Refresh.js bundle"
+    "bundle": "node ./Reload.js bundle"
   },
-  "main": "Refresh.js",
+  "main": "Reload.js",
   "devDependencies": {
     "mocha": "1.10.0",
     "chai": "1.6.0",
     "jsdom": "*",
-    "uglify-js": "2.3.6",
+    "uglify-js": "2.6.0",
     "stylus": "0.46.3",
     "nib": "0.9.1",
     "commander": "1.1.1",
