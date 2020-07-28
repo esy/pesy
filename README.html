@@ -1,4 +1,4 @@
-[ vim: set filetype=Markdown: ]: # (<script src="site/ReFresh.js"> </script>)
+[ vim: set filetype=Markdown: ]: # (<script src="site/Reload.js"> </script>)
 
 
 # pesy
@@ -13,7 +13,7 @@ workflow using the package.json itself.
 
 ` npm install -g pesy`
 
-## Why is pesy?
+## Why pesy?
 `esy` is driven by a package.json to bring the familiar NPM workflow
 to the native world of Reason/OCaml. `pesy` takes this further by
 adopting NPM conventions to configure the build.`esy`'s package.json
@@ -37,7 +37,7 @@ cd my-new-project/
 pesy
 ```
 
-### Adding a dependency to your project
+### Adding project dependencies
 
 Say, we need `@opam/yojson` and `@reason-native/console` in `App.re`.
 
@@ -54,6 +54,7 @@ package.json.
   }
 }
 ```
+<continueRight/>
 
 Run `esy pesy` (once). Run `esy` after that to create builds.
 
@@ -88,14 +89,12 @@ with `pesy` feels like.
 Pesy as accepts package.json as input and producing dune files as output.
 
 ```
-
-                  +----------------+
-                  |                |
-package.json ---> |      pesy      +  --->  dune files
-                  |                |
-                  +----------------+
-
+                  +--------+
+package.json ---> |  pesy  | +--->  dune files
+                  +--------+
 ```
+
+<continueRight/>
 
 Note that not all of Dune's features are supported in pesy (PRs
 welcome). `pesy` doesn't intend to duplicate Dune's efforts - it's
@@ -104,7 +103,7 @@ a NPM friendly interface to Dune so that newcomers can quickly get
 started, without confusing themselves with the library vs packages
 nuances.
 
-## Namespace collison
+## Namespacing
 
 Every library, as we know, exposes a namespace/module under which it's APIs are
 available. However, as package authors, it can hard to make sure one
@@ -145,7 +144,7 @@ would consume it as follows
 ```
 
 And if you were consuming this package (after having published to
-npm), you can import it as follows
+npm), you can import it as follows:
 
 ```json
 {
@@ -159,40 +158,45 @@ npm), you can import it as follows
   }
 ```
 
+<continueRight/>
+
 With the new NPM like conventions, pesy automatically handles the
 namespace for you so that we don't have to worry about the nuances of
 a package and a library during development. 
 
 
-## Commiting the dune files 🐫
+## Commiting the dune files
 
 While dune files can be thought of as generated artifacts,
 we strongly recommended that you always commit them.
 
+> Note: You should always commit the generated dune files before publishing a
+> package (Eject them).
+
 In case, you need to re-generate them, run `esy pesy` (or `esy
 @mysandbox pesy`) if you are using `esy` sandboxes.
 
-### Ejecting:
+#### Ejecting:
 
 It is always possible to eject out of pesy config by running `esy pesy
 eject ./subpackage-path`
 
-## CI and Warming up local cache
+## CI & local cache Warming up
 
-Compilation artifacts built on the CI can be downloaded by `pesy
-warmup`.
-
-At the moment, we only support Azure Pipelines can be configured as
-follows.
+Compilation artifacts built on the CI can be downloaded by `pesy warmup`.  At
+the moment, we only support Azure Pipelines can be configured as follows.
 
 ```json
 {
   "pesy": {
-    "azure-project": "<azure-project>/<azure-pipeline-name>",
-    "github": "<github-org>/<github-repo>"
+    "azure-project":
+      "<azure-project>/<azure-pipeline-name>",
+    "github":
+      "<github-org>/<github-repo>"
   }
 }
 ```
+<continueRight/>
 
 This will fetch appropriate artifacts compiled for the current
 machine. Note however, the best way to get this feature to work is to
@@ -201,7 +205,7 @@ files. `pesy` assumes that the artifact zip file names and/or paths
 haven't changed.
 
 
-### How it works
+#### How it works
 Compilation artifacts created by `esy` are relocatable - since `esy`
 sandboxes isolated, all the dependencies are accounted for and each
 dependency is loaded from a path with a fixed-length prefix. Such
@@ -211,7 +215,7 @@ machine. And `esy` provides all the low level command to do this out of
 the box. `pesy` simply provides a convenient wrapper that drives them.
 
 ## Publishing and Consuming from NPM
-### Publishing libraries
+#### Publishing libraries
 
 Easiest way to get started with distributing you library is to publish
 the source to NPM. 
@@ -229,11 +233,11 @@ This would have bootstrapped a project with the default template with
 
 Let's publish it
 
-```
+```sh
 $ npm publish
 ```
 
-### Consuming `foo-lib`
+#### Consuming `foo-lib`
 
 Let quickly create a new project, `bar` and add `foo`.
 
@@ -256,7 +260,7 @@ We can now require `foo`
 
 And then edit Utils.re
 
-```js
+```reason
 let foo = () => {
   FooLib.Util.foo();
   print_endline("This is from bar");
@@ -270,13 +274,13 @@ Hello from foo!
 This is from bar
 ```
 
-## Templates (experimental)
+## Templates [experimental]
 
-### Usage
+#### Usage
 
 To use a custom template run `pesy --template=github:your-name/your-pesy-template`
   
-### Creating your own template
+#### Creating your own template
 
 *This is a experimental feature that could see a lot of churn. We
 request you to watch the issue tracker for updates.*
@@ -285,14 +289,25 @@ It works by downloading a git repo and then replacing special strings
 in filenames and files inside the repo. The special strings are
 currently these: 
 
-| In filename                      | In contents                | Replaced with              |
-| -------------------------------- | -------------------------- | -------------------------- |
-| \_\_PACKAGE_NAME\_\_             | <PACKAGE_NAME>             | package_name_kebab         |
-| \_\_PACKAGE_NAME_FULL\_\_        | <PACKAGE_NAME_FULL>        | package_name_kebab         |
-| \_\_PACKAGE_NAME_UPPER_CAMEL\_\_ | <PACKAGE_NAME_UPPER_CAMEL> | PackageNameUpperCamelCase  |
-| N/A                              | \<VERSION\>                | version                    |
-| N/A                              | <PUBLIC_LIB_NAME>          | package_name_kebab/library |
-| N/A                              | <TEST_LIB_NAME>            | package_name_kebab/test    |
+###### In file names:
+
+| In filename                      |  Replaced with                |
+| -------------------------------- |  ---------------------------- |
+| `__PACKAGE_NAME__`               |  `package_name`               |
+| `__PACKAGE_NAME_FULL__`          |  `package_name`               |
+| `__PACKAGE_NAME_UPPER_CAMEL__`   |  `PackageName`                |
+
+
+###### In file content:
+
+| In contents                  | Replaced with                |
+| ---------------------------- | ---------------------------- |
+| `<PACKAGE_NAME>`             | `package_name`               |
+| `<PACKAGE_NAME_FULL>`        | `package_name`               |
+| `<PACKAGE_NAME_UPPER_CAMEL>` | `PackageName`                |
+| `<VERSION>`                  | `version`                    |
+| `<PUBLIC_LIB_NAME>`          | `package_name/library`       |
+| `<TEST_LIB_NAME>`            | `package_name/test`          |
 
 Best way to get started creating a new template is to download
 https://github.com/esy/pesy-reason-template and work on it. Any
@@ -307,8 +322,7 @@ Configuration that applies to subpackages that create binary
 executables. Note that these executables can be ocaml bytecode or
 native binaries (ELF/Mach/PE) 
 
-#### bin
-###### *type: string*
+#### bin : `string`
 A subpackage produces binary when it contains a `bin` property. 
 
 ```json
@@ -320,10 +334,12 @@ A subpackage produces binary when it contains a `bin` property.
   }
 }
 ```
-[A working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/simple-bin/package.json)
 
-#### modes
-###### *type: array(string)*
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/simple-bin/package.json)
+
+#### modes : `array(string)`
 An array of [advanced linking
 modes](https://dune.readthedocs.io/en/latest/dune-files.html?highlight=modules_without_implementation#linking-modes). Each
 string should be of the form "`compilation-mode` `binary-kind`" where
@@ -341,41 +357,39 @@ one of c, exe, object, shared_object.
 }
 ```
 
-[A working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/bin-modes/package.json)
+<continueRight/>
 
-#### name (override)
-###### *type: string*
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/bin-modes/package.json)
+
+#### name (override) : `string`
 A string that maps to Dune's `public_name`. Usually unnecessary (as
 `bin` property takes care of it) and must only be used to override. 
 
-## main (override)
-#### *type: string*
+#### main (override) : `string`
 A string that maps to Dune's `name`. Usually unnecessary (as `bin`
 property takes care of it) and must only be used to override the entry
 point. 
 
 ### Libraries
 
-#### modes
-###### *type: array(string)*
+#### modes : `array(string)`
 
 `modes` can be used to configure the compilation target - [native](https://caml.inria.fr/pub/docs/manual-ocaml/native.html) or
 [bytecode](https://caml.inria.fr/pub/docs/manual-ocaml/comp.html) An
 array of string, any of `byte`, `native`, `best` 
 
-##### `byte` 
+##### `"byte"` 
 This mode generates byte code output
 
-##### `native`
+##### `"native"`
 This mode generates native output
 
-##### `best`
-Sometimes it may not be obvious if native compilation is
-supported on a machine. In such circumstances, use `best` and
-`native` will be picked for you if it's available. Else, it'll be `byte`
+##### `"best"`
+Sometimes it may not be obvious if native compilation is supported on a
+machine. In such circumstances, use `"best"` and `"native"` will be picked for
+you if it's available. Else, it'll be `"byte"`
 
-#### cNames
-###### *type: array(string)*
+#### cNames : `array(string)`
 When writing C stubs to FFI into a library, simply mention the file
 name (without the `.c` extension) in the `cNames` field.
 
@@ -388,12 +402,14 @@ name (without the `.c` extension) in the `cNames` field.
   }
 }
 ```
-[A working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/cNames/package.json)
+
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/cNames/package.json)
 
 ### Config supported by both libraries and binaries
 
-#### imports
-###### *type: array(string)*
+#### imports : `array(string)`
 
 `imports` can be used to import a library (from a subpackage or an
 external npm/opam package) and utilise the namespace of the imported
@@ -458,7 +474,9 @@ We can also import other subpackages in the project.
 }
 ```
 
-[A working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/imports/package.json)
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/imports/package.json)
 
 #### Compiler flags
 ###### All of type *list(string)*
@@ -470,17 +488,14 @@ We can also import other subpackages in the project.
 
 
 
-#### Preprocessor flags
-###### *type:list(string)*
+#### Preprocessor flags : `list(string)`
 
 `preprocess` accepts options needed to pass the source files via a
 preprocessor first. When using custom syntax not natively supported in
 the compiler, we pass the sources in a subpackage via a preprocessor
 first.
 
-Example,
-
-Say we'd like to use `let%lwt` syntax for our `Lwt` promises
+For example, suppose we'd like to use `let%lwt` syntax for our `Lwt` promises
 
 ```reason
 
@@ -488,8 +503,8 @@ let%lwt foo = Lwt.return("foo");
 print_endline(foo);
 
 // instead of 
-
-Lwt.return >>= (foo => print_endline(foo); Lwt.return())
+Lwt.return >>=
+  (foo => print_endline(foo); Lwt.return())
 ```
 
 We specify `lwt_ppx` in `pps preprocess`
@@ -504,10 +519,12 @@ We specify `lwt_ppx` in `pps preprocess`
   }
 }
 ```
-[A working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/preprocess/package.json)
 
-#### includeSubdirs
-###### *type: "no"|"unqualified"*
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/preprocess/package.json)
+
+#### includeSubdirs : `string = "no"|"unqualified"`
 
 Default is "no", and changing to "unqualified" will compile modules at
 deeper directories.
@@ -519,8 +536,7 @@ the options above are not enough. Use `rawBuildConfig` to add
 options in a given library or binary. Use `rawBuildConfigFooter` to
 add config to the footer.
 
-##### rawBuildConfig
-###### *type: list(string)*
+##### rawBuildConfig : `list(string)`
 
 Example
 
@@ -532,32 +548,35 @@ Example
   }
 }
 ```
-##### rawBuildConfigFooter
-###### *type: list(string)*
+##### rawBuildConfigFooter : `list(string)`
 
 Example
 
 ```json
 {
   "src": {
-    "rawBuildConfigFooter": [ "(install (section share_root) (files (plaintext.txt as asset.txt)))" ]
+    "rawBuildConfigFooter": [
+      "(install (section share_root) (files (plaintext.txt as asset.txt)))"
+    ]
   }
 }
 ```
 
-[A working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/raw/package.json)
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/raw/package.json)
   
 ## Tutorials
   
-### Simple native example
-### CLI Apps
-### Web Development with Morph
+#### Simple native example
+#### CLI Apps
+#### Web Development with Morph
   
 ## Development
 
 Clone the repo and run `esy` on it.
 
-### e2e tests
+#### e2e tests
 
 `./_build/install/default/bin` would contain (after running `esy`) `Runner.exe`. `Runner.exe` looks for `PESY_CLONE_PATH` variable in the environment to find `pesy` source. Set it to the path where the project was cloned.
 
@@ -584,5 +603,3 @@ globally (as on user's machines).
   - It expects an array of strings, each string being a separate line in the
     generated config.
 - Support new properties `modes` for binaries and libraries `list(string)`.
-
-    
