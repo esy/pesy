@@ -1,0 +1,605 @@
+[ vim: set filetype=Markdown: ]: # (<script src="site/Reload.js"> </script>)
+
+
+# pesy
+
+`pesy` is a command line tool to assist with your native Reason/OCaml
+workflow using the package.json itself.
+
+1. Quickly bootstrap a new Reason project
+2. Configure your builds
+
+## Installation
+
+` npm install -g pesy`
+
+## Why pesy?
+`esy` is driven by a package.json to bring the familiar NPM workflow
+to the native world of Reason/OCaml. `pesy` takes this further by
+adopting NPM conventions to configure the build.`esy`'s package.json
+first approach in creating developer sandboxes brings interesting
+possibilities to the table. `pesy` leverages on those features to make
+native development both convenient and familiar. 
+
+`pesy` provides 
+
+1. A bootstrapper script to quickly create a project template
+2. An alternative JSON syntax around Dune that is NPM like
+3. Built in tasks that take full advantages of esy's capabilities
+
+## Getting started
+### Creating a new project
+
+`pesy` can quickly bootstrap a basic native Reason/OCaml project.
+
+```sh
+cd my-new-project/
+pesy
+```
+
+### Adding project dependencies
+
+Say, we need `@opam/yojson` and `@reason-native/console` in `App.re`.
+
+Place `App.re` in a folder (say, `bin/`?) and add the following to you
+package.json. 
+
+```json
+"buildDirs": {
+  "bin": {
+    "imports": [
+	  "Json = require('@opam/yojson')",
+	  "Console = require('@reason-native/console/lib')"
+	]
+  }
+}
+```
+<continueRight/>
+
+Run `esy pesy` (once). Run `esy` after that to create builds.
+
+`pesy` abstracts library identifiers (in this case `yojson` and
+`console.lib`) in file paths conceptually. Use native dependencies
+from OCaml like you did with NPM!
+
+### Where pesy shines
+However, `pesy`'s is truly useful for frameworks that need
+a lot dependencies and configuration. Ex: Morph and Revery 
+
+```sh
+pesy --template pesy/template-revery --directory my-new-project
+```
+
+If you are authoring a framework, create a template like
+[`pesy/template-revery`](https://github.com/pesy/template-revery) and
+run the project on the CI with a setup that `pesy` creates for you.
+
+You users get cached CI artifacts that will let can hydrate their
+local `esy` cache avoid long wait times! See [Templates](#pesy-templates-experimental-creating-your-own-template) to see how
+to create such templates.
+
+### Looking for a tutorial?
+Checkout [A simple native Reason project with
+pesy](#pesy-simple-native-example) to get an idea of what developing
+with `pesy` feels like. 
+
+
+## Relation to Dune
+
+Pesy as accepts package.json as input and producing dune files as output.
+
+```
+                  +--------+
+package.json ---> |  pesy  | +--->  dune files
+                  +--------+
+```
+
+<continueRight/>
+
+Note that not all of Dune's features are supported in pesy (PRs
+welcome). `pesy` doesn't intend to duplicate Dune's efforts - it's
+meant to compliment it. For simple use cases, `pesy` wants to provide
+a NPM friendly interface to Dune so that newcomers can quickly get
+started, without confusing themselves with the library vs packages
+nuances.
+
+## Namespacing
+
+Every library, as we know, exposes a namespace/module under which it's APIs are
+available. However, as package authors, it can hard to make sure one
+is not using a namespace already taken by another package (Otherwise
+it could lead to collisions). Pesy works around this by assigning the library
+the upper camelcase of the root package name and directory the
+library/sub-package resides in. 
+
+Example: if a package.json looks like this 
+
+```json
+{
+  "name": "@myscope/foo",
+  "buildDirs": {
+    "library": { ... }
+  }
+}
+```
+
+Then, subpackage `library` takes a namespace of
+`MyScopeFooLibrary`. As a user, however, you shouldn't have to worry
+much about yourself, since you can specify how you'd like to import
+subpackages (and packages). In the above example, another subpackage
+would consume it as follows
+
+```json
+{
+  "name": "@myscope/foo",
+  "buildDirs": {
+    "library": { ... },
+    "anotherLibrary": {
+      "imports": [
+        "ThatOtherLibrary = require('@myscope/foo/library')"
+      ]
+    }
+  }
+}
+```
+
+And if you were consuming this package (after having published to
+npm), you can import it as follows:
+
+```json
+{
+  "name": "bar",
+  "buildDirs": {
+    "library": {
+      "imports": [
+        "ThatFooLibrary = require('@myscope/foo/library')"
+      ]
+    }
+  }
+```
+
+<continueRight/>
+
+With the new NPM like conventions, pesy automatically handles the
+namespace for you so that we don't have to worry about the nuances of
+a package and a library during development. 
+
+
+## Commiting the dune files
+
+While dune files can be thought of as generated artifacts,
+we strongly recommended that you always commit them.
+
+> Note: You should always commit the generated dune files before publishing a
+> package (Eject them).
+
+In case, you need to re-generate them, run `esy pesy` (or `esy
+@mysandbox pesy`) if you are using `esy` sandboxes.
+
+#### Ejecting:
+
+It is always possible to eject out of pesy config by running `esy pesy
+eject ./subpackage-path`
+
+## CI & local cache Warming up
+
+Compilation artifacts built on the CI can be downloaded by `pesy warmup`.  At
+the moment, we only support Azure Pipelines can be configured as follows.
+
+```json
+{
+  "pesy": {
+    "azure-project":
+      "<azure-project>/<azure-pipeline-name>",
+    "github":
+      "<github-org>/<github-repo>"
+  }
+}
+```
+<continueRight/>
+
+This will fetch appropriate artifacts compiled for the current
+machine. Note however, the best way to get this feature to work is to
+use cache publish and restore mechanism provided bootstrapped
+files. `pesy` assumes that the artifact zip file names and/or paths
+haven't changed.
+
+
+#### How it works
+Compilation artifacts created by `esy` are relocatable - since `esy`
+sandboxes isolated, all the dependencies are accounted for and each
+dependency is loaded from a path with a fixed-length prefix. Such
+artifacts can be built on one machine and used on other provided the
+prefixes are rewritten to reflect the updated path on the new
+machine. And `esy` provides all the low level command to do this out of
+the box. `pesy` simply provides a convenient wrapper that drives them.
+
+## Publishing and Consuming from NPM
+#### Publishing libraries
+
+Easiest way to get started with distributing you library is to publish
+the source to NPM. 
+
+Let's take a look at an example.
+
+Consider a base package `foo` that you created and distributed on NPM. And let's assume, `bar` is the package that consumes `foo`.
+
+```sh
+$ pesy --directory foo-lib
+```
+
+This would have bootstrapped a project with the default template with
+`Util.re` in the `library/` folder.
+
+Let's publish it
+
+```sh
+$ npm publish
+```
+
+#### Consuming `foo-lib`
+
+Let quickly create a new project, `bar` and add `foo`.
+
+```sh
+$ pesy --directory bar
+$ esy add foo-lib
+```
+
+We can now require `foo`
+
+```diff
+  "buildDirs": {
+    "library": {
+      "imports": [
++        "FooLib = require('foo-lib/library')"
+      ]
+    }
+  }
+```
+
+And then edit Utils.re
+
+```reason
+let foo = () => {
+  FooLib.Util.foo();
+  print_endline("This is from bar");
+};
+```
+
+```sh
+$ esy
+$ esy start
+Hello from foo!
+This is from bar
+```
+
+## Templates [experimental]
+
+#### Usage
+
+To use a custom template run `pesy --template=github:your-name/your-pesy-template`
+  
+#### Creating your own template
+
+*This is a experimental feature that could see a lot of churn. We
+request you to watch the issue tracker for updates.*
+
+It works by downloading a git repo and then replacing special strings
+in filenames and files inside the repo. The special strings are
+currently these: 
+
+###### In file names:
+
+| In filename                      |  Replaced with                |
+| -------------------------------- |  ---------------------------- |
+| `__PACKAGE_NAME__`               |  `package_name`               |
+| `__PACKAGE_NAME_FULL__`          |  `package_name`               |
+| `__PACKAGE_NAME_UPPER_CAMEL__`   |  `PackageName`                |
+
+
+###### In file content:
+
+| In contents                  | Replaced with                |
+| ---------------------------- | ---------------------------- |
+| `<PACKAGE_NAME>`             | `package_name`               |
+| `<PACKAGE_NAME_FULL>`        | `package_name`               |
+| `<PACKAGE_NAME_UPPER_CAMEL>` | `PackageName`                |
+| `<VERSION>`                  | `version`                    |
+| `<PUBLIC_LIB_NAME>`          | `package_name/library`       |
+| `<TEST_LIB_NAME>`            | `package_name/test`          |
+
+Best way to get started creating a new template is to download
+https://github.com/esy/pesy-reason-template and work on it. Any
+changes can be tested with `pesy test-template`.
+
+## Supported Dune Config
+This is reference guide explaining the config `pesy` supports.
+
+### Binaries
+
+Configuration that applies to subpackages that create binary
+executables. Note that these executables can be ocaml bytecode or
+native binaries (ELF/Mach/PE) 
+
+#### bin : `string`
+A subpackage produces binary when it contains a `bin` property. 
+
+```json
+{
+  "buildDirs": {
+    "src": {
+      "bin": "Main.re"
+    }
+  }
+}
+```
+
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/simple-bin/package.json)
+
+#### modes : `array(string)`
+An array of [advanced linking
+modes](https://dune.readthedocs.io/en/latest/dune-files.html?highlight=modules_without_implementation#linking-modes). Each
+string should be of the form "`compilation-mode` `binary-kind`" where
+`compilation-mode` is one byte, native or best and `binary-kind` is
+one of c, exe, object, shared_object. 
+
+```json
+{
+  "buildDirs": {
+    "src": {
+	  "bin": "Foo.re",
+	  "modes": [ "native", "exe"] 
+	}
+  }
+}
+```
+
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/bin-modes/package.json)
+
+#### name (override) : `string`
+A string that maps to Dune's `public_name`. Usually unnecessary (as
+`bin` property takes care of it) and must only be used to override. 
+
+#### main (override) : `string`
+A string that maps to Dune's `name`. Usually unnecessary (as `bin`
+property takes care of it) and must only be used to override the entry
+point. 
+
+### Libraries
+
+#### modes : `array(string)`
+
+`modes` can be used to configure the compilation target - [native](https://caml.inria.fr/pub/docs/manual-ocaml/native.html) or
+[bytecode](https://caml.inria.fr/pub/docs/manual-ocaml/comp.html) An
+array of string, any of `byte`, `native`, `best` 
+
+##### `"byte"` 
+This mode generates byte code output
+
+##### `"native"`
+This mode generates native output
+
+##### `"best"`
+Sometimes it may not be obvious if native compilation is supported on a
+machine. In such circumstances, use `"best"` and `"native"` will be picked for
+you if it's available. Else, it'll be `"byte"`
+
+#### cNames : `array(string)`
+When writing C stubs to FFI into a library, simply mention the file
+name (without the `.c` extension) in the `cNames` field.
+
+```json
+{
+  "buildDirs": {
+    "src": {
+      "cNames": ["my-stub1", "my-stub-2"]
+	}
+  }
+}
+```
+
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/cNames/package.json)
+
+### Config supported by both libraries and binaries
+
+#### imports : `array(string)`
+
+`imports` can be used to import a library (from a subpackage or an
+external npm/opam package) and utilise the namespace of the imported
+library.
+
+```json
+{
+  "buildDirs": {
+    "src": {
+	  "imports": [
+	    "Console = require('console')"
+	  ]
+	}
+  }
+}
+```
+
+The above config makes a namespace `Console` available inside the
+subpackage `src`. Now any `.re` file inside `src` can use the
+`console` library.
+
+```reason
+// src/SomeFile.re
+let foo = () => Console.log("Hello, world")
+```
+
+We can also import a package/subpackage under a different namespace
+
+```json
+{
+  "buildDirs": {
+    "src": {
+	  "imports": [
+	    "NotConsole = require('console')"
+	  ]
+	}
+  }
+}
+```
+
+And we can import (oddly confusing) `NotConsole` from in `src`
+
+```reason
+// src/SomeFile.re
+let foo = () => NotConsole.log("Hello, world");
+```
+
+We can also import other subpackages in the project.
+
+```json
+{
+  "buildDirs": {
+    "src": {
+      "bin": "Main.re",
+      "imports": [
+        "FooConsole = require('console/lib')",
+        "MyOwnLibrary = require('../my-own-lib')"
+      ]
+    },
+    "my-own-lib": {}
+  }
+}
+```
+
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/imports/package.json)
+
+#### Compiler flags
+###### All of type *list(string)*
+
+- `flags` - These flags will be passed to both the bytecode compiler and native compiler
+- `ocamlcFlags` - These will be passed to `ocamlc` - the bytecode compiler
+- `ocamloptFlags` - These will be passed to `ocamlopt` - the native compiler
+- `jsooFlags` - These will be passed to `jsoo` compiler - the [javascript compiler](http://ocsigen.org/js_of_ocaml/3.5.1/manual/overview). *Note: This is unrelated to [Bucklescript](https://bucklescript.github.io/)*
+
+
+
+#### Preprocessor flags : `list(string)`
+
+`preprocess` accepts options needed to pass the source files via a
+preprocessor first. When using custom syntax not natively supported in
+the compiler, we pass the sources in a subpackage via a preprocessor
+first.
+
+For example, suppose we'd like to use `let%lwt` syntax for our `Lwt` promises
+
+```reason
+
+let%lwt foo = Lwt.return("foo");
+print_endline(foo);
+
+// instead of 
+Lwt.return >>=
+  (foo => print_endline(foo); Lwt.return())
+```
+
+We specify `lwt_ppx` in `pps preprocess`
+
+```json
+{
+  "buildDirs": {
+    "src": {
+	  "bin": "Main.re",
+	  "preprocess": ["pps", "lwt_ppx"]
+	}
+  }
+}
+```
+
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/preprocess/package.json)
+
+#### includeSubdirs : `string = "no"|"unqualified"`
+
+Default is "no", and changing to "unqualified" will compile modules at
+deeper directories.
+
+#### Escape hatches for unsupported Dune config
+
+It's always possible that there are features Dune offers are needed and
+the options above are not enough. Use `rawBuildConfig` to add
+options in a given library or binary. Use `rawBuildConfigFooter` to
+add config to the footer.
+
+##### rawBuildConfig : `list(string)`
+
+Example
+
+```json
+{
+  "src": {
+    "rawBuildConfig": [ "(libraries unix)" ],
+    "bin": "Main.re"
+  }
+}
+```
+##### rawBuildConfigFooter : `list(string)`
+
+Example
+
+```json
+{
+  "src": {
+    "rawBuildConfigFooter": [
+      "(install (section share_root) (files (plaintext.txt as asset.txt)))"
+    ]
+  }
+}
+```
+
+<continueRight/>
+
+Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/raw/package.json)
+  
+## Tutorials
+  
+#### Simple native example
+#### CLI Apps
+#### Web Development with Morph
+  
+## Development
+
+Clone the repo and run `esy` on it.
+
+#### e2e tests
+
+`./_build/install/default/bin` would contain (after running `esy`) `Runner.exe`. `Runner.exe` looks for `PESY_CLONE_PATH` variable in the environment to find `pesy` source. Set it to the path where the project was cloned.
+
+To test if simple workflows work as expected. They assume both `esy` and `pesy` are installed
+globally (as on user's machines).
+
+## Changelog
+**version 0.4.0 (12/21/2018)**
+
+- Allow `buildDirs` to contain deeper directories such as `"path/to/my-lib": {...}"`.
+- Added support for `wrapped` property on libraries.
+- Added support for `virtualModules` and `implements` - properties for Dune
+  virtual libraries. (This will only be supported if you mark your project as
+  Dune 1.7 - not yet released).
+- Stopped using `ignore_subdirs` in new projects, instead using
+  `(dirs (:standard \ _esy))` which only works in Dune `1.6.0+`, so made new
+  projects have a lower bound of Dune `1.6.0`.
+- Support new properties `rawBuildConfig` which will be inserted at the bottom
+  of the _target_ being configured (library/executable).
+  - It expects an array of strings, each string being a separate line in the
+    generated config.
+- Support new properties `rawBuildConfigFooter` which will be inserted at the
+  bottom of the entire Dune file for the _target_ being configured.
+  - It expects an array of strings, each string being a separate line in the
+    generated config.
+- Support new properties `modes` for binaries and libraries `list(string)`.
