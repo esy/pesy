@@ -237,19 +237,19 @@ let commandOutput = (command, args) => {
 };
 
 let runCommandWithEnv = (command, args) => {
-  open /* let attach = */
-       /*   Unix.create_process_env( */
-       /*     command, */
-       /*     Array.append([|command|], args), */
-       /*     Unix.environment(), */
-       /*   ); */
-       /* let pid = attach(Unix.stdin, Unix.stdout, Unix.stderr); */
-       /* switch (Unix.waitpid([], pid)) { */
-       /* | (_, WEXITED(c)) => c */
-       /* | (_, WSIGNALED(c)) => c */
-       /* | (_, WSTOPPED(c)) => c */
-       /* }; */
-       Unix;
+  open Unix; /* let attach = */
+  /*   Unix.create_process_env( */
+  /*     command, */
+  /*     Array.append([|command|], args), */
+  /*     Unix.environment(), */
+  /*   ); */
+  /* let pid = attach(Unix.stdin, Unix.stdout, Unix.stderr); */
+  /* switch (Unix.waitpid([], pid)) { */
+  /* | (_, WEXITED(c)) => c */
+  /* | (_, WSIGNALED(c)) => c */
+  /* | (_, WSTOPPED(c)) => c */
+  /* }; */
+
   let cmd =
     String.concat(" ", Array.to_list(Array.append([|command|], args)));
   let (cout, cin, cerr) = open_process_full(cmd, Unix.environment());
@@ -295,6 +295,55 @@ let filterNone = l => {
       };
   loop(l);
   List.rev(result^);
+};
+
+let run = (~env, c, args) => {
+  let env_vars =
+    switch (env) {
+    | Some(v) => v
+    | None => Unix.environment()
+    };
+  let (readme, writeme) = Unix.pipe();
+  let pid =
+    Unix.create_process_env(
+      c,
+      Array.append([|c|], args),
+      env_vars,
+      Unix.stdin,
+      writeme,
+      Unix.stderr,
+    );
+  Unix.close(writeme);
+  let result = {contents: []};
+  let in_channel = Unix.in_channel_of_descr(readme);
+  try(
+    while (true) {
+      result.contents = [input_line(in_channel), ...result.contents];
+    }
+  ) {
+  | End_of_file => ()
+  };
+  Unix.close(readme);
+  result := List.rev(result^);
+  switch (Unix.waitpid([], pid)) {
+  | (_, WEXITED(c)) => (c, result^)
+  | (_, WSIGNALED(c)) => (c, [])
+  | (_, WSTOPPED(c)) => (c, [])
+  };
+};
+
+let run = (~env=?, cmd, args) => {
+  let (exitCode, lines) = run(~env, cmd, args);
+  if (exitCode != 0) {
+    Printf.printf(
+      "%s failed. Exit code relayed to the shell\n Exiting with (%d)...\n",
+      cmd,
+      exitCode,
+    );
+    exit(exitCode);
+  } else {
+    (exitCode, lines);
+  };
 };
 
 module JSON = JSON;

@@ -68,6 +68,170 @@ let moduleNameOf = fileName =>
 let specialCaseOpamRequires = package =>
   Str.global_replace(Str.regexp("^@opam/"), "", package);
 
+module Result = {
+  let bind = (o, f) =>
+    switch (o) {
+    | Ok(x) => f(x)
+    | Error(e) => Error(e)
+    };
+  let ( let* ) = (x, f) => bind(x, f);
+};
+
+let isValidScopeName = n => {
+  n.[0] == '@';
+};
+
+let resolveDepNameToFindlib = depName => {
+  let skipEnvVar = envVar =>
+    Array.fold_left(
+      (acc, e) =>
+        if (Str.string_match(
+              Str.regexp(Printf.sprintf("%s=.*", envVar)),
+              e,
+              0,
+            )) {
+          acc;
+        } else {
+          [e, ...acc];
+        },
+      [],
+    );
+  let list_diff = (l1, l2) => {
+    l1 |> List.filter(e => !List.mem(e, l2));
+  };
+
+  /**
+The above parses {|
+foo (version: n/a)
+foo.lib (version: n/a)
+foo.bar.lib (version: n/a)
+|}
+to
+[["foo"], ["foo", "lib"], ["foo", "bar", "lib"]]
+              */
+  let parseRelevantFindlibOutput = relevantFindlibOutputLines =>
+    relevantFindlibOutputLines
+    |> List.map(x =>
+         Str.split(Str.regexp(" "), x)
+         |> List.hd
+         |> Str.split(Str.regexp("\\."))
+       );
+  let safeSeg = name => {
+    /* Taken from esy's source */
+    let replaceAt = Str.regexp("@");
+    let replaceUnderscore = Str.regexp("_+");
+    let replaceSlash = Str.regexp("\\/");
+    let replaceDash = Str.regexp("\\-");
+    let replaceColon = Str.regexp(":");
+    name
+    |> String.lowercase_ascii
+    |> Str.global_replace(replaceAt, "")
+    |> Str.global_replace(replaceUnderscore, "__")
+    |> Str.global_replace(replaceSlash, "__s__")
+    |> Str.global_replace(replaceColon, "__c__")
+    |> Str.global_replace(replaceDash, "_");
+  };
+  let fullDepNameParts = Str.split(Str.regexp("/"), depName);
+  let (depName, remainingParts) =
+    switch (fullDepNameParts) {
+    | [] => failwith("How can this be empty?")
+    | [x] => (x, [])
+    | [x, y, ...rest] =>
+      if (isValidScopeName(x)) {
+        (x ++ "/" ++ y, rest);
+      } else {
+        (x, [y, ...rest]);
+      }
+    };
+  let process_env =
+    Unix.environment() |> skipEnvVar("ESY__ROOT_PACKAGE_CONFIG_PATH");
+  let esyfiedDepName = safeSeg(depName);
+  open Result;
+  let* ocamlpath =
+    switch (Sys.getenv_opt("OCAMLPATH")) {
+    | Some(v) => Ok(v)
+    | None => Error("OCAMLPATH not found in env")
+    };
+  let candidates =
+    Str.split(Str.regexp(Sys.unix ? ":" : ";"), ocamlpath)
+    |> List.filter_map(v =>
+         if (Str.string_match(
+               Str.regexp(".*" ++ esyfiedDepName ++ ".*"),
+               v,
+               0,
+             )) {
+           let (_exitCode, emptyOutput) =
+             run(
+               ~env=
+                 Array.of_list([
+                   "OCAMLPATH=",
+                   ...process_env |> List.filter(x => x != "OCAMLPATH"),
+                 ]),
+               "ocamlfind",
+               [|"list"|],
+             );
+           let (_exitCode, depOutput) =
+             run(
+               ~env=
+                 Array.of_list([
+                   Printf.sprintf("OCAMLPATH=%s", v),
+                   ...process_env |> List.filter(x => x != "OCAMLPATH"),
+                 ]),
+               "ocamlfind",
+               [|"list"|],
+             );
+           let relevantFindlibOutputLines = list_diff(depOutput, emptyOutput);
+           let listOfLibraryNameAsList =
+             parseRelevantFindlibOutput(relevantFindlibOutputLines);
+           /** Since the library base name (say foo) need not match the
+              npm package name, we are only going to compare the rest (["lib"], ["bar", "lib"] etc) */
+           let listOfCandidateLibraryNameAsList =
+             listOfLibraryNameAsList
+             |> List.filter_map(
+                  fun
+                  | [] => None
+                  | [_, ...rest] as libraryNameAsList =>
+                    if (rest == remainingParts) {
+                      Some(libraryNameAsList);
+                    } else {
+                      None;
+                    },
+                );
+           switch (listOfCandidateLibraryNameAsList) {
+           | [] => None
+           | candidateLibraryNameAsList =>
+             switch (candidateLibraryNameAsList) {
+             | [] => None
+             | x => Some(x |> List.map(String.concat("/")))
+             }
+           };
+         } else {
+           None;
+         }
+       )
+    |> List.flatten;
+
+  switch (candidates) {
+  | [] =>
+    Error(
+      Printf.sprintf(
+        "Sub library <base>/%s not found",
+        String.concat("/", remainingParts),
+      ),
+    )
+  | [candidate] => Ok(candidate)
+  | multipleCandidates =>
+    Error(
+      Printf.sprintf(
+        {|Multiple candidates found for %s
+         %s|},
+        depName,
+        multipleCandidates |> String.concat("\n"),
+      ),
+    )
+  };
+};
+
 let isValidBinaryFileName = fileName =>
   Str.string_match(Str.regexp("^.+\\.exe$"), fileName, 0);
 
@@ -83,10 +247,6 @@ let isBinPropertyPresent =
   fun
   | Some(_) => true
   | _ => false;
-
-let isValidScopeName = n => {
-  n.[0] == '@';
-};
 
 let stripAtTheRate = s => String.sub(s, 1, String.length(s) - 1);
 
@@ -165,12 +325,20 @@ let toPesyConf = (projectPath, rootName, pkg) => {
            <|> (
              x => x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x
            )
+           <|> resolveRelativePath
            <|> (
              x =>
                x.[0] == '@'
-                 ? x |> specialCaseOpamRequires |> doubleKebabifyIfScoped : x
+                 ? if (findIndex(doubleKebabifyIfScoped(x), rootName) != 0) {
+                     switch (x |> resolveDepNameToFindlib) {
+                     | Ok(x) => x
+                     | Error(msg) => raise(Failure(msg))
+                     };
+                   } else {
+                     x |> doubleKebabifyIfScoped;
+                   }
+                 : x
            )
-           <|> resolveRelativePath
            <|> pathToOCamlLibName,
          )
     ) {
@@ -219,10 +387,17 @@ let toPesyConf = (projectPath, rootName, pkg) => {
                |> (
                  x =>
                    x.[0] == '@'
-                     ? x |> specialCaseOpamRequires |> doubleKebabifyIfScoped
+                     ? if (findIndex(doubleKebabifyIfScoped(x), rootName)
+                           != 0) {
+                         switch (x |> resolveDepNameToFindlib) {
+                         | Ok(x) => x
+                         | Error(msg) => raise(Failure(msg))
+                         };
+                       } else {
+                         x |> doubleKebabifyIfScoped;
+                       }
                      : x
                );
-
              let exportedNamespace =
                if (findIndex(libraryAsPath, rootName) == 0) {
                  libraryAsPath
@@ -536,7 +711,15 @@ let toPesyConf = (projectPath, rootName, pkg) => {
                <|> (
                  x =>
                    x.[0] == '@'
-                     ? x |> specialCaseOpamRequires |> doubleKebabifyIfScoped
+                     ? if (findIndex(doubleKebabifyIfScoped(x), rootName)
+                           != 0) {
+                         switch (x |> resolveDepNameToFindlib) {
+                         | Ok(x) => x
+                         | Error(msg) => raise(Failure(msg))
+                         };
+                       } else {
+                         x |> doubleKebabifyIfScoped;
+                       }
                      : x
                )
                <|> resolveRelativePath
