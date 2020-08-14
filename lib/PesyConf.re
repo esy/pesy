@@ -494,16 +494,25 @@ let toPesyConf = (projectPath, rootName, pkg) => {
              );
            }),
     );
+  
+  let fromListOrString = ls => try(FieldTypes.toList(ls)) {
+    | FieldTypes.ConversionException("Expected list. Actual string") => 
+        FieldTypes.toString(ls)
+        |> Str.split(Str.regexp("[ \n\r\x0c\t]+"))
+        |> List.map(s => FieldTypes.String(s))
+    | e => raise(e)
+  };
+
   let flags =
     try(
       Some(
         JSON.member(conf, "flags")
         |> JSON.toValue
-        |> FieldTypes.toList
+        |> fromListOrString
         |> List.map(FieldTypes.toString),
       )
     ) {
-    | _ => None
+      | _ => None
     };
 
   let ocamlcFlags =
@@ -511,7 +520,7 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       Some(
         JSON.member(conf, "ocamlcFlags")
         |> JSON.toValue
-        |> FieldTypes.toList
+        |> fromListOrString
         |> List.map(FieldTypes.toString),
       )
     ) {
@@ -523,7 +532,7 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       Some(
         JSON.member(conf, "ocamloptFlags")
         |> JSON.toValue
-        |> FieldTypes.toList
+        |> fromListOrString
         |> List.map(FieldTypes.toString),
       )
     ) {
@@ -535,7 +544,7 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       Some(
         JSON.member(conf, "jsooFlags")
         |> JSON.toValue
-        |> FieldTypes.toList
+        |> fromListOrString
         |> List.map(FieldTypes.toString),
       )
     ) {
