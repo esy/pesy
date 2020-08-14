@@ -512,7 +512,7 @@ let toPesyConf = (projectPath, rootName, pkg) => {
         |> List.map(FieldTypes.toString),
       )
     ) {
-      | _ => None
+    | _ => None
     };
 
   let ocamlcFlags =
