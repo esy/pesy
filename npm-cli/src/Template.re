@@ -91,11 +91,14 @@ module Helpers: {
 open Bindings;
 open Helpers;
 let copyAndSubstitute = (templatePath, projectPath, ignoreDirs) => {
+  let ignoreDirs = ignoreDirs @ [".ci-self"]; /* Hacky! Figure a cleaner way to ignore template ci files */
+
   let ignoreDirsTbl = Hashtbl.create(ignoreDirs |> List.length);
   List.iter(
     ignoreDir => Hashtbl.add(ignoreDirsTbl, ignoreDir, true),
     ignoreDirs,
   );
+  Js.log("");
   Dir.scan(
     ignoreDirsTbl,
     src => {
@@ -103,26 +106,50 @@ let copyAndSubstitute = (templatePath, projectPath, ignoreDirs) => {
         Js.String.replace(templatePath, projectPath, src)
         |> substituteFileNames(projectPath)
         |> stripTemplateExtension;
-      Fs.isDirectory(src)
-      |> Js.Promise.then_(isDir =>
-           if (isDir) {
-             Fs.mkdir(~dryRun=false, ~p=true, dest);
-           } else {
-             Js.Promise.(
-               Fs.(
-                 readFile(. src)
-                 |> then_(b =>
-                      Buffer.toString(b)
-                      |> substituteTemplateValues(projectPath)
-                      |> Buffer.from
-                      |> resolve
-                    )
-                 |> then_(s => writeFile(. dest, s))
-               )
-             );
-           }
-         )
-      |> Js.Promise.then_(_ => ResultPromise.ok());
+
+      if (Js.String.search([%re "/azure\\-pipelines\\.ya?ml/"], src) != (-1)
+          || Js.String.search([%re "/README.md/i"], src) != (-1)) {
+        ResultPromise.ok();
+      } else {
+        Fs.isDirectory(src)
+        |> Js.Promise.then_(isDir =>
+             if (isDir) {
+               Fs.mkdir(~dryRun=false, ~p=true, dest);
+             } else {
+               Js.Promise.(
+                 Fs.(
+                   readFile(. src)
+                   |> then_(b =>
+                        Buffer.toString(b)
+                        |> substituteTemplateValues(projectPath)
+                        |> Buffer.from
+                        |> resolve
+                      )
+                   |> then_(s => writeFile(. dest, s))
+                   |> then_(_ =>
+                        if (Js.String.search([%re "/\\.lock/"], dest) == (-1)) {
+                          ("    created " |> Chalk.green)
+                          ++ (
+                            dest
+                            |> Js.String.replace(
+                                 projectPath
+                                 ++ (Process.platform == "win32" ? "\\" : "/"),
+                                 "",
+                               )
+                            |> Chalk.whiteBright
+                          )
+                          |> Js.log;
+                          resolve();
+                        } else {
+                          resolve();
+                        }
+                      )
+                 )
+               );
+             }
+           )
+        |> Js.Promise.then_(_ => ResultPromise.ok());
+      };
     },
     templatePath,
   );
@@ -311,7 +338,7 @@ $errors
         )
         >>= (() => validate(remoteTemplateStageArea))
         >>= (
-          (explicitIgnoreDirs) => {
+          explicitIgnoreDirs => {
             copyAndSubstitute(
               remoteTemplateStageArea,
               dest,
@@ -323,7 +350,7 @@ $errors
     | Path(source) =>
       validate(source)
       >>= (
-        (explicitIgnoreDirs) =>
+        explicitIgnoreDirs =>
           copyAndSubstitute(
             source,
             dest,
