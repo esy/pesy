@@ -11,7 +11,7 @@ module Kind: {
 };
 
 /** Copies a template */
-let copy: (Path.t, Path.t, list(string)) => ResultPromise.t(unit, string);
+let copyAndSubstitute: (Path.t, Path.t, list(string)) => ResultPromise.t(unit, string);
 
 /** Substitutes values in the template */
 let substitute: Path.t => ResultPromise.t(unit, string);
