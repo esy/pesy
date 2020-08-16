@@ -1,4 +1,4 @@
 EXCLUDE_QUERY_DIR
 B ../../../_build/default/vendor/cmdliner/src/.cmdliner.objs/byte
 S .
-FLG -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs -w -3-6-27-32-35 -w -a
+FLG -w -40 -w -3-6-27-32-35 -w -a

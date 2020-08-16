@@ -141,15 +141,15 @@ let run = (esy, projectPath, template, bootstrapOnly, forceCacheFetch) => {
           Path.join([|projectPath, ".ci-self"|]),
         );
       }
-    )
-    >>= (
-      _ => {
-        Js.log("");
-        Js.log("Setting up");
-        Js.log("");
-        Template.substitute(projectPath);
-      }
-    );
+    );   
+    /* >>= ( */
+    /*   _ => { */
+    /*     Js.log(""); */
+    /*     Js.log("Setting up"); */
+    /*     Js.log(""); */
+    /*     Template.substitute(projectPath); */
+    /*   } */
+    /* ); */
 
   bootstrapOnly
     ? bootstrapped
