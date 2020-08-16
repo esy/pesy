@@ -485,4 +485,98 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries lwt lwt.unix raw.lib) (preprocess (pps lwt_ppx)))\n",
     ])
   );
+
+  test("Sample config - 17", ({expect}) =>
+    expect.list(
+      testToPackages(
+        {|
+                {
+                    "name": "foo",
+                    "buildDirs": {
+                    "testlib": {
+                        "require": ["foo"],
+                        "namespace": "Foo",
+                        "name": "bar.lib",
+                        "flags": "-verbose"
+                    }
+                    }
+                }
+         |},
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (flags -verbose))\n",
+    ])
+  );
+   test("Sample config - 18", ({expect}) =>
+    expect.list(
+      testToPackages(
+        {|
+                    {
+                      "name": "foo",
+                      "buildDirs": {
+                        "testlib": {
+                          "namespace": "Foo",
+                          "name": "bar.lib",
+                          "ocamlcFlags": "-annot -c"
+                        }
+                      }
+                    }
+
+         |},
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (ocamlc_flags -annot -c))\n",
+    ])
+  );
+  test("Sample config - 19", ({expect}) =>
+    expect.list(
+      testToPackages(
+        {|
+    {
+        "name": "foo",
+        "buildDirs": {
+            "testlib": {
+                "namespace": "Foo",
+                "name": "bar.lib",
+                "ocamloptFlags": "-rectypes -nostdlib"
+            }
+        }
+    }
+
+         |},
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (ocamlopt_flags -rectypes -nostdlib))\n",
+    ])
+  );
+  test("Sample config - 20", ({expect}) =>
+    expect.list(
+      testToPackages(
+        {|
+
+                    {
+                      "name": "foo",
+                      "buildDirs": {
+                        "testlib": {
+                          "namespace": "Foo",
+                          "name": "bar.lib",
+                          "jsooFlags": "-pretty -no-inline"
+                        }
+                      }
+                    }
+
+         |},
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (js_of_ocaml -pretty -no-inline))\n",
+    ])
+  );
 });
