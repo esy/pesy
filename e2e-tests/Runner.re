@@ -350,7 +350,8 @@ let checkBootstrapper = cwd => {
           {|
 {
   "resolutions": {
-    "@pesy/esy-pesy": "<RESOLUTION_LINK>"
+    "@pesy/esy-pesy": "<RESOLUTION_LINK>",
+    "@opam/ocaml-migrate-parsetree": "1.7.3"
   }
 }
 |},
