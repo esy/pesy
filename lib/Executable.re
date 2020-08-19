@@ -38,14 +38,18 @@ module Mode = {
       | C
       | Exe
       | Object
-      | Shared_object;
+      | Shared_object
+      | JS
+      | Plugin;
 
     let toString =
       fun
       | C => "c"
       | Exe => "exe"
       | Object => "object"
-      | Shared_object => "shared_object";
+      | Shared_object => "shared_object"
+      | JS => "js"
+      | Plugin => "plugin";
 
     let ofString =
       fun
@@ -53,28 +57,64 @@ module Mode = {
       | "exe" => Exe
       | "object" => Object
       | "shared_object" => Shared_object
+      | "js" => JS
+      | "plugin" => Plugin
       | _ => raise(InvalidBinaryKind());
   };
 
-  type t = (Compilation.t, BinaryKind.t);
+  type t =
+    | BinaryKind(BinaryKind.t)
+    | Tuple(Compilation.t, BinaryKind.t)
+    | Array(list(t));
   exception InvalidExecutableMode(string);
-  let ofList = parts =>
+  let rec ofFieldTypes = parts =>
     switch (parts) {
-    | [c, b] => (Compilation.ofString(c), BinaryKind.ofString(b))
+    | FieldTypes.String(bs) =>
+      bs
+      |> Str.split(Str.regexp("[ \n\r\x0c\t]+"))
+      |> List.map(b => BinaryKind(BinaryKind.ofString(b)))
+      |> (bs => Array(bs))
+    | FieldTypes.List([FieldTypes.String(c), FieldTypes.String(b)]) =>
+      try(Tuple(Compilation.ofString(c), BinaryKind.ofString(b))) {
+      | InvalidCompilationMode () =>
+        Array([
+          BinaryKind(BinaryKind.ofString(c)),
+          BinaryKind(BinaryKind.ofString(b)),
+        ])
+      | e => raise(e)
+      }
+    | FieldTypes.List([hd, ...tl]) =>
+      Array([ofFieldTypes(hd), ...List.map(ofFieldTypes, tl)])
     | _ =>
       raise(
         InvalidExecutableMode(
           sprintf(
-            "Invalid executable mode: expected of the form (<compilation mode>, <binary_kind>). Got %s",
-            List.fold_left((a, e) => sprintf("%s %s", a, e), "", parts),
+            /* TODO: meaningful error message */
+            "Invalid executable mode: expected of the form (<compilation mode>, <binary_kind>)",
           ),
         ),
       )
     };
-  let toList = m => {
-    let (c, b) = m;
-    [Compilation.toString(c), BinaryKind.toString(b)];
-  };
+  let rec toStanza = m =>
+    switch (m) {
+    | Array(x) =>
+      x
+      |> List.map(toStanza)
+      |> (
+        xs =>
+          switch (xs) {
+          | [h] => h
+          | [_, ..._] => Stanza.createExpression(xs)
+          | _ => raise(InvalidExecutableMode("Invalid executable mode: "))
+          }
+      )
+    | Tuple(c, b) =>
+      Stanza.createExpression([
+        Stanza.createAtom(Compilation.toString(c)),
+        Stanza.createAtom(BinaryKind.toString(b)),
+      ])
+    | BinaryKind(b) => Stanza.createAtom(BinaryKind.toString(b))
+    };
 };
 type t = {
   main: string,
@@ -140,9 +180,7 @@ let toDuneStanza = (common: Common.t, e) => {
       Some(
         Stanza.createExpression([
           Stanza.createAtom("modes"),
-          Stanza.createExpression(
-            m |> Mode.toList |> List.map(Stanza.createAtom),
-          ),
+          Mode.toStanza(m),
         ]),
       )
     };

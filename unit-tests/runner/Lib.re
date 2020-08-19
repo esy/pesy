@@ -117,29 +117,29 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(executable (name Bar) (modules (:standard)) (public_name Bar.exe)\n    (libraries foo))\n",
     ])
   );
-  /* test("Sample config - 2", ({expect}) =>
+  test("Sample config - 2", ({expect, _}) =>
     expect.list(
       testToPackages(
         {|
-           {
-               "name": "foo",
-               "buildDirs": {
-               "testlib": {
-                 "require": ["foo"],
-                 "namespace": "Foo",
-                 "name": "bar.lib",
-                "modes": ["best"]
-               }
-             }
-           }
-         |},
+              {
+                  "name": "foo",
+                  "buildDirs": {
+                  "testlib": {
+                    "require": ["foo"],
+                    "namespace": "Foo",
+                    "name": "bar.lib",
+                   "modes": ["best"]
+                  }
+                }
+              }
+            |},
       )
       |> List.map(DuneFile.toString),
     ).
       toEqual([
       "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (modes best))\n",
     ])
-  ); */
+  );
   test("Sample config - 3", ({expect, _}) =>
     expect.list(
       testToPackages(
@@ -207,27 +207,27 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (wrapped false))\n",
     ])
   );
-  /* test("Sample config - 6", ({expect}) =>
+  test("Sample config - 6", ({expect, _}) =>
     expect.list(
       testToPackages(
         {|
-           {
-               "name": "foo",
-               "buildDirs": {
-               "testlib": {
-                 "bin": { "bar.exe": "Foo.re" },
-                 "modes": ["best", "c"]
-               }
-             }
-           }
-         |},
+              {
+                  "name": "foo",
+                  "buildDirs": {
+                  "testlib": {
+                    "bin": { "bar.exe": "Foo.re" },
+                    "modes": ["best", "c"]
+                  }
+                }
+              }
+            |},
       )
       |> List.map(DuneFile.toString),
     ).
       toEqual([
       "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (best c)))\n",
     ])
-  ); */
+  );
   test("Sample config - 7", ({expect, _}) =>
     expect.list(
       testToPackages(
@@ -509,7 +509,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (flags -verbose))\n",
     ])
   );
-   test("Sample config - 18", ({expect, _}) =>
+  test("Sample config - 18", ({expect, _}) =>
     expect.list(
       testToPackages(
         {|
@@ -579,20 +579,20 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (js_of_ocaml -pretty -no-inline))\n",
     ])
   );
-  /* test("Sample config - 21", ({expect}) =>
+  test("Sample config - 21", ({expect, _}) =>
     expect.list(
       testToPackages(
         {|
-           {
-               "name": "foo",
-               "buildDirs": {
-               "testlib": {
-                 "bin": { "bar.bc.js": "Foo.re" },
-                 "modes": "js"
+             {
+                 "name": "foo",
+                 "buildDirs": {
+                 "testlib": {
+                   "bin": { "bar.bc.js": "Foo.re" },
+                   "modes": "js"
+                 }
                }
              }
-           }
-         |},
+           |},
       )
       |> List.map(DuneFile.toString),
     ).
@@ -600,43 +600,43 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(executable (name Foo) (modules (:standard)) (public_name bar.bc.js)\n    (modes js))\n",
     ])
   );
-  test("Sample config - 22", ({expect}) =>
+  test("Sample config - 22", ({expect, _}) =>
     expect.list(
       /* TODO: Fix the `bin` property once there is support for multiple executables */
       testToPackages(
         {|
-           {
-               "name": "foo",
-               "buildDirs": {
-               "testlib": {
-                 "bin": { "bar.exe": "Foo.re" },
-                 "modes": "exe object shared_object"
-               }
-             }
-           }
-         |},
+                  {
+                      "name": "foo",
+                      "buildDirs": {
+                      "testlib": {
+                        "bin": { "bar.exe": "Foo.re" },
+                        "modes": "exe object shared_object"
+                      }
+                    }
+                  }
+                |},
       )
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (exe object shared_object))\n",
+      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (exe object shared_object)))\n",
     ])
   );
-  test("Sample config - 23", ({expect}) =>
+  test("Sample config - 23", ({expect, _}) =>
     expect.list(
       /* TODO: Fix the `bin` property once there is support for multiple executables */
       testToPackages(
         {|
-           {
-               "name": "foo",
-               "buildDirs": {
-               "testlib": {
-                 "bin": { "bar.exe": "Foo.re" },
-                 "modes": ["js", "plugin"]
-               }
-             }
-           }
-         |},
+                    {
+                        "name": "foo",
+                        "buildDirs": {
+                        "testlib": {
+                          "bin": { "bar.exe": "Foo.re" },
+                          "modes": ["js", "plugin"]
+                        }
+                      }
+                    }
+                  |},
       )
       |> List.map(DuneFile.toString),
     ).
@@ -644,26 +644,73 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (js plugin)))\n",
     ])
   );
-  test("Sample config - 24", ({expect}) =>
+
+  test("Sample config - 24", ({expect, _}) =>
     expect.list(
       /* TODO: Fix the `bin` property once there is support for multiple executables */
       testToPackages(
         {|
-           {
-               "name": "foo",
-               "buildDirs": {
-               "testlib": {
-                 "bin": { "bar.exe": "Foo.re" },
-                 "modes": [["byte", "exe"], ["byte", "js"]]
+             {
+                 "name": "foo",
+                 "buildDirs": {
+                 "testlib": {
+                   "bin": { "bar.exe": "Foo.re" },
+                   "modes": [["byte", "exe"], ["byte", "js"]]
+                 }
                }
              }
-           }
-         |},
+           |},
       )
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (byte exe) (byte js)))\n",
+      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes ((byte exe) (byte js))))\n",
     ])
-  ); */
+  );
+
+  test("Sample config - 25", ({expect, _}) =>
+    expect.list(
+      /* TODO: Fix the `bin` property once there is support for multiple executables */
+      testToPackages(
+        {|
+             {
+                 "name": "foo",
+                 "buildDirs": {
+                 "testlib": {
+                   "bin": { "bar.exe": "Foo.re" },
+                   "modes": ["byte", "exe"]
+                 }
+               }
+             }
+           |},
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (byte exe)))\n",
+    ])
+  );
+
+  test("Sample config - 26", ({expect, _}) =>
+    expect.list(
+      /* TODO: Fix the `bin` property once there is support for multiple executables */
+      testToPackages(
+        {|
+                    {
+                        "name": "foo",
+                        "buildDirs": {
+                        "testlib": {
+                          "bin": { "bar.exe": "Foo.re" },
+                          "modes": ["exe"]
+                        }
+                      }
+                    }
+                  |},
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes exe))\n",
+    ])
+  );
 });

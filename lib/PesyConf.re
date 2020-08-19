@@ -494,14 +494,15 @@ let toPesyConf = (projectPath, rootName, pkg) => {
              );
            }),
     );
-  
-  let fromListOrString = ls => try(FieldTypes.toList(ls)) {
-    | FieldTypes.ConversionException("Expected list. Actual string") => 
-        FieldTypes.toString(ls)
-        |> Str.split(Str.regexp("[ \n\r\x0c\t]+"))
-        |> List.map(s => FieldTypes.String(s))
+
+  let fromListOrString = ls =>
+    try(FieldTypes.toList(ls)) {
+    | FieldTypes.ConversionException("Expected list. Actual string") =>
+      FieldTypes.toString(ls)
+      |> Str.split(Str.regexp("[ \n\r\x0c\t]+"))
+      |> List.map(s => FieldTypes.String(s))
     | e => raise(e)
-  };
+    };
 
   let flags =
     try(
@@ -641,11 +642,8 @@ let toPesyConf = (projectPath, rootName, pkg) => {
     let modes =
       try(
         Some(
-          Executable.Mode.ofList(
-            JSON.member(conf, "modes")
-            |> JSON.toValue
-            |> FieldTypes.toList
-            |> List.map(a => a |> FieldTypes.toString),
+          Executable.Mode.ofFieldTypes(
+            JSON.member(conf, "modes") |> JSON.toValue,
           ),
         )
       ) {
