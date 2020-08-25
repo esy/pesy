@@ -63,9 +63,9 @@ See https://github.com/OCamlPro/opam-user-setup
 ]
 url {
   src:
-    "https://github.com/ocaml/merlin/releases/download/v3.3.5/merlin-v3.3.5.tbz"
+    "https://github.com/ocaml/merlin/releases/download/v3.3.6/merlin-v3.3.6.tbz"
   checksum: [
-    "sha256=966daa84725c8db25fda052d42b8705e0e6bda7f9e7550afed01e83d2f3ec5ca"
-    "sha512=a820308dec144989d9dbab74488125afe41adaf75c117f17f962baf551a990c1ee9fbfb52ef8608078fb752eaa3ff7908acdd78f5fe0cd3b36f2d9e7e57a7b2a"
+    "sha256=3b32d29dc225cd4a975b7345d6dadd41056312f7edfb718b175bd8294165c08c"
+    "sha512=41e5e463c3961c0b5ce77ba8e0a27bf6f426ceb5cad62593389078f30a33f0a45508d3a2c0ff1783d491044a52db33049033aee34cc7b3782a54e4c954d30a8d"
   ]
 }
