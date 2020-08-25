@@ -1,13 +1,18 @@
 name: Build npm release
 
 trigger:
-  - master
-  - global
-  - release-*
-  - releases-*
-  - feature-*
-  - prometheansacrifice/*
-  - ulrikstrid/*
+  branches:
+    include:
+    - master
+    - releases/*
+  paths:
+    include:
+    - docs/*
+    exclude:
+    - README.html
+    - notes/*
+    - "*.md"
+    - LICENSE
 
 jobs:
   - template: .ci/build-platform.yml
