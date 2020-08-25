@@ -1,4 +1,0 @@
-.merlin
-_build
-menhir-generate-printers
-*.cmly

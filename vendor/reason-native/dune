@@ -1,2 +1,0 @@
-(dirs :standard \ node_modules _esy _release)
-(data_only_dirs node_modules _esy _release)
