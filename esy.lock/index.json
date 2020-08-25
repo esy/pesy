@@ -1,5 +1,5 @@
 {
-  "checksum": "3218e5635cb6d55ade5afc6548d9fe60",
+  "checksum": "9db14eb5df620e47ef404368ca42b0d2",
   "root": "@pesy/esy-pesy@link-dev:./package.json",
   "node": {
     "refmterr@3.3.2@d41d8cd9": {
@@ -137,10 +137,13 @@
       },
       "overrides": [],
       "dependencies": [
-        "ocaml@4.10.0@d41d8cd9", "@opam/yojson@opam:1.7.0@7056d985",
+        "ocaml@4.10.0@d41d8cd9", "@reason-native/pastel@0.3.0@d41d8cd9",
+        "@opam/yojson@opam:1.7.0@7056d985",
         "@opam/sexplib@opam:v0.13.0@79086695",
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
-        "@opam/dune@opam:2.7.0@6c6dd6fb", "@esy-ocaml/reason@3.6.2@d41d8cd9"
+        "@opam/dune@opam:2.7.0@6c6dd6fb",
+        "@opam/cmdliner@opam:1.0.4@93208aac",
+        "@esy-ocaml/reason@3.6.2@d41d8cd9"
       ],
       "devDependencies": [
         "refmterr@3.3.2@d41d8cd9", "ocaml@4.10.0@d41d8cd9",

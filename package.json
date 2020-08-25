@@ -34,6 +34,8 @@
   "dependencies": {
     "@esy-ocaml/reason": "3.x.x",
     "@opam/dune": "*",
+    "@opam/cmdliner": "*",
+    "@reason-native/pastel": "*",
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
