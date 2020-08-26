@@ -1,5 +1,0 @@
-(library
-   (name PastelConsole)
-   (public_name pastel-console.lib)
-   (libraries  console.lib pastel.lib )
-  )

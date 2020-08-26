@@ -1,4 +1,0 @@
-EXCLUDE_QUERY_DIR
-B ../../../_build/default/vendor/cmdliner/src/.cmdliner.objs/byte
-S .
-FLG -w -40 -w -3-6-27-32-35 -w -a

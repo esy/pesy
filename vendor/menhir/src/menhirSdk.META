@@ -1,6 +1,0 @@
-requires = ""
-description = "Toolkit for postprocessing Menhir automata (.cmly files)"
-archive(byte) = "menhirSdk.cmo"
-archive(native) = "menhirSdk.cmx"
-plugin(native) = "menhirSdk.cmxs"
-version = "20190626"

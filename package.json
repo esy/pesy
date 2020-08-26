@@ -32,31 +32,24 @@
     "test": "esy run-script test:unit"
   },
   "dependencies": {
-    "@esy-ocaml/reason": "*",
-    "@opam/cmdliner": "*",
+    "@esy-ocaml/reason": "3.x.x",
     "@opam/dune": "*",
+    "@opam/cmdliner": "*",
+    "@reason-native/pastel": "*",
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
-    "@reason-native/pastel": "*",
-    "ocaml": "4.6.10 - 4.10",
-    "refmterr": "^3.3.0"
+    "ocaml": "4.6.10 - 4.10"
   },
   "devDependencies": {
-    "ocaml": "4.9.x",
-    "@opam/dune": "2.6.0",
+    "refmterr": "^3.3.0",
+    "ocaml": "4.10.x",
+    "@opam/dune": "*",
     "@opam/bos": "0.2.0",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
     "@opam/merlin": "*",
     "@opam/ocamlformat": "0.12",
     "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam"
-  },
-  "resolutions": {
-    "@opam/cmdliner": "link:./vendor/cmdliner/cmdliner.opam",
-    "@reason-native/console": "link:./vendor/reason-native/console.json",
-    "@opam/menhir": "link:./vendor/menhir/menhir.opam",
-    "@opam/ocaml-migrate-parsetree": "link:./vendor/ocaml-migrate-parsetree/ocaml-migrate-parsetree.opam",
-    "@reason-native/pastel": "link:./vendor/reason-native/pastel.json"
   }
 }

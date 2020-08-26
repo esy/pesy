@@ -1,4 +1,0 @@
-(library
-  (name Utf8)
-  (public_name utf8.lib)
-)

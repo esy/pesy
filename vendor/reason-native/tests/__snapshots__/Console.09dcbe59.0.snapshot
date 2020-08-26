@@ -1,8 +1,0 @@
-Console › Basic lists and variants
-===== Standard Out =====
-[{[\"console\"]}, {[\"dot\"]}, {[\"log\"]}, 0]
-===== Standard Err =====
-[{[\"console\"]}, {[\"dot\"]}, {[\"warn\"]}, 0]
-[{[\"console\"]}, {[\"dot\"]}, {[\"error\"]}, 0]
-========================
-
