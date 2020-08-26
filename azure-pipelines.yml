@@ -6,8 +6,6 @@ trigger:
     - master
     - releases/*
   paths:
-    include:
-    - docs/*
     exclude:
     - README.html
     - notes/*
