@@ -1,5 +1,4 @@
 module Utils = PesyEsyPesyUtils.Utils;
-open Printf;
 open Utils;
 
 module Mode = {
@@ -63,57 +62,50 @@ module Mode = {
   };
 
   type t =
-    | BinaryKind(BinaryKind.t)
+    | Atom(BinaryKind.t)
     | Tuple(Compilation.t, BinaryKind.t)
     | Array(list(t));
   exception InvalidExecutableMode(string);
   let rec ofFieldTypes = parts =>
     switch (parts) {
     | FieldTypes.String(bs) =>
-      bs
-      |> Str.split(Str.regexp("[ \n\r\x0c\t]+"))
-      |> List.map(b => BinaryKind(BinaryKind.ofString(b)))
-      |> (bs => Array(bs))
+      Array(
+        bs
+        |> Str.split(Str.regexp("[ \n\r\x0c\t]+"))
+        |> List.map(b => Atom(BinaryKind.ofString(b))),
+      )
     | FieldTypes.List([FieldTypes.String(c), FieldTypes.String(b)]) =>
       try(Tuple(Compilation.ofString(c), BinaryKind.ofString(b))) {
       | InvalidCompilationMode () =>
         Array([
-          BinaryKind(BinaryKind.ofString(c)),
-          BinaryKind(BinaryKind.ofString(b)),
+          Atom(BinaryKind.ofString(c)),
+          Atom(BinaryKind.ofString(b)),
         ])
-      | e => raise(e)
+      | _ =>
+        raise(
+          InvalidExecutableMode(
+            "Invalid executable mode: expected of the form [(<compilation mode>, <binary_kind>)'s | <binary_kind>'s] or <binary_kind>'s",
+          ),
+        )
       }
-    | FieldTypes.List([hd, ...tl]) =>
-      Array([ofFieldTypes(hd), ...List.map(ofFieldTypes, tl)])
+    | FieldTypes.List(xs) => Array(List.map(ofFieldTypes, xs))
     | _ =>
       raise(
         InvalidExecutableMode(
-          sprintf(
-            /* TODO: meaningful error message */
-            "Invalid executable mode: expected of the form (<compilation mode>, <binary_kind>)",
-          ),
+          "Invalid executable mode: expected of the form [(<compilation mode>, <binary_kind>)'s | <binary_kind>'s] or <binary_kind>'s",
         ),
       )
     };
-  let rec toStanza = m =>
+  let rec toStanzas = m =>
     switch (m) {
-    | Array(x) =>
-      x
-      |> List.map(toStanza)
-      |> (
-        xs =>
-          switch (xs) {
-          | [h] => h
-          | [_, ..._] => Stanza.createExpression(xs)
-          | _ => raise(InvalidExecutableMode("Invalid executable mode: "))
-          }
-      )
-    | Tuple(c, b) =>
-      Stanza.createExpression([
-        Stanza.createAtom(Compilation.toString(c)),
-        Stanza.createAtom(BinaryKind.toString(b)),
-      ])
-    | BinaryKind(b) => Stanza.createAtom(BinaryKind.toString(b))
+    | Array(x) => List.fold_left((acc, s) => acc @ toStanzas(s), [], x)
+    | Tuple(c, b) => [
+        Stanza.createExpression([
+          Stanza.createAtom(Compilation.toString(c)),
+          Stanza.createAtom(BinaryKind.toString(b)),
+        ]),
+      ]
+    | Atom(b) => [Stanza.createAtom(BinaryKind.toString(b))]
     };
 };
 type t = {
@@ -180,7 +172,7 @@ let toDuneStanza = (common: Common.t, e) => {
       Some(
         Stanza.createExpression([
           Stanza.createAtom("modes"),
-          Mode.toStanza(m),
+          ...Mode.toStanzas(m),
         ]),
       )
     };

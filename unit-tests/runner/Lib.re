@@ -619,7 +619,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (exe object shared_object)))\n",
+      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes exe object shared_object))\n",
     ])
   );
   test("Sample config - 23", ({expect, _}) =>
@@ -641,7 +641,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (js plugin)))\n",
+      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes js plugin))\n",
     ])
   );
 
@@ -664,7 +664,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes ((byte exe) (byte js))))\n",
+      "(executable (name Foo) (modules (:standard)) (public_name bar.exe)\n    (modes (byte exe) (byte js)))\n",
     ])
   );
 
