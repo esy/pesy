@@ -214,6 +214,16 @@ prefixes are rewritten to reflect the updated path on the new
 machine. And `esy` provides all the low level command to do this out of
 the box. `pesy` simply provides a convenient wrapper that drives them.
 
+When the project is bootstrapped for the first time, it is identical to a copy
+that is run on the server. This is where the first set of cached builds come from,
+which is why the `azure-project` in the pesy config is set to `esy-dev/esy` and
+`github` to `esy/pesy-reason-template`.
+
+Once the project sees changes, you most probably would add more dependencies 
+(or remove some) which could change the build sandbox state. It is recommended that
+you run the provided CI setup to cache builds on your own Azure Pipelines instance 
+and update `github` and `azure-project` accordingly.
+
 ## Publishing and Consuming from NPM
 #### Publishing libraries
 
