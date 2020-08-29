@@ -1,8 +1,11 @@
+module Utils = PesyEsyPesyUtils.Utils;
+open Utils;
+
 type t;
 module Mode: {
   type t;
-  let ofList: list(string) => t;
-  let toList: t => list(string);
+  let ofFieldTypes: FieldTypes.t => t;
+  let toStanzas: t => list(Stanza.t);
 };
 let create: (string, option(Mode.t)) => t;
 let toDuneStanza: (Common.t, t) => (string, list(Stanza.t));
