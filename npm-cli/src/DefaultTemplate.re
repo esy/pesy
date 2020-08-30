@@ -4,5 +4,5 @@ let path =
   Path.resolve([|
     dirname,
     "templates",
-    "pesy-reason-template-0.1.0-alpha.8",
+    "pesy-reason-template-0.1.0-alpha.11",
   |]);
