@@ -245,7 +245,7 @@ let pesyLsLibs = () => {
     pkgs,
   );
 };
-let version = "0.1.0-dev.12";
+let version = "0.1.0-alpha.12";
 
 let cmd = () => {
   open Cmdliner.Term;

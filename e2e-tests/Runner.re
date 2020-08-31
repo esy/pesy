@@ -47,7 +47,7 @@ let () = {
   run(makeCommand("yarn"), [||]);
   run(makeCommand("yarn"), [|"run", "package"|]);
   run(makeCommand("npm"), [|"pack"|]);
-  run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-dev.21.tgz"|]);
+  run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-alpha.21.tgz"|]);
   chdir(cwd);
 };
 
@@ -384,7 +384,7 @@ let checkBootstrapper = cwd => {
         "Library = require('test-project/library')"
       ],
       "bin": {
-        "TestProjectApp.exe": "TestProjectApp.re"
+        "TestProjectApp": "TestProjectApp.re"
       }
     }
 }
@@ -437,7 +437,7 @@ caml_foo(value a) {
         "Library = require('test-project/library')"
       ],
       "bin": {
-        "TestProjectApp.exe": "TestProjectApp.re"
+        "TestProjectApp": "TestProjectApp.re"
       }
     }
 }
@@ -471,7 +471,7 @@ caml_foo(value a) {
         "Library = require('test-project/library')"
       ],
       "bin": {
-        "TestProjectApp.exe": "TestProjectApp.re"
+        "TestProjectApp": "TestProjectApp.re"
       }
     }
 }
@@ -538,7 +538,7 @@ Foo.foo();
                                  "imports": [
                                    "Foo = require('../library-with-relative-imports')"
                                  ],
-                                 "bin": { "TestRelativelyImportedLib.exe": "Main.re" }
+                                 "bin": { "TestRelativelyImportedLib": "Main.re" }
                                }
                            }
                        |},
@@ -600,7 +600,7 @@ print_endline(Lwt_main.run(foo));
                                     "pps",
                                     "lwt_ppx"
                                 ],
-                                "bin": { "TestLwtPreprocessor.exe": "Main.re" }
+                                "bin": { "TestLwtPreprocessor": "Main.re" }
                                }
                            }
                        |},
@@ -632,7 +632,7 @@ print_endline(Unix.getenv("PATH"));
                            {
                                "executable-with-raw-config": {
                                 "rawBuildConfig": [ "(libraries unix)" ],
-                                "bin": { "TestRawBuildConfig.exe": "Main.re" }
+                                "bin": { "TestRawBuildConfig": "Main.re" }
                                }
                            }
                        |},
