@@ -156,7 +156,7 @@ to
     Str.split(Str.regexp(Sys.unix ? ":" : ";"), ocamlpath)
     |> List.filter_map(v =>
          if (Str.string_match(
-               Str.regexp(".*" ++ esyfiedDepName ++ ".*"),
+               Str.regexp(".*" ++ esyfiedDepName ++ "-.*"),
                v,
                0,
              )) {
