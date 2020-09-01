@@ -165,16 +165,27 @@ namespace for you so that we don't have to worry about the nuances of
 a package and a library during development. 
 
 
-## Commiting the dune files
+## Dune files
 
-While dune files can be thought of as generated artifacts,
-we strongly recommended that you always commit them.
+`pesy` generates dune files on fly behind the scenes. And to be able to so,
+it needs a static dune file that looks like the following
 
-> Note: You should always commit the generated dune files before publishing a
-> package (Eject them).
+```sexp
+(* -*- tuareg -*- *)
 
-In case, you need to re-generate them, run `esy pesy` (or `esy
-@mysandbox pesy` if you are using `esy` sandboxes).
+open Jbuild_plugin.V1
+
+let () =
+  run_and_read_lines ("pesy dune-file " ^ Sys.getcwd ())
+  |> String.concat "\n"
+  |> send
+```
+
+These have to created only once - after that they never change (unless you decide
+to eject). Every bootstrapped project has them already and you dont have to create
+them. In case, you need to re-generate them, run `esy pesy` (or `esy
+@mysandbox pesy` if you are using `esy` sandboxes). A common need for running `esy pesy`
+is when you add a new folder to your project.
 
 #### Ejecting:
 
