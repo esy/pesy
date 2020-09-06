@@ -346,5 +346,8 @@ let run = (~env=?, cmd, args) => {
   };
 };
 
+let moduleNameOf = fileName =>
+  Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
+
 module JSON = JSON;
 module FieldTypes = FieldTypes;

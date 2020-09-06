@@ -62,9 +62,6 @@ let resolveRelativePath = path => {
   ++ String.concat(separator, resolve(revParts, 0, []));
 };
 
-let moduleNameOf = fileName =>
-  Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
-
 let specialCaseOpamRequires = package =>
   Str.global_replace(Str.regexp("^@opam/"), "", package);
 

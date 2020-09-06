@@ -136,8 +136,8 @@ let toDuneStanza = (common: Common.t, e) => {
     let (mains, publicNames) = acc;
     (mains @ [main], publicNames @ [publicName]);
     }, binKVs,([], []));
-  let name = Stanza.create("names", mains |> List.map(Stanza.createAtom) |> Stanza.createExpression);
-  let public_name = Stanza.create("public_names", publicNames  |> List.map(Stanza.createAtom) |> Stanza.createExpression);
+  let name = Stanza.createExpression([Stanza.createAtom("names"), ...(mains |> List.map(x => x|> moduleNameOf |> Stanza.createAtom))])
+  let public_name = Stanza.createExpression([Stanza.createAtom("public_names"), ...(publicNames  |> List.map(Stanza.createAtom))]);
 
   let modules =
     Stanza.createExpression([
