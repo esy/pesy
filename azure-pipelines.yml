@@ -1,5 +1,8 @@
 name: Build npm release
 
+variables:
+  esy__ci_cache_version: v1
+
 trigger:
   branches:
     include:
