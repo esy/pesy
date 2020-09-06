@@ -8,6 +8,7 @@ type t;
 let create:
   (
     string,
+    string,
     option(list(Mode.t)),
     option(list(string)),
     option(list(string)),

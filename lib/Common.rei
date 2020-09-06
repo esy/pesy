@@ -3,7 +3,6 @@ type t;
 let toDuneStanzas:
   t =>
   (
-    Stanza.t,
     option(Stanza.t),
     option(Stanza.t),
     option(Stanza.t),
@@ -20,7 +19,6 @@ let getPath: t => string;
 let getPesyModules: t => PesyModule.t;
 let create:
   (
-    /* name */ string,
     /* path */ string,
     /* require */ list(string),
     /* flags */ option(list(string)),

@@ -20,6 +20,7 @@ module Mode = {
     | Byte => "byte";
 };
 type t = {
+  name: string,
   namespace: string,
   modes: option(list(Mode.t)),
   cNames: option(list(string)),
@@ -27,7 +28,8 @@ type t = {
   implements: option(list(string)),
   wrapped: option(bool),
 };
-let create = (namespace, modes, cNames, virtualModules, implements, wrapped) => {
+let create = (name, namespace, modes, cNames, virtualModules, implements, wrapped) => {
+  name,
   namespace,
   modes,
   cNames,
@@ -38,6 +40,7 @@ let create = (namespace, modes, cNames, virtualModules, implements, wrapped) => 
 let toDuneStanza = (common, lib) => {
   /* let {name: pkgName, require, path} = common */
   let {
+    name,
     namespace,
     modes: modesP,
     cNames: cNamesP,
@@ -46,7 +49,6 @@ let toDuneStanza = (common, lib) => {
     wrapped: wrappedP,
   } = lib;
   let (
-    public_name,
     libraries,
     flags,
     ocamlcFlags,
@@ -61,6 +63,7 @@ let toDuneStanza = (common, lib) => {
   ) =
     Common.toDuneStanzas(common);
   let path = Common.getPath(common);
+  let public_name = Stanza.create("public_name", Stanza.createAtom(name)); // pesy's name is Dune's public_name
   let name = Stanza.create("name", Stanza.createAtom(namespace));
   let modules =
     Stanza.createExpression([

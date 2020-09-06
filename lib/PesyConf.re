@@ -62,9 +62,6 @@ let resolveRelativePath = path => {
   ++ String.concat(separator, resolve(revParts, 0, []));
 };
 
-let moduleNameOf = fileName =>
-  Str.global_replace(Str.regexp("\\.\\(re\\|ml\\)$"), "", fileName);
-
 let specialCaseOpamRequires = package =>
   Str.global_replace(Str.regexp("^@opam/"), "", package);
 
@@ -243,11 +240,6 @@ let isValidSourceFile = fileName =>
 /* Turns "foo/bar/baz" => "foo.bar.baz" */
 let pathToOCamlLibName = p => Str.global_replace(Str.regexp("/"), ".", p);
 
-let isBinPropertyPresent =
-  fun
-  | Some(_) => true
-  | _ => false;
-
 let stripAtTheRate = s => String.sub(s, 1, String.length(s) - 1);
 
 /* doubleKebabifyIfScoped turns @myscope/pkgName => myscope--pkgName */
@@ -274,16 +266,16 @@ let toPesyConf = (projectPath, rootName, pkg) => {
     try(
       Some(
         {
-          let kvPairs = JSON.toKeyValuePairs(binJSON);
-          /* TODO: Multiple executable support */
-          let kv = List.hd(kvPairs);
-          let (k, v) = kv;
-          (
-            /* Value is the source .re file */
-            v |> JSON.toValue |> FieldTypes.toString,
-            /* Key is the target executable name */
-            k,
-          );
+          JSON.toKeyValuePairs(binJSON)
+          |> List.map(kv => {
+               let (k, v) = kv;
+               (
+                 /* Value is the source .re file */
+                 v |> JSON.toValue |> FieldTypes.toString,
+                 /* Key is the target executable name */
+                 k,
+               );
+             });
         },
       )
     ) {
@@ -297,7 +289,7 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       if (!isValidSourceFile(binaryMainFile)) {
         raise(InvalidBinProperty(dir));
       };
-      Some((binaryMainFile, moduleNameOf(binaryMainFile) ++ ".exe"));
+      Some([(binaryMainFile, moduleNameOf(binaryMainFile) ++ ".exe")]);
     | e => raise(e)
     };
 
@@ -307,7 +299,12 @@ let toPesyConf = (projectPath, rootName, pkg) => {
     try(JSON.member(conf, "name") |> JSON.toValue |> FieldTypes.toString) {
     | JSON.NullJSONValue(_) =>
       switch (bin) {
-      | Some((_mainFileName, installedBinaryName)) => installedBinaryName
+      | Some(names) =>
+        names
+        |> List.map(((_mainFileName, installedBinaryName)) =>
+             installedBinaryName
+           )
+        |> List.hd
       | None => rootName ++ "." ++ pathToOCamlLibName(dir)
       }
     | e => raise(e)
@@ -603,7 +600,6 @@ let toPesyConf = (projectPath, rootName, pkg) => {
   let pkg_path = Path.(projectPath / dir);
   let common =
     Common.create(
-      name,
       Path.(projectPath / dir),
       require,
       flags,
@@ -617,28 +613,10 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       pesyModules,
     );
 
-  if (isBinPropertyPresent(bin)) {
-    /* Prioritising `bin` over `name` */
-    let main =
-      switch (bin) {
-      | Some((mainFileName, _installedBinaryName)) =>
-        moduleNameOf(mainFileName)
-
-      | _ =>
-        try(JSON.member(conf, "main") |> JSON.toValue |> FieldTypes.toString) {
-        | JSON.NullJSONValue () =>
-          raise(
-            FatalError(
-              sprintf(
-                "Atleast one of `bin` or `main` must be provided for %s",
-                dir,
-              ),
-            ),
-          )
-        | e => raise(e)
-        }
-      };
-
+  /* Prioritising `bin` over `name` */
+  switch (bin) {
+  | Some(binKVs) =>
+    //bins |> List.map(((mainFileName, _installedBinaryName)) => moduleNameOf(mainFileName))
     let modes =
       try(
         Some(
@@ -653,9 +631,9 @@ let toPesyConf = (projectPath, rootName, pkg) => {
     {
       pkg_path,
       common,
-      pkgType: ExecutablePackage(Executable.create(main, modes)),
+      pkgType: ExecutablePackage(Executable.create(binKVs, modes)),
     };
-  } else {
+  | None =>
     let namespace =
       try(
         JSON.member(conf, "namespace") |> JSON.toValue |> FieldTypes.toString
@@ -752,6 +730,7 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       pkgType:
         LibraryPackage(
           Library.create(
+            name,
             namespace,
             libraryModes,
             cStubs,

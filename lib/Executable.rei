@@ -7,5 +7,5 @@ module Mode: {
   let ofFieldTypes: FieldTypes.t => t;
   let toStanzas: t => list(Stanza.t);
 };
-let create: (string, option(Mode.t)) => t;
+let create: (list((string, string)), option(Mode.t)) => t;
 let toDuneStanza: (Common.t, t) => (string, list(Stanza.t));
