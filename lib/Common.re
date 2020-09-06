@@ -5,7 +5,6 @@ type include_subdirs =
 
 type t = {
   path: string,
-  name: string,
   require: list(string),
   flags: option(list(string)), /* TODO: Use a variant instead since flags only accept a set of values and not any list of strings */
   ocamlcFlags: option(list(string)),
@@ -19,7 +18,6 @@ type t = {
 };
 let create =
     (
-      name,
       path,
       require,
       flags,
@@ -43,7 +41,6 @@ let create =
     | None => None
     };
   {
-    name,
     path,
     require,
     flags,
@@ -59,7 +56,6 @@ let create =
 };
 let toDuneStanzas = c => {
   let {
-    name,
     require,
     flags,
     ocamlcFlags,
@@ -74,7 +70,6 @@ let toDuneStanzas = c => {
   } = c;
 
   (
-    /* public_name: */ Stanza.create("public_name", Stanza.createAtom(name)),
     /* libraries: */
     switch (require) {
     | [] =>

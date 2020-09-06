@@ -109,15 +109,14 @@ module Mode = {
     };
 };
 type t = {
-  main: string,
+  binKVs: list((string, string)),
   modes: option(Mode.t),
 };
-let create = (main, modes) => {main, modes};
+let create = (binKVs, modes) => {binKVs, modes};
 let toDuneStanza = (common: Common.t, e) => {
   /* let {name: pkgName, require, path} = common; */
-  let {main, modes: modesP} = e;
+  let {binKVs, modes: modesP} = e;
   let (
-    public_name,
     libraries,
     flags,
     ocamlcFlags,
@@ -132,8 +131,14 @@ let toDuneStanza = (common: Common.t, e) => {
   ) =
     Common.toDuneStanzas(common);
   let path = Common.getPath(common);
-  /* Pesy's main is Dune's name */
-  let name = Stanza.create("name", Stanza.createAtom(main));
+  let (mains, publicNames) = List.fold_right((tuple, acc) => {
+    let (main, publicName) = tuple;
+    let (mains, publicNames) = acc;
+    (mains @ [main], publicNames @ [publicName]);
+    }, binKVs,([], []));
+  let name = Stanza.create("names", mains |> List.map(Stanza.createAtom) |> Stanza.createExpression);
+  let public_name = Stanza.create("public_names", publicNames  |> List.map(Stanza.createAtom) |> Stanza.createExpression);
+
   let modules =
     Stanza.createExpression([
       Stanza.createAtom("modules"),
