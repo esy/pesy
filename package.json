@@ -25,6 +25,10 @@
       ]
     }
   },
+  "pesy": {
+    "github": "esy/pesy",
+    "azure-project": "pesy/pesy"
+  },
   "scripts": {
     "doc": "esy dune build @doc -p pesy--esy-pesy,PesyE2E",
     "test:unit": "esy b dune exec ./unit-tests/runner/RunUnitTests.exe",
