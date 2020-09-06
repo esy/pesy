@@ -228,7 +228,7 @@ let toDuneStanza = (common: Common.t, e) => {
 
   let executable =
     Stanza.createExpression([
-      Stanza.createAtom("executable"),
+      Stanza.createAtom("executables"),
       ...mandatoryExpressions
          @ filterNone(optionalExpressions)
          @ rawBuildConfig,
