@@ -120,6 +120,12 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
   let conf = PesyConf.get(manifestFile);
   let pkgs = PesyConf.pkgs(conf);
 
+  /* TODO: pass the `duneVersion` to `PesyConf.toPesyConf` and
+     take decisions based on version in order to maintain backwards compatibility*/
+  let duneProjectPath = Path.(projectPath / "dune-project");
+  let _duneVersion =
+    DuneFile.ofFile(duneProjectPath) |> DuneProject.findLangVersion;
+
   let rootName = PesyConf.rootName(conf);
   let pesyPackages =
     pkgs |> List.map(PesyConf.toPesyConf(projectPath, rootName));
