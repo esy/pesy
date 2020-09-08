@@ -670,6 +670,25 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       | JSON.NullJSONValue () => None
       | e => raise(e)
       };
+    let foreignStubs =
+      try(
+        Some(
+          JSON.member(conf, "foreignStubs")
+          |> JSON.toListKVPairs
+          |> List.map(kvs =>
+               List.map(
+                 kv => {
+                   let (k, v) = kv;
+                   (k, v |> JSON.toValue);
+                 },
+                 kvs,
+               )
+             ),
+        )
+      ) {
+      | JSON.NullJSONValue () => None
+      | e => raise(e)
+      };
     let virtualModules =
       try(
         Some(
@@ -734,6 +753,7 @@ let toPesyConf = (projectPath, rootName, pkg) => {
             namespace,
             libraryModes,
             cStubs,
+            foreignStubs,
             virtualModules,
             implements,
             wrapped,

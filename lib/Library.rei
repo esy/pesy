@@ -1,3 +1,6 @@
+module Utils = PesyEsyPesyUtils.Utils;
+open Utils;
+
 module Mode: {
   exception InvalidLibraryMode(string);
   type t;
@@ -11,6 +14,7 @@ let create:
     string,
     option(list(Mode.t)),
     option(list(string)),
+    option(list(list((string, FieldTypes.t)))),
     option(list(string)),
     option(list(string)),
     option(bool)

@@ -19,20 +19,136 @@ module Mode = {
     | Native => "native"
     | Byte => "byte";
 };
+
+module ForeignStub = {
+  exception LanguageNotSupported(string);
+  module Language = {
+    type t =
+      | C
+      | CXX;
+    let ofString =
+      fun
+      | "c" => C
+      | "cxx" => CXX
+      | x => raise(LanguageNotSupported(x));
+    let toString =
+      fun
+      | C => "c"
+      | CXX => "cxx";
+  };
+  type t = {
+    language: Language.t,
+    names: option(list(string)),
+    flags: option(list(string)),
+  };
+  let ofFieldTypes = tfts => {
+    /* Note: here language is set C as default value it will be replaced by the
+       correct value in the below pattern match */
+    let fs = ref({language: Language.C, names: None, flags: None});
+    List.iter(
+      tft => {
+        switch (tft) {
+        | ("names", ft) =>
+          fs :=
+            {
+              ...fs^,
+              names:
+                switch (FieldTypes.toList(ft)) {
+                | [] => None
+                | l => Some(List.map(FieldTypes.toString, l))
+                },
+            }
+        | ("flags", ft) =>
+          fs :=
+            {
+              ...fs^,
+              flags:
+                switch (FieldTypes.toList(ft)) {
+                | [] => None
+                | l => Some(List.map(FieldTypes.toString, l))
+                },
+            }
+        | ("language", ft) =>
+          fs :=
+            {...fs^, language: Language.ofString(FieldTypes.toString(ft))}
+        | _ => ()
+        }
+      },
+      tfts,
+    );
+    fs^;
+  };
+  let toDuneStanza = fs => {
+    let stanzas = [];
+    stanzas
+    @ [
+      Stanza.createExpression([
+        Stanza.createAtom("language"),
+        Stanza.createAtom(Language.toString(fs.language)),
+      ]),
+    ]
+    @ (
+      switch (fs.names) {
+      | None
+      | Some([]) => [
+          Stanza.createExpression([
+            Stanza.createAtom("names"),
+            Stanza.createAtom(":standard"),
+          ]),
+        ]
+      | Some(xs) => [
+          Stanza.createExpression([
+            Stanza.createAtom("names"),
+            ...List.map(Stanza.createAtom, xs),
+          ]),
+        ]
+      }
+    )
+    @ (
+      switch (fs.flags) {
+      | None
+      | Some([]) => [
+          Stanza.createExpression([
+            Stanza.createAtom("flags"),
+            Stanza.createAtom(":standard"),
+          ]),
+        ]
+      | Some(xs) => [
+          Stanza.createExpression([
+            Stanza.createAtom("flags"),
+            ...List.map(Stanza.createAtom, xs),
+          ]),
+        ]
+      }
+    );
+  };
+};
 type t = {
   name: string,
   namespace: string,
   modes: option(list(Mode.t)),
   cNames: option(list(string)),
+  foreignStubs: option(list(list((string, FieldTypes.t)))),
   virtualModules: option(list(string)),
   implements: option(list(string)),
   wrapped: option(bool),
 };
-let create = (name, namespace, modes, cNames, virtualModules, implements, wrapped) => {
+let create =
+    (
+      name,
+      namespace,
+      modes,
+      cNames,
+      foreignStubs,
+      virtualModules,
+      implements,
+      wrapped,
+    ) => {
   name,
   namespace,
   modes,
   cNames,
+  foreignStubs,
   virtualModules,
   implements,
   wrapped,
@@ -44,6 +160,7 @@ let toDuneStanza = (common, lib) => {
     namespace,
     modes: modesP,
     cNames: cNamesP,
+    foreignStubs: foreignStubsP,
     virtualModules: virtualModulesP,
     implements: implementsP,
     wrapped: wrappedP,
@@ -104,6 +221,22 @@ let toDuneStanza = (common, lib) => {
           ...List.map(Stanza.createAtom, l),
         ]),
       )
+    };
+
+  let foreignStubsD =
+    switch (foreignStubsP) {
+    | None => [None]
+    | Some(fss) =>
+      fss
+      |> List.map(ForeignStub.ofFieldTypes)
+      |> List.map(fs =>
+           Some(
+             Stanza.createExpression([
+               Stanza.createAtom("foreign_stubs"),
+               ...ForeignStub.toDuneStanza(fs),
+             ]),
+           )
+         )
     };
 
   let virtualModulesD =
@@ -195,6 +328,7 @@ let toDuneStanza = (common, lib) => {
       Stanza.createAtom("library"),
       ...mandatoryExpressions
          @ filterNone(optionalExpressions)
+         @ filterNone(foreignStubsD)
          @ rawBuildConfig,
     ]);
 
