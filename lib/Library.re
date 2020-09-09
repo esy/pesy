@@ -288,6 +288,7 @@ let toDuneStanza = (common, lib) => {
     ocamloptFlags,
     jsooFlags,
     preprocess,
+    ...foreignStubsD,
   ];
 
   let rawBuildConfig =
@@ -328,7 +329,6 @@ let toDuneStanza = (common, lib) => {
       Stanza.createAtom("library"),
       ...mandatoryExpressions
          @ filterNone(optionalExpressions)
-         @ filterNone(foreignStubsD)
          @ rawBuildConfig,
     ]);
 
