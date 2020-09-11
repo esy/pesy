@@ -661,23 +661,33 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
       | e => raise(e)
       };
 
-    let versionGuard = (prop, version, n) => {
+    let stubsVersionGuard = (~cnJSON, ~fsJSON, prop, version) => {
       switch (
         prop,
         List.hd(String.split_on_char('.', version)),
-        JSON.isNull(n),
+        JSON.isNull(cnJSON),
+        JSON.isNull(fsJSON),
       ) {
-      | ("cNames", "2", false) => raise(VersionMismatch_CNames)
-      | ("foreignStubs", "1", false) => raise(VersionMismatch_ForeignStubs)
-      | (_, _, _) => n
+      | ("cNames", "2", false, true) => raise(VersionMismatch_CNames)
+      | ("foreignStubs", "1", true, false) =>
+        raise(VersionMismatch_ForeignStubs)
+      | ("cNames", "1", false, true) => cnJSON
+      | ("cNames", "1", false, false) => cnJSON
+      | ("foreignStubs", "2", true, false) => fsJSON
+      | ("foreignStubs", "2", false, false) => fsJSON
+      | (_, _, _, _) => JSON.jsonNullValue()
       };
     };
+
+    let (cnJSON, fsJSON) = (
+      JSON.member(conf, "cNames"),
+      JSON.member(conf, "foreignStubs"),
+    );
 
     let cStubs =
       try(
         Some(
-          JSON.member(conf, "cNames")
-          |> versionGuard("cNames", duneVersion)
+          stubsVersionGuard("cNames", duneVersion, ~cnJSON, ~fsJSON)
           |> JSON.toValue
           |> FieldTypes.toList
           |> List.map(FieldTypes.toString),
@@ -696,8 +706,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
     let foreignStubs =
       try(
         Some(
-          JSON.member(conf, "foreignStubs")
-          |> versionGuard("foreignStubs", duneVersion)
+          stubsVersionGuard("foreignStubs", duneVersion, ~cnJSON, ~fsJSON)
           |> JSON.toListKVPairs
           |> List.map(kvs =>
                List.map(

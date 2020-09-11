@@ -21,6 +21,7 @@ let member = (j, m) =>
     )
   };
 let isNull = v => v === `Null;
+let jsonNullValue = () => `Null;
 let toKeyValuePairs = (json: Yojson.Basic.t) =>
   switch (json) {
   | `Assoc(jsonKeyValuePairs) => jsonKeyValuePairs
