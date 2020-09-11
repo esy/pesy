@@ -81,10 +81,10 @@ describe("PesyConf.doubleKebabifyIfScoped", ({test, _}) => {
   )
 });
 
-let testToPackages = jsonStr => {
+let testToPackages = (~duneVersion="1.11", jsonStr) => {
   let json = JSON.ofString(jsonStr);
   let pkgs = PesyConf.pkgs(json);
-  let pesyPackages = List.map(toPesyConf("", ""), pkgs);
+  let pesyPackages = List.map(toPesyConf("", "", ~duneVersion), pkgs);
   let dunePackages = List.map(toDunePackages("", ""), pesyPackages);
   List.map(
     p => {
@@ -729,6 +729,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
            }
          }
        |},
+        ~duneVersion="2.0",
       )
       |> List.map(DuneFile.toString),
     ).
@@ -759,6 +760,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
            }
          }
        |},
+        ~duneVersion="2.0",
       )
       |> List.map(DuneFile.toString),
     ).
@@ -793,6 +795,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
            }
          }
        |},
+        ~duneVersion="2.0",
       )
       |> List.map(DuneFile.toString),
     ).

@@ -22,6 +22,8 @@ type package = {
 
 /* private */
 exception ShouldHaveRaised(unit);
+exception VersionMismatch_ForeignStubs;
+exception VersionMismatch_CNames;
 
 let findIndex = (s1, s2) => {
   let re = Str.regexp_string(s2);
@@ -258,7 +260,7 @@ let doubleKebabifyIfScoped = n => {
 };
 
 type t = (string, list(package));
-let toPesyConf = (projectPath, rootName, pkg) => {
+let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
   let (dir, conf) = pkg;
 
   let binJSON = JSON.member(conf, "bin");
@@ -658,22 +660,44 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       | JSON.NullJSONValue () => None
       | e => raise(e)
       };
+
+    let versionGuard = (prop, version, n) => {
+      switch (
+        prop,
+        List.hd(String.split_on_char('.', version)),
+        JSON.isNull(n),
+      ) {
+      | ("cNames", "2", false) => raise(VersionMismatch_CNames)
+      | ("foreignStubs", "1", false) => raise(VersionMismatch_ForeignStubs)
+      | (_, _, _) => n
+      };
+    };
+
     let cStubs =
       try(
         Some(
           JSON.member(conf, "cNames")
+          |> versionGuard("cNames", duneVersion)
           |> JSON.toValue
           |> FieldTypes.toList
           |> List.map(FieldTypes.toString),
         )
       ) {
+      | VersionMismatch_CNames =>
+        Printf.fprintf(
+          stderr,
+          "======== WARNING ========\ncNames is deprecated in dune version 2.x\nUse foreignStubs to specify stubs\n=========================\n",
+        );
+        None;
       | JSON.NullJSONValue () => None
       | e => raise(e)
       };
+
     let foreignStubs =
       try(
         Some(
           JSON.member(conf, "foreignStubs")
+          |> versionGuard("foreignStubs", duneVersion)
           |> JSON.toListKVPairs
           |> List.map(kvs =>
                List.map(
@@ -687,8 +711,15 @@ let toPesyConf = (projectPath, rootName, pkg) => {
         )
       ) {
       | JSON.NullJSONValue () => None
+      | VersionMismatch_ForeignStubs =>
+        Printf.fprintf(
+          stderr,
+          "======== WARNING ========\nforeignStubs is introduced since dune version 2.0\nUse cNames to specify stubs\n=========================\n",
+        );
+        None;
       | e => raise(e)
       };
+
     let virtualModules =
       try(
         Some(
