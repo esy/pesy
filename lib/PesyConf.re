@@ -37,8 +37,6 @@ module Version = {
 
 /* private */
 exception ShouldHaveRaised(unit);
-exception VersionMismatch_ForeignStubs;
-exception VersionMismatch_CNames;
 
 let findIndex = (s1, s2) => {
   let re = Str.regexp_string(s2);
@@ -706,7 +704,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
       JSON.member(conf, "foreignStubs"),
     );
 
-    let ffi = 
+    let ffi =
       switch (
         Version.ofString(duneVersion),
         JSON.toOption(cnJSON),
@@ -714,7 +712,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
       ) {
       | (V1(_), None, None) => None
       | (V1(_), Some(cn), None)
-      | (V1(_), Some(cn), Some(_)) => Some(Library.CNames(cStubs(cn)))
+      | (V1(_), Some(cn), Some(_)) => Some(Stubs.ofCNames(cStubs(cn)))
       | (V1(_), None, Some(_)) =>
         Printf.fprintf(
           stderr,
@@ -729,7 +727,8 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
         );
         None;
       | (V2(_), None, Some(fs))
-      | (V2(_), Some(_), Some(fs)) => Some(Library.ForeignStubs(foreignStubs(fs)))
+      | (V2(_), Some(_), Some(fs)) =>
+        Some(Stubs.ofForeignStubs(foreignStubs(fs)))
       };
 
     let virtualModules =

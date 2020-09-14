@@ -1,10 +1,3 @@
-module Utils = PesyEsyPesyUtils.Utils;
-open Utils;
-
-type stubs =
-  | CNames(list(string))
-  | ForeignStubs(list(list((string, FieldTypes.t))));
-
 module Mode: {
   exception InvalidLibraryMode(string);
   type t;
@@ -17,7 +10,7 @@ let create:
     string,
     string,
     option(list(Mode.t)),
-    option(stubs),
+    option(Stubs.t),
     option(list(string)),
     option(list(string)),
     option(bool)
