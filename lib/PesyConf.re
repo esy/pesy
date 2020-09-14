@@ -20,6 +20,21 @@ type package = {
   pkgType,
 };
 
+exception InvalidDuneVersion;
+module Version = {
+  type t =
+    | V1(int)
+    | V2(int);
+  let ofString = version => {
+    let vs = String.split_on_char('.', version) |> List.map(int_of_string);
+    switch (vs) {
+    | [1, minorVersion] => V1(minorVersion)
+    | [2, minorVersion] => V2(minorVersion)
+    | _ => raise(InvalidDuneVersion)
+    };
+  };
+};
+
 /* private */
 exception ShouldHaveRaised(unit);
 exception VersionMismatch_ForeignStubs;
@@ -661,72 +676,60 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
       | e => raise(e)
       };
 
-    let stubsVersionGuard = (~cnJSON, ~fsJSON, prop, version) => {
-      switch (
-        prop,
-        List.hd(String.split_on_char('.', version)),
-        JSON.isNull(cnJSON),
-        JSON.isNull(fsJSON),
+    let cStubs = cns =>
+      try(
+        JSON.toValue(cns)
+        |> FieldTypes.toList
+        |> List.map(FieldTypes.toString)
       ) {
-      | ("cNames", "2", false, true) => raise(VersionMismatch_CNames)
-      | ("foreignStubs", "1", true, false) =>
-        raise(VersionMismatch_ForeignStubs)
-      | ("cNames", "1", false, true) => cnJSON
-      | ("cNames", "1", false, false) => cnJSON
-      | ("foreignStubs", "2", true, false) => fsJSON
-      | ("foreignStubs", "2", false, false) => fsJSON
-      | (_, _, _, _) => JSON.jsonNullValue()
+      | e => raise(e)
       };
-    };
+
+    let foreignStubs = fss =>
+      try(
+        JSON.toListKVPairs(fss)
+        |> List.map(kvs =>
+             List.map(
+               kv => {
+                 let (k, v) = kv;
+                 (k, v |> JSON.toValue);
+               },
+               kvs,
+             )
+           )
+      ) {
+      | e => raise(e)
+      };
 
     let (cnJSON, fsJSON) = (
       JSON.member(conf, "cNames"),
       JSON.member(conf, "foreignStubs"),
     );
 
-    let cStubs =
-      try(
-        Some(
-          stubsVersionGuard("cNames", duneVersion, ~cnJSON, ~fsJSON)
-          |> JSON.toValue
-          |> FieldTypes.toList
-          |> List.map(FieldTypes.toString),
-        )
+    let ffi = 
+      switch (
+        Version.ofString(duneVersion),
+        JSON.toOption(cnJSON),
+        JSON.toOption(fsJSON),
       ) {
-      | VersionMismatch_CNames =>
-        Printf.fprintf(
-          stderr,
-          "======== WARNING ========\ncNames is deprecated in dune version 2.x\nUse foreignStubs to specify stubs\n=========================\n",
-        );
-        None;
-      | JSON.NullJSONValue () => None
-      | e => raise(e)
-      };
-
-    let foreignStubs =
-      try(
-        Some(
-          stubsVersionGuard("foreignStubs", duneVersion, ~cnJSON, ~fsJSON)
-          |> JSON.toListKVPairs
-          |> List.map(kvs =>
-               List.map(
-                 kv => {
-                   let (k, v) = kv;
-                   (k, v |> JSON.toValue);
-                 },
-                 kvs,
-               )
-             ),
-        )
-      ) {
-      | JSON.NullJSONValue () => None
-      | VersionMismatch_ForeignStubs =>
+      | (V1(_), None, None) => None
+      | (V1(_), Some(cn), None)
+      | (V1(_), Some(cn), Some(_)) => Some(Library.CNames(cStubs(cn)))
+      | (V1(_), None, Some(_)) =>
         Printf.fprintf(
           stderr,
           "======== WARNING ========\nforeignStubs is introduced since dune version 2.0\nUse cNames to specify stubs\n=========================\n",
         );
         None;
-      | e => raise(e)
+      | (V2(_), None, None) => None
+      | (V2(_), Some(_), None) =>
+        Printf.fprintf(
+          stderr,
+          "======== WARNING ========\ncNames is deprecated in dune version 2.x\nUse foreignStubs to specify stubs\n=========================\n",
+        );
+        None;
+      | (V2(_), None, Some(fs))
+      | (V2(_), Some(_), Some(fs)) => Some(Library.ForeignStubs(foreignStubs(fs)))
       };
 
     let virtualModules =
@@ -792,8 +795,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
             name,
             namespace,
             libraryModes,
-            cStubs,
-            foreignStubs,
+            ffi,
             virtualModules,
             implements,
             wrapped,

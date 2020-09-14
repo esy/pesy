@@ -803,4 +803,76 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard))\n    (foreign_stubs (language cxx) (names src3) (flags -02)))\n",
     ])
   );
+
+  test("Sample config - 30", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testlib": {
+               "require": ["foo"],
+               "namespace": "Foo",
+               "name": "bar.lib",
+               "cNames": ["stubs"],
+               "foreignStubs": [
+                  {
+                    "language": "c",
+                    "names": ["src1", "src2"]
+                  },
+                  {
+                    "language": "cxx",
+                    "names": ["src3"],
+                    "flags": ["-02"]
+                  }
+                ]
+             }
+           }
+         }
+       |},
+        ~duneVersion="2.0",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard))\n    (foreign_stubs (language cxx) (names src3) (flags -02)))\n",
+    ])
+  );
+
+  test("Sample config - 31", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testlib": {
+               "require": ["foo"],
+               "namespace": "Foo",
+               "name": "bar.lib",
+               "cNames": ["stub1", "stub2"],
+               "foreignStubs": [
+                  {
+                    "language": "c",
+                    "names": ["src1", "src2"]
+                  },
+                  {
+                    "language": "cxx",
+                    "names": ["src3"],
+                    "flags": ["-02"]
+                  }
+                ]
+             }
+           }
+         }
+       |},
+        ~duneVersion="1.11",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (c_names stub1 stub2))\n",
+    ])
+  );
 });

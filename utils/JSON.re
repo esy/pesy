@@ -20,8 +20,7 @@ let member = (j, m) =>
       MissingJSONMember(Printf.sprintf("%s was missing in the json", m)),
     )
   };
-let isNull = v => v === `Null;
-let jsonNullValue = () => `Null;
+let toOption = v => v === `Null ? None : Some(v);
 let toKeyValuePairs = (json: Yojson.Basic.t) =>
   switch (json) {
   | `Assoc(jsonKeyValuePairs) => jsonKeyValuePairs

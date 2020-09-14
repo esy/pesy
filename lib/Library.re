@@ -123,32 +123,24 @@ module ForeignStub = {
     );
   };
 };
+type stubs =
+  | CNames(list(string))
+  | ForeignStubs(list(list((string, FieldTypes.t))));
 type t = {
   name: string,
   namespace: string,
   modes: option(list(Mode.t)),
-  cNames: option(list(string)),
-  foreignStubs: option(list(list((string, FieldTypes.t)))),
+  ffi: option(stubs),
   virtualModules: option(list(string)),
   implements: option(list(string)),
   wrapped: option(bool),
 };
 let create =
-    (
-      name,
-      namespace,
-      modes,
-      cNames,
-      foreignStubs,
-      virtualModules,
-      implements,
-      wrapped,
-    ) => {
+    (name, namespace, modes, ffi, virtualModules, implements, wrapped) => {
   name,
   namespace,
   modes,
-  cNames,
-  foreignStubs,
+  ffi,
   virtualModules,
   implements,
   wrapped,
@@ -159,8 +151,7 @@ let toDuneStanza = (common, lib) => {
     name,
     namespace,
     modes: modesP,
-    cNames: cNamesP,
-    foreignStubs: foreignStubsP,
+    ffi: stubsP,
     virtualModules: virtualModulesP,
     implements: implementsP,
     wrapped: wrappedP,
@@ -211,32 +202,33 @@ let toDuneStanza = (common, lib) => {
       )
     };
 
-  let cNamesD =
-    switch (cNamesP) {
-    | None => None
-    | Some(l) =>
-      Some(
-        Stanza.createExpression([
-          Stanza.createAtom("c_names"),
-          ...List.map(Stanza.createAtom, l),
-        ]),
-      )
-    };
-
-  let foreignStubsD =
-    switch (foreignStubsP) {
-    | None => [None]
-    | Some(fss) =>
-      fss
-      |> List.map(ForeignStub.ofFieldTypes)
-      |> List.map(fs =>
-           Some(
-             Stanza.createExpression([
-               Stanza.createAtom("foreign_stubs"),
-               ...ForeignStub.toDuneStanza(fs),
-             ]),
-           )
+  let cNamesD = cNamesP => [
+    Some(
+      Stanza.createExpression([
+        Stanza.createAtom("c_names"),
+        ...List.map(Stanza.createAtom, cNamesP),
+      ]),
+    ),
+  ];
+  let foreignStubsD = foreignStubsP =>
+    List.map(ForeignStub.ofFieldTypes, foreignStubsP)
+    |> List.map(fs =>
+         Some(
+           Stanza.createExpression([
+             Stanza.createAtom("foreign_stubs"),
+             ...ForeignStub.toDuneStanza(fs),
+           ]),
          )
+       );
+
+  let stubsD =
+    switch (stubsP) {
+    | Some(s) =>
+      switch (s) {
+      | CNames(cNamesP) => cNamesD(cNamesP)
+      | ForeignStubs(foreignStubsP) => foreignStubsD(foreignStubsP)
+      }
+    | None => [None]
     };
 
   let virtualModulesD =
@@ -279,7 +271,6 @@ let toDuneStanza = (common, lib) => {
   let optionalExpressions = [
     libraries,
     modesD,
-    cNamesD,
     virtualModulesD,
     implementsD,
     wrappedD,
@@ -288,7 +279,7 @@ let toDuneStanza = (common, lib) => {
     ocamloptFlags,
     jsooFlags,
     preprocess,
-    ...foreignStubsD,
+    ...stubsD,
   ];
 
   let rawBuildConfig =
