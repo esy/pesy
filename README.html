@@ -424,6 +424,30 @@ name (without the `.c` extension) in the `cNames` field.
 }
 ```
 
+#### foreignStubs : `list(ForeignStub)`
+From dune version 2.0 onwards the cNames field was removed and foreignStubs field
+was introduced to provide the FFI functionality, foreignStubs is a list of objects, 
+where each foreignStub object should specify `language`, `names` & `flags`.
+Incase `names` & `flags` is not specified or empty, their default value will be considered
+[Refer this for default values for names & flags](https://dune.readthedocs.io/en/stable/concepts.html#foreign-stubs)
+
+```json
+{
+  "buildDirs": {
+    "src": {
+      "foreignStubs": [
+        {
+          "language": "c",
+          "names": ["my-stub1", "my-stub-2"],
+          "flags": ["-verbose"]
+        } 
+      ]
+	}
+  }
+}
+```
+
+
 <continueRight/>
 
 Here is a [complete, working example](https://github.com/prometheansacrifice/pesy-samples/blob/master/cNames/package.json)

@@ -4,10 +4,10 @@ steps:
   - template: utils/use-node.yml
   - template: utils/use-cache-yarn.yml
   - template: utils/use-esy.yml
-  - template: utils/use-cache-esy.yml
+#  - template: utils/use-cache-esy.yml
   - script: "esy install"
     displayName: "esy install"
-  - template: utils/restore-build-cache.yml # Run this to make sure cached prebuilts work. 
+#  - template: utils/restore-build-cache.yml # Run this to make sure cached prebuilts work. 
   - script: "esy b dune build --only-packages pesy--esy-pesy,PesyE2E"
     displayName: "esy build"
   - bash: "ls -lR _build"

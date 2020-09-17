@@ -23,16 +23,17 @@ type t = {
   name: string,
   namespace: string,
   modes: option(list(Mode.t)),
-  cNames: option(list(string)),
+  ffi: option(Stubs.t),
   virtualModules: option(list(string)),
   implements: option(list(string)),
   wrapped: option(bool),
 };
-let create = (name, namespace, modes, cNames, virtualModules, implements, wrapped) => {
+let create =
+    (name, namespace, modes, ffi, virtualModules, implements, wrapped) => {
   name,
   namespace,
   modes,
-  cNames,
+  ffi,
   virtualModules,
   implements,
   wrapped,
@@ -43,7 +44,7 @@ let toDuneStanza = (common, lib) => {
     name,
     namespace,
     modes: modesP,
-    cNames: cNamesP,
+    ffi: stubsP,
     virtualModules: virtualModulesP,
     implements: implementsP,
     wrapped: wrappedP,
@@ -94,17 +95,7 @@ let toDuneStanza = (common, lib) => {
       )
     };
 
-  let cNamesD =
-    switch (cNamesP) {
-    | None => None
-    | Some(l) =>
-      Some(
-        Stanza.createExpression([
-          Stanza.createAtom("c_names"),
-          ...List.map(Stanza.createAtom, l),
-        ]),
-      )
-    };
+  let stubsD = Stubs.toDuneStanza(stubsP);
 
   let virtualModulesD =
     switch (virtualModulesP) {
@@ -146,7 +137,6 @@ let toDuneStanza = (common, lib) => {
   let optionalExpressions = [
     libraries,
     modesD,
-    cNamesD,
     virtualModulesD,
     implementsD,
     wrappedD,
@@ -155,6 +145,7 @@ let toDuneStanza = (common, lib) => {
     ocamloptFlags,
     jsooFlags,
     preprocess,
+    ...stubsD,
   ];
 
   let rawBuildConfig =

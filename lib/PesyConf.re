@@ -20,6 +20,21 @@ type package = {
   pkgType,
 };
 
+exception InvalidDuneVersion;
+module Version = {
+  type t =
+    | V1(int)
+    | V2(int);
+  let ofString = version => {
+    let vs = String.split_on_char('.', version) |> List.map(int_of_string);
+    switch (vs) {
+    | [1, minorVersion] => V1(minorVersion)
+    | [2, minorVersion] => V2(minorVersion)
+    | _ => raise(InvalidDuneVersion)
+    };
+  };
+};
+
 /* private */
 exception ShouldHaveRaised(unit);
 
@@ -258,7 +273,7 @@ let doubleKebabifyIfScoped = n => {
 };
 
 type t = (string, list(package));
-let toPesyConf = (projectPath, rootName, pkg) => {
+let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
   let (dir, conf) = pkg;
 
   let binJSON = JSON.member(conf, "bin");
@@ -658,18 +673,64 @@ let toPesyConf = (projectPath, rootName, pkg) => {
       | JSON.NullJSONValue () => None
       | e => raise(e)
       };
-    let cStubs =
+
+    let cStubs = cns =>
       try(
-        Some(
-          JSON.member(conf, "cNames")
-          |> JSON.toValue
-          |> FieldTypes.toList
-          |> List.map(FieldTypes.toString),
-        )
+        JSON.toValue(cns)
+        |> FieldTypes.toList
+        |> List.map(FieldTypes.toString)
       ) {
-      | JSON.NullJSONValue () => None
       | e => raise(e)
       };
+
+    let foreignStubs = fss =>
+      try(
+        JSON.toListKVPairs(fss)
+        |> List.map(kvs =>
+             List.map(
+               kv => {
+                 let (k, v) = kv;
+                 (k, v |> JSON.toValue);
+               },
+               kvs,
+             )
+           )
+      ) {
+      | e => raise(e)
+      };
+
+    let (cnJSON, fsJSON) = (
+      JSON.member(conf, "cNames"),
+      JSON.member(conf, "foreignStubs"),
+    );
+
+    let ffi =
+      switch (
+        Version.ofString(duneVersion),
+        JSON.toOption(cnJSON),
+        JSON.toOption(fsJSON),
+      ) {
+      | (V1(_), None, None) => None
+      | (V1(_), Some(cn), None)
+      | (V1(_), Some(cn), Some(_)) => Some(Stubs.ofCNames(cStubs(cn)))
+      | (V1(_), None, Some(_)) =>
+        Printf.fprintf(
+          stderr,
+          "======== WARNING ========\nforeignStubs is introduced since dune version 2.0\nUse cNames to specify stubs\n=========================\n",
+        );
+        None;
+      | (V2(_), None, None) => None
+      | (V2(_), Some(_), None) =>
+        Printf.fprintf(
+          stderr,
+          "======== WARNING ========\ncNames is deprecated in dune version 2.x\nUse foreignStubs to specify stubs\n=========================\n",
+        );
+        None;
+      | (V2(_), None, Some(fs))
+      | (V2(_), Some(_), Some(fs)) =>
+        Some(Stubs.ofForeignStubs(foreignStubs(fs)))
+      };
+
     let virtualModules =
       try(
         Some(
@@ -733,7 +794,7 @@ let toPesyConf = (projectPath, rootName, pkg) => {
             name,
             namespace,
             libraryModes,
-            cStubs,
+            ffi,
             virtualModules,
             implements,
             wrapped,

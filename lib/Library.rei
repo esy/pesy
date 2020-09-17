@@ -10,7 +10,7 @@ let create:
     string,
     string,
     option(list(Mode.t)),
-    option(list(string)),
+    option(Stubs.t),
     option(list(string)),
     option(list(string)),
     option(bool)

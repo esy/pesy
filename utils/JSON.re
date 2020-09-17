@@ -14,17 +14,24 @@ exception NullJSONValue(unit);
 let ofString = jstr => from_string(jstr);
 let fromFile = path => from_file(path);
 let member = (j, m) =>
-  try (Util.member(m, j)) {
+  try(Util.member(m, j)) {
   | _ =>
     raise(
       MissingJSONMember(Printf.sprintf("%s was missing in the json", m)),
     )
   };
+let toOption = v => v === `Null ? None : Some(v);
 let toKeyValuePairs = (json: Yojson.Basic.t) =>
   switch (json) {
   | `Assoc(jsonKeyValuePairs) => jsonKeyValuePairs
   | `Null => raise(NullJSONValue())
   | _ => raise(InvalidJSONValue("Expected key value pairs"))
+  };
+let toListKVPairs = (json: Yojson.Basic.t) =>
+  switch (json) {
+  | `List(kvs) => List.map(toKeyValuePairs, kvs)
+  | `Null => raise(NullJSONValue())
+  | _ => raise(InvalidJSONValue("Expected list of key value pairs"))
   };
 let rec toValue = (json: Yojson.Basic.t) =>
   switch (json) {

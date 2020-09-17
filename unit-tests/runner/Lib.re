@@ -81,10 +81,10 @@ describe("PesyConf.doubleKebabifyIfScoped", ({test, _}) => {
   )
 });
 
-let testToPackages = jsonStr => {
+let testToPackages = (~duneVersion="1.11", jsonStr) => {
   let json = JSON.ofString(jsonStr);
   let pkgs = PesyConf.pkgs(json);
-  let pesyPackages = List.map(toPesyConf("", ""), pkgs);
+  let pesyPackages = List.map(toPesyConf("", "", ~duneVersion), pkgs);
   let dunePackages = List.map(toDunePackages("", ""), pesyPackages);
   List.map(
     p => {
@@ -602,7 +602,6 @@ describe("PesyConf.testToPackages", ({test, _}) => {
   );
   test("Sample config - 22", ({expect, _}) =>
     expect.list(
-      /* TODO: Fix the `bin` property once there is support for multiple executables */
       testToPackages(
         {|
                   {
@@ -624,7 +623,6 @@ describe("PesyConf.testToPackages", ({test, _}) => {
   );
   test("Sample config - 23", ({expect, _}) =>
     expect.list(
-      /* TODO: Fix the `bin` property once there is support for multiple executables */
       testToPackages(
         {|
                     {
@@ -647,7 +645,6 @@ describe("PesyConf.testToPackages", ({test, _}) => {
 
   test("Sample config - 24", ({expect, _}) =>
     expect.list(
-      /* TODO: Fix the `bin` property once there is support for multiple executables */
       testToPackages(
         {|
              {
@@ -670,7 +667,6 @@ describe("PesyConf.testToPackages", ({test, _}) => {
 
   test("Sample config - 25", ({expect, _}) =>
     expect.list(
-      /* TODO: Fix the `bin` property once there is support for multiple executables */
       testToPackages(
         {|
              {
@@ -693,7 +689,6 @@ describe("PesyConf.testToPackages", ({test, _}) => {
 
   test("Sample config - 26", ({expect, _}) =>
     expect.list(
-      /* TODO: Fix the `bin` property once there is support for multiple executables */
       testToPackages(
         {|
                     {
@@ -711,6 +706,173 @@ describe("PesyConf.testToPackages", ({test, _}) => {
     ).
       toEqual([
       "(executables (names Foo) (modules (:standard)) (public_names bar.exe)\n    (modes exe))\n",
+    ])
+  );
+
+  test("Sample config - 27", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testlib": {
+               "require": ["foo"],
+               "namespace": "Foo",
+               "name": "bar.lib",
+               "foreignStubs": [
+                  {
+                    "language": "c"
+                  }
+                ]
+             }
+           }
+         }
+       |},
+        ~duneVersion="2.0",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names :standard) (flags :standard)))\n",
+    ])
+  );
+
+  test("Sample config - 28", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testlib": {
+               "require": ["foo"],
+               "namespace": "Foo",
+               "name": "bar.lib",
+               "foreignStubs": [
+                  {
+                    "language": "c",
+                    "names": ["src1", "src2"],
+                    "flags": []
+                  }
+                ]
+             }
+           }
+         }
+       |},
+        ~duneVersion="2.0",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard)))\n",
+    ])
+  );
+
+  test("Sample config - 29", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testlib": {
+               "require": ["foo"],
+               "namespace": "Foo",
+               "name": "bar.lib",
+               "foreignStubs": [
+                  {
+                    "language": "c",
+                    "names": ["src1", "src2"]
+                  },
+                  {
+                    "language": "cxx",
+                    "names": ["src3"],
+                    "flags": ["-02"]
+                  }
+                ]
+             }
+           }
+         }
+       |},
+        ~duneVersion="2.0",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard))\n    (foreign_stubs (language cxx) (names src3) (flags -02)))\n",
+    ])
+  );
+
+  test("Sample config - 30", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testlib": {
+               "require": ["foo"],
+               "namespace": "Foo",
+               "name": "bar.lib",
+               "cNames": ["stubs"],
+               "foreignStubs": [
+                  {
+                    "language": "c",
+                    "names": ["src1", "src2"]
+                  },
+                  {
+                    "language": "cxx",
+                    "names": ["src3"],
+                    "flags": ["-02"]
+                  }
+                ]
+             }
+           }
+         }
+       |},
+        ~duneVersion="2.0",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard))\n    (foreign_stubs (language cxx) (names src3) (flags -02)))\n",
+    ])
+  );
+
+  test("Sample config - 31", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testlib": {
+               "require": ["foo"],
+               "namespace": "Foo",
+               "name": "bar.lib",
+               "cNames": ["stub1", "stub2"],
+               "foreignStubs": [
+                  {
+                    "language": "c",
+                    "names": ["src1", "src2"]
+                  },
+                  {
+                    "language": "cxx",
+                    "names": ["src3"],
+                    "flags": ["-02"]
+                  }
+                ]
+             }
+           }
+         }
+       |},
+        ~duneVersion="1.11",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (c_names stub1 stub2))\n",
     ])
   );
 });
