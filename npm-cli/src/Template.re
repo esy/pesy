@@ -325,7 +325,7 @@ $errors
        );
   };
 
-  let gen = dest =>
+  let gen = (dest, bootstrapCIOnly) =>
     fun
     | GitRemote(remote) => {
         let tmpdir = Os.tmpdir();
@@ -348,15 +348,19 @@ $errors
         );
       }
     | Path(source) =>
-      validate(source)
-      >>= (
-        explicitIgnoreDirs =>
-          copyAndSubstitute(
-            source,
-            dest,
-            explicitIgnoreDirs @ ["node_modules", ".git", "_esy"],
-          )
-      );
+      if (bootstrapCIOnly) {
+        copyAndSubstitute(DefaultTemplate.ciPath, dest, []);
+      } else {
+        validate(source)
+        >>= (
+          explicitIgnoreDirs =>
+            copyAndSubstitute(
+              source,
+              dest,
+              explicitIgnoreDirs @ ["node_modules", ".git", "_esy"],
+            )
+        );
+      };
   let ofString = str =>
     /* TODO: sanitisation. For instance, if git remotes with three components (foo/bar/baz) are meaningless */
     if (Path.isAbsolute(str)) {
