@@ -8,12 +8,6 @@ steps:
   - template: utils/restore-build-cache.yml
   - script: "esy build --release"
     displayName: "esy build --release"
-  - template: utils/create-docs.yml
-  # - script: "esy test"
-  #   displayName: "Test command"
   - script: "esy release"
     displayName: "esy release"
   - template: utils/publish-build-cache.yml
-
-  # Run tests or any additional steps here
-  # - script: esy b dune runtest
