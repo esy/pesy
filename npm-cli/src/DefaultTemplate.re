@@ -6,3 +6,5 @@ let path =
     "templates",
     "pesy-reason-template-0.1.0-alpha.11",
   |]);
+
+let ciPath = Path.resolve([|dirname, "templates", "ci"|]);

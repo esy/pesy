@@ -131,9 +131,17 @@ let runningEsy = (~esy, ~projectPath, ~forceCacheFetch, ()) => {
   );
 };
 
-let run = (esy, projectPath, template, bootstrapOnly, forceCacheFetch) => {
+let run =
+    (
+      esy,
+      projectPath,
+      template,
+      bootstrapOnly,
+      bootstrapCIOnly,
+      forceCacheFetch,
+    ) => {
   let bootstrapped =
-    bootstrap(projectPath, template)
+    bootstrap(projectPath, bootstrapCIOnly, template)
     >>= (
       () => {
         // TODO: Hacky! Streamline what stays and what doesn't. Maybe add a ignore field to pesy config so that we know what to copy and what shouldn't be?
@@ -141,15 +149,15 @@ let run = (esy, projectPath, template, bootstrapOnly, forceCacheFetch) => {
           Path.join([|projectPath, ".ci-self"|]),
         );
       }
-    );   
-    /* >>= ( */
-    /*   _ => { */
-    /*     Js.log(""); */
-    /*     Js.log("Setting up"); */
-    /*     Js.log(""); */
-    /*     Template.substitute(projectPath); */
-    /*   } */
-    /* ); */
+    );
+  /* >>= ( */
+  /*   _ => { */
+  /*     Js.log(""); */
+  /*     Js.log("Setting up"); */
+  /*     Js.log(""); */
+  /*     Template.substitute(projectPath); */
+  /*   } */
+  /* ); */
 
   bootstrapOnly
     ? bootstrapped
@@ -162,10 +170,25 @@ let run = (esy, projectPath, template, bootstrapOnly, forceCacheFetch) => {
     : bootstrapped >>= runningEsy(~esy, ~projectPath, ~forceCacheFetch);
 };
 
-let run = (esy, projectPath, template, bootstrapOnly, forceCacheFetch) => {
+let run =
+    (
+      esy,
+      projectPath,
+      template,
+      bootstrapOnly,
+      bootstrapCIOnly,
+      forceCacheFetch,
+    ) => {
   Fs.mkdir(~p=true, projectPath)
   |> Js.Promise.then_(() => {
        Process.chdir(projectPath);
-       run(esy, projectPath, template, bootstrapOnly, forceCacheFetch);
+       run(
+         esy,
+         projectPath,
+         template,
+         bootstrapOnly,
+         bootstrapCIOnly,
+         forceCacheFetch,
+       );
      });
 };

@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "ocaml": "4.6.x",
-    "@esy-ocaml/reason": "<= 3.5.2",
+    "@esy-ocaml/reason": "3.6.x",
     "@opam/odoc": "*",
     "@opam/ocaml-lsp-server": "ocaml/ocaml-lsp:ocaml-lsp-server.opam#7aa196ffeb358b2916f425df4923b7431f7eaf51",
     "@opam/merlin": "*"

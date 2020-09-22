@@ -23,7 +23,15 @@ let handleEmptyDirectory =
       promptEmptyDirectory();
     };
 
-let main = (projectPath, template, forceInit, forceCacheFetch, bootstrapOnly) => {
+let main =
+    (
+      projectPath,
+      template,
+      forceInit,
+      forceCacheFetch,
+      bootstrapOnly,
+      bootstrapCIOnly,
+    ) => {
   let projectPath =
     Path.isAbsolute(projectPath)
       ? projectPath : Path.join([|Process.cwd(), projectPath|]);
@@ -36,6 +44,7 @@ let main = (projectPath, template, forceInit, forceCacheFetch, bootstrapOnly) =>
         projectPath,
         template,
         bootstrapOnly,
+        bootstrapCIOnly,
         forceCacheFetch,
       )
   )
@@ -77,6 +86,7 @@ let testTemplate = () => {
         testProjectPath,
         Template.Kind.path(templatePath),
         false,
+        false,
         None,
       );
     }
@@ -117,6 +127,11 @@ let bootstrapOnly = {
   Arg.(value & flag & info(["b", "bootstrap-only"], ~doc));
 };
 
+let bootstrapCIOnly = {
+  let doc = "Only create ci files.";
+  Arg.(value & flag & info(["c", "bootstrap-ci-only"], ~doc));
+};
+
 open Cmdliner.Term;
 let cmd = {
   let cmd = "pesy";
@@ -131,6 +146,7 @@ let cmd = {
       $ forceInit
       $ forceCacheFetch
       $ bootstrapOnly
+      $ bootstrapCIOnly
     );
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
