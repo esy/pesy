@@ -4,7 +4,6 @@ steps:
   - bash: 'mkdir -p $(Build.StagingDirectory)'
     condition: and(eq(variables['Build.Reason'], 'PullRequest'), and(succeeded(), ne(variables['Build.SourceBranch'], variables['System.PullRequest.TargetBranch'])))
     displayName: '[Cache][Publish] Create cache directory'
-    workingDirectory: $(Agent.HomeDirectory)/hello-reason
 
   # TODO: This can be done in parallel with installing node, and esy
   # (which would save a bunch of time on windows)
@@ -90,7 +89,6 @@ steps:
       
   - bash: 'rm -rf _import'
     continueOnError: true
-    workingDirectory: $(Agent.HomeDirectory)/hello-reason
     condition: and(eq(variables['Build.Reason'], 'PullRequest'), and(succeeded(), ne(variables['Build.SourceBranch'], variables['System.PullRequest.TargetBranch'])))
     displayName: 'Remove import directory'
 
