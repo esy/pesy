@@ -11,12 +11,10 @@ steps:
     continueOnError: true
     condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
     displayName: "esy export-dependencies"
-    workingDirectory: $(Agent.HomeDirectory)/hello-reason
 
   - bash: pwd && ls _export/* && mv _export '$(Build.StagingDirectory)' && ls '$(Build.StagingDirectory)/_export/'
     condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
     displayName: '[Cache][Publish] move export to staging dir'
-    workingDirectory: $(Agent.HomeDirectory)/hello-reason
 
   # - bash: cd $ESY__CACHE_INSTALL_PATH && tar -czf $(Build.StagingDirectory)/esy-cache.tar .
   #   workingDirectory: ''
