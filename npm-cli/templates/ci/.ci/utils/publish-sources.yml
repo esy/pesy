@@ -1,0 +1,10 @@
+steps:
+  - task: PublishBuildArtifacts@1
+    displayName: '[Cache][Publish] Sources'
+    condition: eq(variables['AGENT.OS'], 'Linux')
+    inputs:
+      pathToPublish: "$(Agent.HomeDirectory)/esy-sources"
+      artifactName: 'esy-sources'
+      parallel: true
+      parallelCount: 8
+
