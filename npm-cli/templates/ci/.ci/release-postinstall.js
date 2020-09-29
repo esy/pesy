@@ -125,7 +125,6 @@ function copyFileSync(sourcePath, destPath) {
   }
   var stat = fs.statSync(sourcePath);
   fs.writeFileSync(destPath, data);
-  fs.chmodSync(destPath, stat.mode);
 }
 
 var copyPlatformBinaries = platformPath => {
@@ -145,7 +144,6 @@ var copyPlatformBinaries = platformPath => {
       fs.unlinkSync(destPath);
     }
     copyFileSync(sourcePath, destPath);
-    fs.chmodSync(destPath, 0777);
   });
 };
 
