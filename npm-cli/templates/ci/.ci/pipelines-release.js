@@ -18,11 +18,11 @@ const mainPackageJson = require(path.join('..', mainPackageJsonPath));
 const bins =
   Array.isArray(mainPackageJson.esy.release.bin) ?
   mainPackageJson.esy.release.bin.reduce(
-    (acc, curr) => Object.assign({ [curr]: "bin/" + (process.platform == "win32" ? ".exe": "") }, acc),
+    (acc, curr) => Object.assign({ [curr]: "bin/" + curr }, acc),
     {}
   ) :
   Object.keys(mainPackageJson.esy.release.bin).reduce(
-    (acc, currKey) => Object.assign({ [currKey]: "bin/" + mainPackageJson.esy.release.bin[currKey] + (process.platform == "win32" ? ".exe": "") }, acc),
+    (acc, currKey) => Object.assign({ [currKey]: "bin/" + mainPackageJson.esy.release.bin[currKey] }, acc),
     {}
   );
 
