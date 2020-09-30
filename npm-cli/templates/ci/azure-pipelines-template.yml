@@ -42,30 +42,35 @@ jobs:
     steps:
       - checkout: self
         submodules: true
-      - script: apt install jq gzip
+      - script: sudo apt install jq gzip
         displayName: Install deps
-      - script: docker build . -f docker/DevImage.Dockerfile --network=host -t $(jq .name package.json)-dev
+      - bash: |
+          ESY__PROJECT_NAME=$(jq -r .name package.json)
+          ESY__PROJECT_VERSION=$(jq -r .version package.json)
+          echo "##vso[task.setvariable variable=esy__project_name]$ESY__PROJECT_NAME"
+          echo "##vso[task.setvariable variable=esy__project_version]$ESY__PROJECT_VERSION"
+      - script: docker build . -f docker/DevImage.Dockerfile --network=host -t $(esy__project_name)-dev
         displayName: "Build Docker (dev) image"
-      - script: docker container run -itd --network=host --name $(jq .name package.json)-container $(jq .name package.json)-dev
+      - script: docker container run -itd --network=host --name $(esy__project_name)-container $(esy__project_name)-dev
         displayName: "Run Docker container"
-      - script:  docker cp $(jq .name package.json)-container:/app/_release $PWD/_container_release
+      - script:  docker cp $(esy__project_name)-container:/app/_release $PWD/_container_release
         displayName: "Copy _release from container"
-      - script: npm release
+      - script: npm pack
         workingDirectory: _container_release
         displayName: "Npm pack'ing"
       - task: PublishBuildArtifacts@1
         displayName: "Publish Docker built artifact"
         inputs:
-          PathtoPublish: "_container_release/*.tgz"
+          PathtoPublish: "_container_release/$(esy__project_name)-$(esy__project_version).tgz"
           ArtifactName: DockerBuiltNPM.tgz
-      - script: docker build . -f docker/ProdImage.Dockerfile --network=host -t $(jq .name package.json)
+      - script: docker build . -f docker/ProdImage.Dockerfile --network=host -t $(esy__project_name)
         displayName: "Build production Docker image"
-      - script: docker save $(jq .name package.json) | gzip > $(jq .name package.json)-docker-image.tar.gz
+      - script: docker save $(esy__project_name) | gzip > $(esy__project_name)-docker-image.tar.gz
         displayName: "Save Docker image as tarball"
       - task: PublishBuildArtifacts@1
         displayName: "Publish Docker production image"
         inputs:
-          PathtoPublish: "$(jq .name package.json)-docker-image.tar.gz"
+          PathtoPublish: "$(esy__project_name)-docker-image.tar.gz"
           ArtifactName: DockerBuiltNPM.tgz
           
   # This job is kept here as we want to have the platform names in the same file

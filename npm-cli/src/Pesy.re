@@ -94,6 +94,42 @@ let testTemplate = () => {
   |> ResultPromise.catch;
 };
 
+type componentConv =
+  | CI
+  | Docker;
+
+let upgradeTemplate = (dest, cs1, cs2) => {
+  let components = cs1 @ cs2;
+  let allIfNone =
+    fun
+    | [] => [CI, Docker]
+    | x => x;
+  let rec uniq = acc =>
+    fun
+    | [] => acc
+    | [h, ...rest] =>
+      List.mem(h, acc) ? uniq(acc, rest) : uniq([h, ...acc], rest);
+  let setupTemplate = path =>
+    Template.copyAndSubstitute(path, dest, [])
+    |> Js.Promise.then_(
+         fun
+         | Ok () => Js.Promise.resolve()
+         | Error(msg) =>
+           Js.log("Error while upgrading: " ++ msg) |> Js.Promise.resolve,
+       );
+  components
+  |> uniq([])
+  |> allIfNone
+  |> List.map(
+       fun
+       | CI => setupTemplate(DefaultTemplate.ciPath)
+       | Docker => setupTemplate(DefaultTemplate.dockerPath),
+     )
+  |> Array.of_list
+  |> Js.Promise.all
+  |> Js.Promise.then_(_ => Js.log("") |> Js.Promise.resolve);
+};
+
 let version = "0.5.0-dev.22";
 let template = {
   let doc = "Specify URL of the remote template. This can be of the form https://repo-url.git#<commit|branch|tag>. Eg: https://github.com/reason-native-web/morph-hello-world-pesy-template#6e5cbbb9f28";
@@ -169,9 +205,63 @@ let testTemplateCmd = {
   (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
 };
 
+let upgradeTemplateCmd = {
+  let componentConv: Cmdliner.Arg.conv(componentConv) = {
+    let ofString =
+      fun
+      | "ci" => Ok(CI)
+      | "docker" => Ok(Docker)
+      | _ => Error("Unrecognised component to be upgraded");
+
+    let parser =
+        (str: string): Pervasives.result(componentConv, [ | `Msg(string)]) =>
+      switch (ofString(str)) {
+      | Ok(kind) => Ok(kind)
+      | Error(msg) => Error(`Msg(msg))
+      };
+
+    let printer: Cmdliner.Arg.printer(componentConv) =
+      (ppf: Format.formatter, v: componentConv) => (
+        switch (v) {
+        | CI => Format.fprintf(ppf, "CI")
+        | Docker => Format.fprintf(ppf, "Docker")
+        }: unit
+      );
+
+    (parser, printer) |> Arg.conv(~docv="ci | docker");
+  };
+  let components = {
+    let doc = "Specifies which components of the template to upgrade";
+    Arg.(
+      value
+      & opt(list(componentConv), [])
+      & info(["components", "l"], ~doc)
+    );
+  };
+  let component = {
+    let doc = "Specifies which component of the template to upgrade";
+    Arg.(
+      value & opt_all(componentConv, []) & info(["component", "c"], ~doc)
+    );
+  };
+  let cmd = "upgrade-template";
+  let envs: list(env_info) = [];
+  let exits: list(exit_info) = [];
+  let doc = "upgrade-template - convenient subcommand to upgrade your template";
+  let cmdT =
+    Term.(const(upgradeTemplate) $ directory $ component $ components);
+  (cmdT, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+};
+
 let main =
   (. argv) =>
-    switch (Term.eval_choice(~argv, cmd, [warmupCmd, testTemplateCmd])) {
+    switch (
+      Term.eval_choice(
+        ~argv,
+        cmd,
+        [warmupCmd, testTemplateCmd, upgradeTemplateCmd],
+      )
+    ) {
     | exception (Invalid_argument(msg)) =>
       Js.log(msg);
       Js.Promise.resolve(1);

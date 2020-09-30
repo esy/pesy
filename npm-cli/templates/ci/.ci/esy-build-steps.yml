@@ -4,9 +4,13 @@ steps:
   - template: utils/use-node.yml
   - template: utils/use-cache-yarn.yml
   - template: utils/use-esy.yml
-  - template: utils/use-cache-esy.yml
-    - script: "esy install --cache-tarballs-path=$(Build.SourcesDirectory)/esy-sources"
+  - script: "esy install"
     displayName: "esy install"
+    condition: ne(variables['AGENT.OS'], 'Linux')
+  - template: utils/use-cache-esy.yml
+  - script: "esy install --cache-tarballs-path=$(Agent.HomeDirectory)/esy-sources"
+    displayName: "esy install"
+    condition: eq(variables['AGENT.OS'], 'Linux')
   - template: utils/publish-sources.yml
   - template: utils/restore-build-cache.yml
   - script: "esy build --release"
