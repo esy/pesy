@@ -5,7 +5,7 @@ steps:
   - template: utils/use-cache-yarn.yml
   - template: utils/use-esy.yml
   - template: utils/use-cache-esy.yml
-  - script: "esy install --cache-tarballs-path=$(Agent.HomeDirectory)/esy-sources"
+    - script: "esy install --cache-tarballs-path=$(Build.SourcesDirectory)/esy-sources"
     displayName: "esy install"
   - template: utils/publish-sources.yml
   - template: utils/restore-build-cache.yml
