@@ -150,7 +150,7 @@
         "@reason-native/rely@3.2.1@d41d8cd9",
         "@opam/odoc@opam:1.5.1@52a58c0b",
         "@opam/ocamlformat@opam:0.12@c6954cd5",
-        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#0358d7db474ce5ef23a7eb7cefa39076403911da@d41d8cd9",
+        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#a66d82aff86b162423b1657b38f7c4dcc5867ff1@d41d8cd9",
         "@opam/merlin@opam:3.3.9@e0b69f63", "@opam/dune@opam:2.7.0@50e8f3e0",
         "@opam/bos@opam:0.2.0@df49e63f"
       ]
@@ -812,16 +812,16 @@
         "@opam/dune@opam:2.7.0@50e8f3e0"
       ]
     },
-    "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#0358d7db474ce5ef23a7eb7cefa39076403911da@d41d8cd9": {
+    "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#a66d82aff86b162423b1657b38f7c4dcc5867ff1@d41d8cd9": {
       "id":
-        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#0358d7db474ce5ef23a7eb7cefa39076403911da@d41d8cd9",
+        "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#a66d82aff86b162423b1657b38f7c4dcc5867ff1@d41d8cd9",
       "name": "@opam/ocaml-lsp-server",
       "version":
-        "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#0358d7db474ce5ef23a7eb7cefa39076403911da",
+        "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#a66d82aff86b162423b1657b38f7c4dcc5867ff1",
       "source": {
         "type": "install",
         "source": [
-          "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#0358d7db474ce5ef23a7eb7cefa39076403911da"
+          "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#a66d82aff86b162423b1657b38f7c4dcc5867ff1"
         ]
       },
       "overrides": [],
