@@ -3,9 +3,10 @@ module Alias = {
     alias: string,
     library: string,
     originalNamespace: string,
+    exportedNamespace: string,
   };
-  let create = (~alias, ~library, ~originalNamespace) => {
-    {alias, library, originalNamespace};
+  let create = (~alias, ~library, ~originalNamespace, ~exportedNamespace) => {
+    {alias, library, originalNamespace, exportedNamespace};
   };
   let getLibrary = x => x.library;
   let transform = (~f, x) => f(x);
