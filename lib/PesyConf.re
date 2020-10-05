@@ -376,6 +376,146 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
     |> List.map(upperCamelCasify)
     |> List.fold_left((++), "");
 
+  let aliases =
+    imports
+    |> List.map(import => {
+         let (exportedNamespace, lib) = import;
+         let libraryAsPath =
+           lib
+           |> (
+             x => {
+               x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x;
+             }
+           )
+           |> resolveRelativePath
+           |> (
+             x =>
+               x.[0] == '@'
+                 ? if (findIndex(doubleKebabifyIfScoped(x), rootName) != 0) {
+                     switch (x |> resolveDepNameToFindlib) {
+                     | Ok(x) => x
+                     | Error(msg) => raise(Failure(msg))
+                     };
+                   } else {
+                     x |> doubleKebabifyIfScoped;
+                   }
+                 : x
+           );
+         let originalNamespace =
+           if (findIndex(libraryAsPath, rootName) == 0) {
+             libraryAsPath
+             |> String.split_on_char('/')
+             |> List.map(upperCamelCasify)
+             |> List.fold_left((++), "");
+           } else {
+             /** ie. external library. We use findlib and figure out namespace **/
+             Str.global_replace(
+               Str.regexp("\\.cmxa"),
+               "",
+               Findlib.package_property(
+                 ["native"],
+                 pathToOCamlLibName(libraryAsPath),
+                 "archive",
+               ),
+             )
+             |> String.mapi((i, c) => i == 0 ? Char.uppercase_ascii(c) : c);
+           };
+
+         PesyModule.Alias.create(
+           ~alias={
+             switch (
+               List.fold_left(
+                 (accExt, ext) =>
+                   List.fold_left(
+                     (accEntry, entry) => {
+                       switch (accEntry) {
+                       | Some(x) => Some(x)
+                       | None =>
+                         if (findIndex(libraryAsPath, rootName) != 0) {
+                           Some(
+                             sprintf(
+                               "module %s = %s;",
+                               exportedNamespace,
+                               originalNamespace,
+                             ),
+                           );
+                         } else {
+                           let stripRootName =
+                             Str.global_replace(
+                               Str.regexp(rootName ++ "/"),
+                               "",
+                             );
+                           let basePathToRequirePkg =
+                             libraryAsPath
+                             |> stripRootName
+                             |> (x => Path.(projectPath / x))
+                             |> resolveRelativePath;
+                           if (Sys.file_exists(
+                                 Path.(basePathToRequirePkg / entry) ++ ext,
+                               )
+                               || Sys.file_exists(
+                                    Path.(
+                                      basePathToRequirePkg
+                                      / String.lowercase_ascii(entry)
+                                    )
+                                    ++ ext,
+                                  )) {
+                             Some(
+                               sprintf(
+                                 "module %s = %s.%s;",
+                                 exportedNamespace,
+                                 originalNamespace,
+                                 entry,
+                               ),
+                             );
+                           } else {
+                             None;
+                           };
+                         }
+                       }
+                     },
+                     accExt,
+                     ["Index", exportedNamespace] /* If it finds, Index.re, it doesn't look for Bar.re */
+                   ),
+                 None,
+                 [".re", ".ml"],
+               )
+             ) {
+             | Some(x) => x
+             | None =>
+               sprintf(
+                 "module %s = %s;",
+                 exportedNamespace,
+                 originalNamespace,
+               )
+             };
+           },
+           ~library=pathToOCamlLibName(libraryAsPath),
+           ~originalNamespace,
+           ~exportedNamespace,
+         );
+       });
+
+  let aliasesWithDifferentNamespace =
+    PesyModule.Alias.(
+      aliases
+      |> List.filter(alias =>
+           alias.originalNamespace != alias.exportedNamespace
+         )
+    );
+
+  /*
+    Ex: Pastel = require('pastel/lib'). In this case,
+    we should skip aliasing. See: https://github.com/esy/pesy/issues/171
+   */
+  let aliasesWithSameNamespace =
+    PesyModule.Alias.(
+      aliases
+      |> List.filter(alias =>
+           alias.originalNamespace == alias.exportedNamespace
+         )
+    );
+
   let pesyModules =
     PesyModule.create(
       ~namespace=pesyModuleNamespace,
@@ -384,127 +524,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
           "%s.pesy-modules",
           pathToOCamlLibName(rootName ++ "/" ++ dir),
         ),
-      ~aliases=
-        imports
-        |> List.map(import => {
-             let (importedNamespace, lib) = import;
-             let libraryAsPath =
-               lib
-               |> (
-                 x => {
-                   x.[0] == '.' ? sprintf("%s/%s/%s", rootName, dir, x) : x;
-                 }
-               )
-               |> resolveRelativePath
-               |> (
-                 x =>
-                   x.[0] == '@'
-                     ? if (findIndex(doubleKebabifyIfScoped(x), rootName)
-                           != 0) {
-                         switch (x |> resolveDepNameToFindlib) {
-                         | Ok(x) => x
-                         | Error(msg) => raise(Failure(msg))
-                         };
-                       } else {
-                         x |> doubleKebabifyIfScoped;
-                       }
-                     : x
-               );
-             let exportedNamespace =
-               if (findIndex(libraryAsPath, rootName) == 0) {
-                 libraryAsPath
-                 |> String.split_on_char('/')
-                 |> List.map(upperCamelCasify)
-                 |> List.fold_left((++), "");
-               } else {
-                 /** ie. external library. We use findlib and figure out namespace **/
-                 Str.global_replace(
-                   Str.regexp("\\.cmxa"),
-                   "",
-                   Findlib.package_property(
-                     ["native"],
-                     pathToOCamlLibName(libraryAsPath),
-                     "archive",
-                   ),
-                 )
-                 |> String.mapi((i, c) =>
-                      i == 0 ? Char.uppercase_ascii(c) : c
-                    );
-               };
-
-             PesyModule.Alias.create(
-               ~alias={
-                 switch (
-                   List.fold_left(
-                     (accExt, ext) =>
-                       List.fold_left(
-                         (accEntry, entry) => {
-                           switch (accEntry) {
-                           | Some(x) => Some(x)
-                           | None =>
-                             if (findIndex(libraryAsPath, rootName) != 0) {
-                               Some(
-                                 sprintf(
-                                   "module %s = %s;",
-                                   importedNamespace,
-                                   exportedNamespace,
-                                 ),
-                               );
-                             } else {
-                               let stripRootName =
-                                 Str.global_replace(
-                                   Str.regexp(rootName ++ "/"),
-                                   "",
-                                 );
-                               let basePathToRequirePkg =
-                                 libraryAsPath
-                                 |> stripRootName
-                                 |> (x => Path.(projectPath / x))
-                                 |> resolveRelativePath;
-                               if (Sys.file_exists(
-                                     Path.(basePathToRequirePkg / entry) ++ ext,
-                                   )
-                                   || Sys.file_exists(
-                                        Path.(
-                                          basePathToRequirePkg
-                                          / String.lowercase_ascii(entry)
-                                        )
-                                        ++ ext,
-                                      )) {
-                                 Some(
-                                   sprintf(
-                                     "module %s = %s.%s;",
-                                     importedNamespace,
-                                     exportedNamespace,
-                                     entry,
-                                   ),
-                                 );
-                               } else {
-                                 None;
-                               };
-                             }
-                           }
-                         },
-                         accExt,
-                         ["Index", importedNamespace] /* If it finds, Index.re, it doesn't look for Bar.re */
-                       ),
-                     None,
-                     [".re", ".ml"],
-                   )
-                 ) {
-                 | Some(x) => x
-                 | None =>
-                   sprintf(
-                     "module %s = %s;",
-                     importedNamespace,
-                     exportedNamespace,
-                   )
-                 };
-               },
-               ~library=pathToOCamlLibName(libraryAsPath),
-               ~originalNamespace=importedNamespace,
-             );
-           }),
+      ~aliases=aliasesWithDifferentNamespace,
     );
 
   let fromListOrString = ls =>
@@ -616,7 +636,13 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
   let common =
     Common.create(
       Path.(projectPath / dir),
-      require,
+      List.append(
+        require,
+        PesyModule.Alias.(
+          aliasesWithSameNamespace
+          |> List.map(pesyModule => pesyModule.library)
+        ),
+      ),
       flags,
       ocamlcFlags,
       ocamloptFlags,
