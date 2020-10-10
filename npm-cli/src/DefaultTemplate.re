@@ -8,3 +8,4 @@ let path =
   |]);
 
 let ciPath = Path.resolve([|dirname, "templates", "ci"|]);
+let dockerPath = Path.resolve([|dirname, "templates", "docker"|]);
