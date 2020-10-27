@@ -227,8 +227,8 @@ to
   | [] =>
     Error(
       Printf.sprintf(
-        "Sub library <base>/%s not found",
-        String.concat("/", remainingParts),
+        "Library %s not found",
+        String.concat("/", [depName, ...remainingParts]),
       ),
     )
   | [candidate] => Ok(candidate)
