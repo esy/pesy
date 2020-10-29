@@ -99,9 +99,18 @@ let os =
   | _ => None
   };
 
-let artifactName =
+type artifact = {
+  filename: string,
+  checksumFilename: string,
+};
+
+let artifact =
   switch (os) {
-  | Some(os) => Some({j|cache-$os-install-v1|j})
+  | Some(os) =>
+    Some({
+      filename: {j|cache-$os-install-v1|j},
+      checksumFilename: {j|cache-$os-install-v1-checksum|j},
+    })
   | None => None
   };
 
@@ -152,10 +161,31 @@ let getBuildID = (projName, definitionID) => {
 let getDownloadURL = (projName, latestBuildID) => {
   let proj = projName |> ProjectName.toString;
   let latestBuildID = Js.Int.toString(latestBuildID);
-  switch (artifactName) {
-  | Some(artifactName) =>
+  switch (artifact) {
+  | Some({filename}) =>
     Https.getCompleteResponse(
-      {j|$restBase/$proj/_apis/build/builds/$latestBuildID/artifacts?artifactname=$artifactName&api-version=4.1|j},
+      {j|$restBase/$proj/_apis/build/builds/$latestBuildID/artifacts?artifactname=$filename&api-version=4.1|j},
+    )
+    |> P.then_(
+         fun
+         | Error(Https.E.Failure(url)) =>
+           Error({j| Failed to download $url |j}) |> P.resolve
+         | Ok(responseText) =>
+           responseText |> RESTResponse.getDownloadURL |> P.resolve,
+       )
+  | None =>
+    Error("We detected a platform for which we couldn't find cached builds")
+    |> P.resolve
+  };
+};
+
+let getChecksumDownloadURL = (projName, latestBuildID) => {
+  let proj = projName |> ProjectName.toString;
+  let latestBuildID = Js.Int.toString(latestBuildID);
+  switch (artifact) {
+  | Some({checksumFilename}) =>
+    Https.getCompleteResponse(
+      {j|$restBase/$proj/_apis/build/builds/$latestBuildID/artifacts?artifactname=$checksumFilename&api-version=4.1|j},
     )
     |> P.then_(
          fun

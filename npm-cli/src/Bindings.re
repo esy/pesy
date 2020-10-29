@@ -237,6 +237,8 @@ module Https = {
 module Crypto = {
   [@bs.module "../../../stubs/crypto.js"]
   external sha256: (. string, string) => string = "sha256";
+  [@bs.module "../../../stubs/crypto.js"]
+  external sha1File: (string) => Js.Promise.t(string) = "sha1File";
 };
 
 module Fs = {
@@ -250,8 +252,14 @@ module Fs = {
   [@bs.module "fs"]
   external createWriteStream: string => Stream.t = "createWriteStream";
 
+  [@bs.module "fs"]
+  external readStream: string => Stream.t = "ReadStream";
+
   [@bs.module "../../../stubs/fs.js"]
   external unlink: string => Js.Promise.t(bool) = "unlink";
+
+  [@bs.module "../../../stubs/fs.js"]
+  external rmdirRecursive: string => Js.Promise.t(unit) = "rmdirRecursive";
 
   let copy = (~dryRun=?, ~src, ~dest, ()) => {
     Promise.(
