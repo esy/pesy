@@ -1,0 +1,39 @@
+* Release process
+
+  The release process is mostly manual right now and works like this.
+  
+** @pesy/esy-pesy
+
+   1. =git ls-files | xargs sed -i 's/dev.<num>/alpha.<num/g'=
+   2. Commit and push
+   3. Tag the commit for just =@pesy/esy-pesy=
+   4. =npm publish= (watch the tag)
+
+ 
+   =@pesy/esy-pesy= is preferably released first so that =pesy-reason-template= can be updated with it
+
+  
+** Update pesy-reason-template with the newly released @pesy/esy-pesy
+
+   The diff usually looks like this
+
+   #+begin_src diff
+   - "@pesy/esy-pesy": "<old version>"
+   + "@pesy/esy-pesy": "<new version>"
+   #+end_src
+
+   
+** pesy
+
+   Same as =@pesy/esy-pesy=
+   
+   1. =git ls-files | xargs sed -i 's/dev.<num>/alpha.<num/g'=
+   2. Commit and push
+   3. Tag the commit for just =@pesy/esy-pesy=
+   4. =npm publish= (watch the tag)
+
+** Back to dev version for further development
+
+   1. Revert the two commits that bump to release versions
+   2. =git ls-files | xargs sed -i 's/dev.<num>/dev.<num + 1>/g'=
+   3. Commit and push
