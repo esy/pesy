@@ -47,7 +47,7 @@ let () = {
   run(makeCommand("yarn"), [||]);
   run(makeCommand("yarn"), [|"run", "package"|]);
   run(makeCommand("npm"), [|"pack"|]);
-  run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-dev.22.tgz"|]);
+  run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-alpha.22.tgz"|]);
   chdir(cwd);
 };
 
