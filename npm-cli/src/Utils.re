@@ -153,7 +153,9 @@ let rec askYesNoQuestion = (~question, ~onYes, ~onNo, ()) => {
       | "no" =>
         onNo();
         rl##close();
-      | _ => askYesNoQuestion(~question, ~onYes, ~onNo, ())
+      | _ =>
+        rl##close();
+        askYesNoQuestion(~question, ~onYes, ~onNo, ());
       };
     },
   );
