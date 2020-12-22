@@ -7,10 +7,10 @@ steps:
 
   # continueOnError because on windows it has a permission denied error but the
   # export succeeds.
-  - script: "esy export-dependencies"
+  - script: 'esy export-dependencies'
     continueOnError: true
     condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
-    displayName: "esy export-dependencies"
+    displayName: 'esy export-dependencies'
 
   - bash: pwd && ls _export/* && mv _export '$(Build.StagingDirectory)' && ls '$(Build.StagingDirectory)/_export/'
     condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
@@ -25,13 +25,50 @@ steps:
   #   condition: and(succeeded(), eq(variables['Build.SourceBranch'], variables['System.PullRequest.TargetBranch']))
   #   displayName: '[Cache][Publish] Tar npm cache directory'
 
-  - task: PublishBuildArtifacts@1
-    displayName: '[Cache][Publish] Upload tarball'
+  - task: ArchiveFiles@2
     condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+    displayName: '[Cache][Publish] compress export folder'
+    inputs:
+      rootFolderOrFile: '$(Build.StagingDirectory)/_export/'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.StagingDirectory)/_export.zip'
+
+  - bash: 'shasum _export.zip | cut -d " " -f 1 | tr -d "\n" > checksum.txt'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'), or(eq(variables['Agent.OS'], 'Darwin'), eq(variables['Agent.OS'], 'Linux')))
+    displayName: '[Cache][Publish] calcule export.zip sha1 on Linux/Darwin'
+    workingDirectory: $(Build.StagingDirectory)
+
+  - bash: 'sha1sum _export.zip | cut -d " " -f 1 | tr -d "\n" > checksum.txt'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'), eq( variables['Agent.OS'], 'Windows_NT'))
+    displayName: '[Cache][Publish] calcule export.zip sha1 on Windows'
+    workingDirectory: $(Build.StagingDirectory)
+
+  - task: PublishBuildArtifacts@1
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+    displayName: '[Cache][Publish] Upload tarball'
     # TODO: The CI Build caches are pulled down by the last successful buildID
     # for the target branch.
     inputs:
-        pathToPublish: '$(Build.StagingDirectory)'
-        artifactName: 'cache-$(Agent.OS)-install-$(esy__ci_cache_version)'
-        parallel: true
-        parallelCount: 8
+      pathToPublish: '$(Build.StagingDirectory)/_export.zip'
+      artifactName: 'cache-$(Agent.OS)-install-$(esy__ci_cache_version)'
+      parallel: true
+      parallelCount: 8
+
+  - task: PublishBuildArtifacts@1
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+    displayName: '[Cache][Publish] upload checksum'
+    inputs:
+      pathToPublish: '$(Build.StagingDirectory)/checksum.txt'
+      artifactName: 'cache-$(Agent.OS)-install-$(esy__ci_cache_version)-checksum'
+      parallel: true
+      parallelCount: 8
+
+  - task: DeleteFiles@1
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+    displayName: 'Remove checksum files'
+    inputs:
+      SourceFolder: $(Build.StagingDirectory)
+      Contents: |
+        _export.zip
+        checksum.txt
