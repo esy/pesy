@@ -669,10 +669,11 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
       | JSON.NullJSONValue () => None
       | e => raise(e)
       };
+    let static = try(Some(JSON.member(conf, "static") |> JSON.toValue |> FieldTypes.toBool)) { | JSON.NullJSONValue () => None | e => raise(e) };
     {
       pkg_path,
       common,
-      pkgType: ExecutablePackage(Executable.create(binKVs, modes)),
+      pkgType: ExecutablePackage(Executable.create(binKVs, static, modes)),
     };
   | None =>
     let namespace =

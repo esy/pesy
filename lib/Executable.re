@@ -109,13 +109,14 @@ module Mode = {
     };
 };
 type t = {
+  static: option(bool),
   binKVs: list((string, string)),
   modes: option(Mode.t),
 };
-let create = (binKVs, modes) => {binKVs, modes};
+let create = (binKVs, static, modes) => {binKVs, static, modes};
 let toDuneStanza = (common: Common.t, e) => {
   /* let {name: pkgName, require, path} = common; */
-  let {binKVs, modes: modesP} = e;
+  let {binKVs, static, modes: modesP} = e;
   let (
     libraries,
     flags,
@@ -130,14 +131,85 @@ let toDuneStanza = (common: Common.t, e) => {
     pesyModulesAliasModuleGen,
   ) =
     Common.toDuneStanzas(common);
+
+  /* TODO: hacky!
+        ocamlopt flags are not lists. They are s-expresions.
+        Each item in the list can a single item or another list of items.
+        And so on..
+        TODO: remodel some of the fields correctly as s-expressions
+     */
+
+  let ocamloptFlags =
+    switch (static) {
+    | Some(static) when static =>
+      Sexplib.Sexp.(
+        switch (ocamloptFlags) {
+        | None =>
+          Some(
+            List([
+              Atom("ocamlopt_flags"),
+              List([Atom("-ccopt"), Atom("-static")]),
+            ])
+            |> Stanza.ofSexp,
+          )
+        | Some(flags) =>
+          switch (Stanza.toSexp(flags)) {
+          | List(l) =>
+            switch (l) {
+            | [Atom("ocamlopt_flags"), ...rest] =>
+              Some(
+                List([
+                  Atom("ocamlopt_flags"),
+                  ...(rest @ [List([Atom("-ccopt"), Atom("-static")])]),
+                ])
+                |> Stanza.ofSexp,
+              )
+            | [] =>
+              Some(
+                List([
+                  Atom("ocamlopt_flags"),
+                  List([Atom("-ccopt"), Atom("-static")]),
+                ])
+                |> Stanza.ofSexp,
+              )
+            | _ => failwith("Invalid s-exp obtained for ocamlopt_flags")
+            }
+          | _ =>
+            Some(
+              List([
+                Atom("ocamlopt_flags"),
+                List([Atom("-ccopt"), Atom("-static")]),
+              ])
+              |> Stanza.ofSexp,
+            )
+          }
+        }
+      )
+    | Some(_) => ocamloptFlags
+    | None => ocamloptFlags
+    };
+
   let path = Common.getPath(common);
-  let (mains, publicNames) = List.fold_right((tuple, acc) => {
-    let (main, publicName) = tuple;
-    let (mains, publicNames) = acc;
-    (mains @ [main], publicNames @ [publicName]);
-    }, binKVs,([], []));
-  let name = Stanza.createExpression([Stanza.createAtom("names"), ...(mains |> List.map(x => x|> moduleNameOf |> Stanza.createAtom))])
-  let public_name = Stanza.createExpression([Stanza.createAtom("public_names"), ...(publicNames  |> List.map(Stanza.createAtom))]);
+  let (mains, publicNames) =
+    List.fold_right(
+      (tuple, acc) => {
+        let (main, publicName) = tuple;
+        let (mains, publicNames) = acc;
+        (mains @ [main], publicNames @ [publicName]);
+      },
+      binKVs,
+      ([], []),
+    );
+  let name =
+    Stanza.createExpression([
+      Stanza.createAtom("names"),
+      ...mains |> List.map(x => x |> moduleNameOf |> Stanza.createAtom),
+    ]);
+  let public_name =
+    Stanza.createExpression([
+      Stanza.createAtom("public_names"),
+      ...publicNames |> List.map(Stanza.createAtom),
+    ]);
 
   let modules =
     Stanza.createExpression([

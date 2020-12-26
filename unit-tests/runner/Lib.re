@@ -875,4 +875,51 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (c_names stub1 stub2))\n",
     ])
   );
+  
+  test("Sample config - 32 - Static linking with empty ocamloptFlags", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testExe": {
+               "bin": "Foo.re",
+               "static": true
+             }
+           }
+         }
+       |},
+        ~duneVersion="1.11",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(executables (names Foo) (modules (:standard)) (public_names Foo.exe)\n    (ocamlopt_flags (-ccopt -static)))\n",
+    ])
+  );
+  
+  test("Sample config - 32 - Static linking with non-empty ocamloptFlags", ({expect, _}) =>
+    expect.list(
+      testToPackages(
+        {|
+         {
+             "name": "foo",
+             "buildDirs": {
+             "testExe": {
+               "bin": "Foo.re",
+               "static": true,
+               "ocamloptFlags": ["-verbose"]
+             }
+           }
+         }
+       |},
+        ~duneVersion="1.11",
+      )
+      |> List.map(DuneFile.toString),
+    ).
+      toEqual([
+      "(executables (names Foo) (modules (:standard)) (public_names Foo.exe)\n    (ocamlopt_flags -verbose (-ccopt -static)))\n",
+    ])
+  );
 });
