@@ -375,7 +375,10 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
     @ ["PesyModules"]
     |> List.map(upperCamelCasify)
     |> List.fold_left((++), "");
-
+  /*
+       TODO: Find is packageLibrary then check if path exists else raise Exn <Pastel/> error
+   */
+  let isLocalLibrary = path => findIndex(path, rootName) == 0;
   let aliases =
     imports
     |> List.map(import => {
@@ -401,8 +404,26 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
                    }
                  : x
            );
+         let stripRootName =
+           Str.global_replace(Str.regexp(rootName ++ "/"), "");
+         let basePathToRequirePkg =
+           libraryAsPath
+           |> stripRootName
+           |> (x => Path.(projectPath / x))
+           |> resolveRelativePath;
+
+         if (isLocalLibrary(libraryAsPath)) {
+           if (!Sys.file_exists(basePathToRequirePkg)) {
+             /* TODO: error message saying please check package.json buildDirs & require()
+                 Possibly use pastel for error message
+                */
+             print_endline("Path Not Found");
+             exit(-1);
+           };
+         };
+
          let originalNamespace =
-           if (findIndex(libraryAsPath, rootName) == 0) {
+           if (isLocalLibrary(libraryAsPath)) {
              libraryAsPath
              |> String.split_on_char('/')
              |> List.map(upperCamelCasify)
@@ -439,38 +460,27 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
                                originalNamespace,
                              ),
                            );
-                         } else {
-                           let stripRootName =
-                             Str.global_replace(
-                               Str.regexp(rootName ++ "/"),
-                               "",
-                             );
-                           let basePathToRequirePkg =
-                             libraryAsPath
-                             |> stripRootName
-                             |> (x => Path.(projectPath / x))
-                             |> resolveRelativePath;
-                           if (Sys.file_exists(
-                                 Path.(basePathToRequirePkg / entry) ++ ext,
-                               )
-                               || Sys.file_exists(
-                                    Path.(
-                                      basePathToRequirePkg
-                                      / String.lowercase_ascii(entry)
+                         } else if (Sys.file_exists(
+                                      Path.(basePathToRequirePkg / entry)
+                                      ++ ext,
                                     )
-                                    ++ ext,
-                                  )) {
-                             Some(
-                               sprintf(
-                                 "module %s = %s.%s;",
-                                 exportedNamespace,
-                                 originalNamespace,
-                                 entry,
-                               ),
-                             );
-                           } else {
-                             None;
-                           };
+                                    || Sys.file_exists(
+                                         Path.(
+                                           basePathToRequirePkg
+                                           / String.lowercase_ascii(entry)
+                                         )
+                                         ++ ext,
+                                       )) {
+                           Some(
+                             sprintf(
+                               "module %s = %s.%s;",
+                               exportedNamespace,
+                               originalNamespace,
+                               entry,
+                             ),
+                           );
+                         } else {
+                           None;
                          }
                        }
                      },
