@@ -126,7 +126,9 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
 
   let rootName = PesyConf.rootName(conf);
   let pesyPackages =
-    pkgs |> List.map(PesyConf.toPesyConf(projectPath, rootName, ~duneVersion));
+    try(pkgs |> List.map(PesyConf.toPesyConf(projectPath, rootName, ~duneVersion))) {
+    | x => raise(x)
+    };
   /** TODO: Why compute for every subpackage? */
   PesyConf.(
     switch (

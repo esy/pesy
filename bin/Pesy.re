@@ -156,6 +156,16 @@ let main = () =>
       );
     fprintf(stderr, "%s\n", message);
     exit(-1);
+  | LocalLibraryPathNotFound(e) =>
+    let message =
+      Pastel.(
+        <Pastel>
+          <Pastel color=Red> "Could not find the library\n" </Pastel>
+          <Pastel> e </Pastel>
+        </Pastel>
+      );
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
   | x =>
     /* let message = Pastel.(<Pastel color=Red> "Failed" </Pastel>); */
     /* fprintf(stderr, "%s", message); */
@@ -176,7 +186,19 @@ let pesy_dune_file = dir => {
       );
     fprintf(stderr, "%s\n", message);
     exit(-1);
-  | Some(curRoot) => duneFile(curRoot, getManifestFile(curRoot), dir)
+  | Some(curRoot) =>
+    try(duneFile(curRoot, getManifestFile(curRoot), dir)) {
+    | LocalLibraryPathNotFound(e) =>
+      let message =
+        Pastel.(
+          <Pastel>
+            <Pastel color=Red> "Could not find the library\n" </Pastel>
+            <Pastel> e </Pastel>
+          </Pastel>
+        );
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    }
   };
 };
 

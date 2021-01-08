@@ -417,8 +417,20 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
              /* TODO: error message saying please check package.json buildDirs & require()
                  Possibly use pastel for error message
                 */
-             print_endline("Path Not Found");
-             exit(-1);
+             let message =
+               Pastel.(
+                 <Pastel>
+                   <Pastel color=Red> "Could not find the library\n" </Pastel>
+                   <Pastel> "Here" </Pastel>
+                 </Pastel>
+               );
+             fprintf(stderr, "%s\n", message);
+             raise(
+               PesyEsyPesyErrors.Errors.LocalLibraryPathNotFound(
+                 "local lib not found",
+               ),
+               /* exit(-1); */
+             );
            };
          };
 
