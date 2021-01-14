@@ -414,23 +414,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
 
          if (isLocalLibrary(libraryAsPath)) {
            if (!Sys.file_exists(basePathToRequirePkg)) {
-             /* TODO: error message saying please check package.json buildDirs & require()
-                 Possibly use pastel for error message
-                */
-             let message =
-               Pastel.(
-                 <Pastel>
-                   <Pastel color=Red> "Could not find the library\n" </Pastel>
-                   <Pastel> "Here" </Pastel>
-                 </Pastel>
-               );
-             fprintf(stderr, "%s\n", message);
-             raise(
-               PesyEsyPesyErrors.Errors.LocalLibraryPathNotFound(
-                 "local lib not found",
-               ),
-               /* exit(-1); */
-             );
+             raise(PesyEsyPesyErrors.Errors.LocalLibraryPathNotFound(lib));
            };
          };
 
@@ -761,19 +745,9 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
       | (V1(_), None, None) => None
       | (V1(_), Some(cn), None)
       | (V1(_), Some(cn), Some(_)) => Some(Stubs.ofCNames(cStubs(cn)))
-      | (V1(_), None, Some(_)) =>
-        Printf.fprintf(
-          stderr,
-          "======== WARNING ========\nforeignStubs is introduced since dune version 2.0\nUse cNames to specify stubs\n=========================\n",
-        );
-        None;
+      | (V1(_), None, Some(_)) => raise(ForeignStubsIncorrectlyUsed)
       | (V2(_), None, None) => None
-      | (V2(_), Some(_), None) =>
-        Printf.fprintf(
-          stderr,
-          "======== WARNING ========\ncNames is deprecated in dune version 2.x\nUse foreignStubs to specify stubs\n=========================\n",
-        );
-        None;
+      | (V2(_), Some(_), None) => raise(CNamesIncorrectlyUsed)
       | (V2(_), None, Some(fs))
       | (V2(_), Some(_), Some(fs)) =>
         Some(Stubs.ofForeignStubs(foreignStubs(fs)))

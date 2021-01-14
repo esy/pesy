@@ -126,7 +126,10 @@ let duneFile = (projectPath, manifestFile, subpackagePath) => {
 
   let rootName = PesyConf.rootName(conf);
   let pesyPackages =
-    try(pkgs |> List.map(PesyConf.toPesyConf(projectPath, rootName, ~duneVersion))) {
+    try(
+      pkgs
+      |> List.map(PesyConf.toPesyConf(projectPath, rootName, ~duneVersion))
+    ) {
     | x => raise(x)
     };
   /** TODO: Why compute for every subpackage? */
@@ -160,12 +163,14 @@ let duneEject = (projectPath, manifestFile, subpackageNameOrPath) => {
   let duneVersion =
     DuneFile.ofFile(duneProjectPath) |> DuneProject.findLangVersion;
 
-
   let rootName = PesyConf.rootName(conf);
   let pesyPackages =
     pkgs
     |> List.map(((pkgName, _) as pkg) =>
-         (pkgName, PesyConf.toPesyConf(projectPath, rootName, pkg, ~duneVersion))
+         (
+           pkgName,
+           PesyConf.toPesyConf(projectPath, rootName, pkg, ~duneVersion),
+         )
        );
 
   switch (
@@ -208,4 +213,24 @@ let duneEject = (projectPath, manifestFile, subpackageNameOrPath) => {
     );
     write(Path.(pesyPackage.pkg_path / "dune"), DuneFile.toString(duneFile));
   };
+};
+
+let validateManifestFile = (projectPath, manifestFile) => {
+  let conf = PesyConf.get(manifestFile);
+  let pkgs = PesyConf.pkgs(conf);
+
+  let duneProjectPath = Path.(projectPath / "dune-project");
+  let duneVersion =
+    DuneFile.ofFile(duneProjectPath) |> DuneProject.findLangVersion;
+
+  let rootName = PesyConf.rootName(conf);
+  let _ =
+    try(
+      pkgs
+      |> List.map(PesyConf.toPesyConf(projectPath, rootName, ~duneVersion))
+    ) {
+    | x => raise(x)
+    };
+
+  ();
 };
