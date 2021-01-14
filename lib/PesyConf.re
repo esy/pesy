@@ -375,9 +375,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
     @ ["PesyModules"]
     |> List.map(upperCamelCasify)
     |> List.fold_left((++), "");
-  /*
-       TODO: Find is packageLibrary then check if path exists else raise Exn <Pastel/> error
-   */
+
   let isLocalLibrary = path => findIndex(path, rootName) == 0;
   let aliases =
     imports

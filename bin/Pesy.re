@@ -158,12 +158,17 @@ let main = () =>
     exit(-1);
   | LocalLibraryPathNotFound(e) =>
     let message =
-      Pastel.(
+      <Pastel>
         <Pastel>
-          <Pastel color=Red> "Could not find the library\n" </Pastel>
-          <Pastel> e </Pastel>
+          <Pastel color=Red> "Error: " </Pastel>
+          "Could not find the library "
         </Pastel>
-      );
+        <Pastel bold=true> e </Pastel>
+        <Pastel>
+          "\ncheck the require() in import of your package.json"
+        </Pastel>
+      </Pastel>;
+
     fprintf(stderr, "%s\n", message);
     exit(-1);
   | x =>
@@ -190,12 +195,17 @@ let pesy_dune_file = dir => {
     try(duneFile(curRoot, getManifestFile(curRoot), dir)) {
     | LocalLibraryPathNotFound(e) =>
       let message =
-        Pastel.(
+        <Pastel>
           <Pastel>
-            <Pastel color=Red> "Could not find the library\n" </Pastel>
-            <Pastel> e </Pastel>
+            <Pastel color=Red> "Error: " </Pastel>
+            "Could not find the library "
           </Pastel>
-        );
+          <Pastel bold=true> e </Pastel>
+          <Pastel>
+            "\ncheck the require() in import of your package.json"
+          </Pastel>
+        </Pastel>;
+
       fprintf(stderr, "%s\n", message);
       exit(-1);
     }
