@@ -156,6 +156,21 @@ let main = () =>
       );
     fprintf(stderr, "%s\n", message);
     exit(-1);
+  | LocalLibraryPathNotFound(e) =>
+    let message =
+      <Pastel>
+        <Pastel>
+          <Pastel color=Red> "Error: " </Pastel>
+          "Could not find the library "
+        </Pastel>
+        <Pastel bold=true> e </Pastel>
+        <Pastel>
+          "\ncheck the require() in import of your package.json"
+        </Pastel>
+      </Pastel>;
+
+    fprintf(stderr, "%s\n", message);
+    exit(-1);
   | x =>
     /* let message = Pastel.(<Pastel color=Red> "Failed" </Pastel>); */
     /* fprintf(stderr, "%s", message); */
@@ -176,7 +191,24 @@ let pesy_dune_file = dir => {
       );
     fprintf(stderr, "%s\n", message);
     exit(-1);
-  | Some(curRoot) => duneFile(curRoot, getManifestFile(curRoot), dir)
+  | Some(curRoot) =>
+    try(duneFile(curRoot, getManifestFile(curRoot), dir)) {
+    | LocalLibraryPathNotFound(e) =>
+      let message =
+        <Pastel>
+          <Pastel>
+            <Pastel color=Red> "Error: " </Pastel>
+            "Could not find the library "
+          </Pastel>
+          <Pastel bold=true> e </Pastel>
+          <Pastel>
+            "\ncheck the require() in import of your package.json"
+          </Pastel>
+        </Pastel>;
+
+      fprintf(stderr, "%s\n", message);
+      exit(-1);
+    }
   };
 };
 
@@ -184,8 +216,64 @@ let pesy_build = () =>
   ignore(
     switch (Sys.getenv_opt("cur__root")) {
     | Some(curRoot) =>
-      let buildTarget = build(curRoot |> getManifestFile);
+      let manifestFile = curRoot |> getManifestFile;
 
+      try(validateManifestFile(curRoot, manifestFile)) {
+      | LocalLibraryPathNotFound(e) =>
+        let message =
+          <Pastel>
+            <Pastel>
+              <Pastel color=Red> "Error: " </Pastel>
+              "Could not find the library "
+            </Pastel>
+            <Pastel bold=true> e </Pastel>
+            <Pastel>
+              "\ncheck the require() in import of your package.json"
+            </Pastel>
+          </Pastel>;
+
+        fprintf(stderr, "%s\n", message);
+        exit(-1);
+      | ForeignStubsIncorrectlyUsed =>
+        let message =
+          Pastel.(
+            <Pastel>
+              <Pastel color=Red> "Error: " </Pastel>
+              <Pastel>
+                <Pastel bold=true> "foreignStubs " </Pastel>
+                "is introduced since dune version"
+                <Pastel bold=true> " 2.0\n" </Pastel>
+              </Pastel>
+              <Pastel>
+                "Use "
+                <Pastel bold=true> "cNames" </Pastel>
+                " to specify stubs"
+              </Pastel>
+            </Pastel>
+          );
+        fprintf(stderr, "%s\n", message);
+        exit(-1);
+      | CNamesIncorrectlyUsed =>
+        let message =
+          Pastel.(
+            <Pastel>
+              <Pastel color=Red> "Error: " </Pastel>
+              <Pastel>
+                <Pastel bold=true> "cNames " </Pastel>
+                "is deprecated in dune version 2.x\n"
+              </Pastel>
+              <Pastel>
+                "Use "
+                <Pastel bold=true> "foreignStubs" </Pastel>
+                " to specify stubs"
+              </Pastel>
+            </Pastel>
+          );
+        fprintf(stderr, "%s\n", message);
+        exit(-1);
+      };
+
+      let buildTarget = build(manifestFile);
       Unix.(
         switch (
           create_process(

@@ -11,3 +11,6 @@ exception ResolveRelativePathFailure(string);
 exception InvalidBinProperty(string);
 exception BuildValidationFailures(list(validationError));
 exception ImportsParserFailure(unit);
+exception LocalLibraryPathNotFound(string);
+exception ForeignStubsIncorrectlyUsed;
+exception CNamesIncorrectlyUsed;

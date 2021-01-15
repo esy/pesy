@@ -376,6 +376,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
     |> List.map(upperCamelCasify)
     |> List.fold_left((++), "");
 
+  let isLocalLibrary = path => findIndex(path, rootName) == 0;
   let aliases =
     imports
     |> List.map(import => {
@@ -401,8 +402,22 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
                    }
                  : x
            );
+         let stripRootName =
+           Str.global_replace(Str.regexp(rootName ++ "/"), "");
+         let basePathToRequirePkg =
+           libraryAsPath
+           |> stripRootName
+           |> (x => Path.(projectPath / x))
+           |> resolveRelativePath;
+
+         if (isLocalLibrary(libraryAsPath)) {
+           if (!Sys.file_exists(basePathToRequirePkg)) {
+             raise(PesyEsyPesyErrors.Errors.LocalLibraryPathNotFound(lib));
+           };
+         };
+
          let originalNamespace =
-           if (findIndex(libraryAsPath, rootName) == 0) {
+           if (isLocalLibrary(libraryAsPath)) {
              libraryAsPath
              |> String.split_on_char('/')
              |> List.map(upperCamelCasify)
@@ -439,38 +454,27 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
                                originalNamespace,
                              ),
                            );
-                         } else {
-                           let stripRootName =
-                             Str.global_replace(
-                               Str.regexp(rootName ++ "/"),
-                               "",
-                             );
-                           let basePathToRequirePkg =
-                             libraryAsPath
-                             |> stripRootName
-                             |> (x => Path.(projectPath / x))
-                             |> resolveRelativePath;
-                           if (Sys.file_exists(
-                                 Path.(basePathToRequirePkg / entry) ++ ext,
-                               )
-                               || Sys.file_exists(
-                                    Path.(
-                                      basePathToRequirePkg
-                                      / String.lowercase_ascii(entry)
+                         } else if (Sys.file_exists(
+                                      Path.(basePathToRequirePkg / entry)
+                                      ++ ext,
                                     )
-                                    ++ ext,
-                                  )) {
-                             Some(
-                               sprintf(
-                                 "module %s = %s.%s;",
-                                 exportedNamespace,
-                                 originalNamespace,
-                                 entry,
-                               ),
-                             );
-                           } else {
-                             None;
-                           };
+                                    || Sys.file_exists(
+                                         Path.(
+                                           basePathToRequirePkg
+                                           / String.lowercase_ascii(entry)
+                                         )
+                                         ++ ext,
+                                       )) {
+                           Some(
+                             sprintf(
+                               "module %s = %s.%s;",
+                               exportedNamespace,
+                               originalNamespace,
+                               entry,
+                             ),
+                           );
+                         } else {
+                           None;
                          }
                        }
                      },
@@ -739,19 +743,9 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
       | (V1(_), None, None) => None
       | (V1(_), Some(cn), None)
       | (V1(_), Some(cn), Some(_)) => Some(Stubs.ofCNames(cStubs(cn)))
-      | (V1(_), None, Some(_)) =>
-        Printf.fprintf(
-          stderr,
-          "======== WARNING ========\nforeignStubs is introduced since dune version 2.0\nUse cNames to specify stubs\n=========================\n",
-        );
-        None;
+      | (V1(_), None, Some(_)) => raise(ForeignStubsIncorrectlyUsed)
       | (V2(_), None, None) => None
-      | (V2(_), Some(_), None) =>
-        Printf.fprintf(
-          stderr,
-          "======== WARNING ========\ncNames is deprecated in dune version 2.x\nUse foreignStubs to specify stubs\n=========================\n",
-        );
-        None;
+      | (V2(_), Some(_), None) => raise(CNamesIncorrectlyUsed)
       | (V2(_), None, Some(fs))
       | (V2(_), Some(_), Some(fs)) =>
         Some(Stubs.ofForeignStubs(foreignStubs(fs)))
