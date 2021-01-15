@@ -429,7 +429,10 @@ caml_foo(value a) {
         "console.lib",
         "pastel.lib"
       ],
-      "foreignStubs": ["stubs"]
+      "foreignStubs": [{
+        "language": "c",
+        "names": ["stubs"]
+      }]
     },
     "bin": {
       "imports": [
