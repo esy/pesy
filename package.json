@@ -43,11 +43,11 @@
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
-    "ocaml": "4.6.10 - 4.10"
+    "ocaml": "4.6.10 - 4.12"
   },
   "devDependencies": {
     "refmterr": "^3.3.0",
-    "ocaml": "4.10.x",
+    "ocaml": "4.10.2000",
     "@opam/dune": "*",
     "@opam/bos": "0.2.0",
     "@reason-native/rely": "*",

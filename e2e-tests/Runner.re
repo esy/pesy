@@ -350,8 +350,7 @@ let checkBootstrapper = cwd => {
           {|
 {
   "resolutions": {
-    "@pesy/esy-pesy": "<RESOLUTION_LINK>",
-    "@opam/ocaml-migrate-parsetree": "1.7.3"
+    "@pesy/esy-pesy": "<RESOLUTION_LINK>"
   }
 }
 |},
@@ -420,7 +419,7 @@ caml_foo(value a) {
           )
       )
   )
-  >>= checkPesyConfig("add cNames for stubs", () =>
+  >>= checkPesyConfig("add foreignStubs for stubs", () =>
         PesyConfig.edit(
           Config.ofString(
             {|
@@ -430,7 +429,7 @@ caml_foo(value a) {
         "console.lib",
         "pastel.lib"
       ],
-      "cNames": ["stubs"]
+      "foreignStubs": ["stubs"]
     },
     "bin": {
       "imports": [
@@ -460,7 +459,7 @@ caml_foo(value a) {
         "byte",
         "native"
       ],
-      "cNames": ["stubs"]
+      "foreignStubs": ["stubs"]
     },
     "bin": {
       "modes": [
