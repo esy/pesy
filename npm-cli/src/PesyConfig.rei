@@ -4,7 +4,7 @@ type t;
 let decoder: Json.Decode.decoder(t);
 
 /* Extracts the Azure Project name from the config */
-let getAzureProject: t => string;
+let getAzureProject: t => option(string);
 
 /* Extracts the github slug (username/reponame) from the config */
 let getGithub: t => string;

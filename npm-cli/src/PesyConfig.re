@@ -1,12 +1,12 @@
 type t = {
-  azureProject: string,
+  azureProject: option(string),
   github: string,
   ignoreDirs: option(list(string)),
 };
 
 let decoder = json => {
   open Json.Decode;
-  let azureProject = json |> field("azure-project", string);
+  let azureProject = json |> (field("azure-project", string) |> optional);
   let github = json |> field("github", string);
   let ignoreDirs = json |> (field("ignore-dirs", list(string)) |> optional);
   {ignoreDirs, github, azureProject};
