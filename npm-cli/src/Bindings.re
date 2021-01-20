@@ -239,6 +239,21 @@ module Crypto = {
   external sha256: (. string, string) => string = "sha256";
   [@bs.module "../../../stubs/crypto.js"]
   external sha1File: (string) => Js.Promise.t(string) = "sha1File";
+  [@bs.module "../../../stubs/crypto.js"]
+  external sha256File: (string) => Js.Promise.t(string) = "sha256File";
+};
+
+module Resolve = {
+  [@bs.module "../../../stubs/resolve.js"]
+  external resolve': (string) => ((Js.Nullable.t(string), string) => unit) => unit = "run";
+  let resolve = (url) => Js.Promise.make((~resolve as r, ~reject as _) => {
+    resolve'(url, (err, resolvedUrl) => {
+      switch(Js.Nullable.toOption(err)) {
+        | Some(msg) => r(. Error(msg))
+	| None => r(. Ok(resolvedUrl))
+      }
+    });
+  });
 };
 
 module Fs = {
@@ -311,51 +326,7 @@ module Fs = {
   external exists: string => Js.Promise.t(bool) = "exists";
 
   [@bs.module "../../../stubs/fs.js"]
-  external mkdir': string => Js.Promise.t(unit) = "mkdir";
-
-  let rec mkdir = (~dryRun=?, ~p=?, path) => {
-    let forceCreate =
-      switch (p) {
-      | Some(x) => x
-      | None => false
-      };
-    let dryRun =
-      switch (dryRun) {
-      | Some(x) => x
-      | None => false
-      };
-    Js.Promise.(
-      if (!dryRun) {
-        if (forceCreate) {
-          exists(path)
-          |> then_(doesExist =>
-               if (doesExist) {
-                 resolve();
-               } else {
-                 let homePath =
-                   Sys.getenv(
-                     Process.platform == "win32" ? "USERPROFILE" : "HOME",
-                   );
-                 if (path == homePath) {
-                   reject(
-                     Failure(
-                       "mkdir(~p=true) received home path and it was not found",
-                     ),
-                   );
-                 } else {
-                   mkdir(~p=true, Filename.dirname(path))
-                   |> then_(() => mkdir'(path));
-                 };
-               }
-             );
-        } else {
-          mkdir'(path);
-        };
-      } else {
-        resolve();
-      }
-    );
-  };
+  external mkdir: string => Js.Promise.t(unit) = "mkdir";
 };
 
 [@bs.module "source-map-support"]

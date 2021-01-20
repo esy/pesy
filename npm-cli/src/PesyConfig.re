@@ -1,15 +1,23 @@
+module Tag = {
+  open Json.Decode;
+  type t = string;
+  let decoder = json => json |> string;
+};
+
 type t = {
   azureProject: option(string),
   github: string,
+  template: option(Tag.t),
   ignoreDirs: option(list(string)),
 };
 
 let decoder = json => {
   open Json.Decode;
   let azureProject = json |> (field("azure-project", string) |> optional);
+  let template = json |> (field("template", Tag.decoder) |> optional);
   let github = json |> field("github", string);
   let ignoreDirs = json |> (field("ignore-dirs", list(string)) |> optional);
-  {ignoreDirs, github, azureProject};
+  {ignoreDirs, github, template, azureProject};
 };
 
 let ofJson = json =>
@@ -27,6 +35,7 @@ let make = manifest =>
 let getAzureProject = config => config.azureProject;
 let getGithub = config => config.github;
 let getIgnoreDirs = config => config.ignoreDirs;
+let getTemplateTag = config => config.template;
 
 module Build: {
   type t;

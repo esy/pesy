@@ -79,7 +79,7 @@ let toHumanReadableBytes =
 let readFileContentAsString = filePath =>
   Fs.readFile(. filePath)
   |> Js.Promise.then_(bytes =>
-       Bindings.Buffer.toString(bytes) |> Js.Promise.resolve
+       Bindings.Buffer.toString(bytes) |> Js.String.trim |> Js.Promise.resolve
      );
 
 type checksumMatch =
@@ -90,12 +90,12 @@ type cacheState =
   | CacheFound(checksumMatch)
   | CacheNotFound;
 
-let verifyChecksum = (~checksumFilePath, ~exportPath) =>
+let verifyChecksum = (~checksumFilePath, ~cacheZipPath) =>
   Js.Promise.all2((
     readFileContentAsString(checksumFilePath),
-    Crypto.sha1File(exportPath),
+    Crypto.sha256File(cacheZipPath),
   ))
-  |> Js.Promise.then_(((checksumToMatch, calculatedChecksum)) =>
+  |> Js.Promise.then_(((checksumToMatch, calculatedChecksum)) => {
        Js.Promise.resolve(
          if (checksumToMatch == calculatedChecksum) {
            ChecksumMatch;
@@ -103,13 +103,13 @@ let verifyChecksum = (~checksumFilePath, ~exportPath) =>
            ChecksumNotMatch;
          },
        )
-     );
+     });
 
-let checkCacheState = (~checksumFilePath, ~exportPath) =>
-  Js.Promise.all2((Fs.exists(exportPath), Fs.exists(checksumFilePath)))
+let checkCacheState = (~checksumFilePath, ~cacheZipPath) =>
+  Js.Promise.all2((Fs.exists(cacheZipPath), Fs.exists(checksumFilePath)))
   |> Js.Promise.then_(((cacheZipFound, checksumFileFound)) =>
        if (cacheZipFound && checksumFileFound) {
-         verifyChecksum(~checksumFilePath, ~exportPath)
+         verifyChecksum(~checksumFilePath, ~cacheZipPath)
          |> Js.Promise.then_(checksumMatch =>
               Js.Promise.resolve(CacheFound(checksumMatch))
             );
@@ -117,6 +117,139 @@ let checkCacheState = (~checksumFilePath, ~exportPath) =>
          Js.Promise.resolve(CacheNotFound);
        }
      );
+
+let rec downloadCacheFromGithub =
+        (~github, ~templateTag, ~cacheDir, ~cacheZipPath, ~checksumFilePath) => {
+  let os =
+    switch (Process.platform) {
+    | "darwin" => Some("Darwin")
+    | "linux" => Some("Linux")
+    | "win32" => Some("Windows_NT")
+    | _ => None
+    };
+  Js.log2(
+    "Fetching prebuilts from Github" |> Chalk.dim,
+    github |> Chalk.whiteBright,
+  );
+  Rimraf.run(cacheDir)
+  |> Js.Promise.then_(_ => Fs.mkdir(cacheDir))
+  |> (
+    _ =>
+      Resolve.resolve(
+        {j|https://github.com/$github/releases/download/$templateTag/cache-$os-install-v1-checksum|j},
+      )
+  )
+  >>= (
+    downloadUrl =>
+      Js.Promise.make((~resolve, ~reject as _) => {
+        let progress = bytes => {
+          bytes
+          |> toHumanReadableBytes
+          |> (
+            x =>
+              Process.Stdout.(
+                write(
+                  v,
+                  "Downloading checksum file " ++ (x |> Chalk.green) ++ "\r",
+                )
+              )
+          );
+        };
+        let error = error => {
+          Js.log(error);
+          resolve(. Error("Checksum file download failed"));
+        };
+        let end_ = () => {
+          Js.log("\nChecksum file downloaded. " |> Chalk.green);
+          resolve(. Ok());
+        };
+        download(downloadUrl, checksumFilePath, ~progress, ~error, ~end_);
+      })
+  )
+  >>= (
+    _ =>
+      Resolve.resolve(
+        {j|https://github.com/$github/releases/download/$templateTag/cache-$os-install-v1|j},
+      )
+  )
+  >>= (
+    downloadUrl =>
+      Js.Promise.make((~resolve, ~reject as _) => {
+        let progress = bytes => {
+          bytes
+          |> toHumanReadableBytes
+          |> (
+            x =>
+              Process.Stdout.(
+                write(
+                  v,
+                  "Downloading cache files " ++ (x |> Chalk.green) ++ "\r",
+                )
+              )
+          );
+        };
+        let error = error => {
+          Js.log(error);
+          resolve(. Error("Cache files download failed"));
+        };
+        let end_ = () => {
+          Js.log("\nCache files downloaded" |> Chalk.green);
+          resolve(. Ok());
+        };
+        download(downloadUrl, cacheZipPath, ~progress, ~error, ~end_);
+      })
+  )
+  >>= (_ => getUnzipCmd())
+  >>= (
+    cmd =>
+      Cmd.output(
+        ~cwd=cacheDir,
+        ~cmd,
+        ~args=[|"-d _export", "-o", cacheZipPath|],
+      )
+  )
+  >>= (
+    _ => {
+      Process.Stdout.(write(v, "Verifying checksum... "));
+      verifyChecksum(~checksumFilePath, ~cacheZipPath)
+      |> Js.Promise.then_(cacheState =>
+           switch (cacheState) {
+           | ChecksumMatch =>
+             Process.Stdout.(
+               write(v, Chalk.green("checksum match") ++ "\n")
+             );
+             ResultPromise.ok();
+           | ChecksumNotMatch =>
+             Process.Stdout.(
+               write(v, Chalk.red("checksum does not match") ++ "\n")
+             );
+             Js.Promise.make((~resolve, ~reject as _) => {
+               Utils.askYesNoQuestion(
+                 ~question=
+                   "Looks like there is an issue with the downloaded files. Do you want to re-download these files ?",
+                 ~onYes=
+                   () =>
+                     downloadCacheFromGithub(
+                       ~github,
+                       ~cacheDir,
+                       ~cacheZipPath,
+                       ~checksumFilePath,
+                     ),
+                 ~onNo=
+                   () =>
+                     resolve(.
+                       Result.fail(
+                         "Issue with the downloaded files (checksum does not match)",
+                       ),
+                     ),
+                 (),
+               )
+             });
+           }
+         );
+    }
+  );
+};
 
 let rec downloadCacheFromAzure =
         (
@@ -132,9 +265,9 @@ let rec downloadCacheFromAzure =
     "Fetching prebuilts for azure project" |> Chalk.dim,
     azureProject |> AzurePipelines.ProjectName.toString |> Chalk.whiteBright,
   );
-  Fs.rmdirRecursive(cacheDir)
-  |> Js.Promise.then_(_ => Fs.mkdir(~p=true, cacheDir))
-  |> Js.Promise.then_(_ => getLatestAzureBuildId(azureProject, github))
+  Rimraf.run(cacheDir)
+  |> Js.Promise.then_(_ => Fs.mkdir(cacheDir))
+  |> Js.Promise.then_(() => getLatestAzureBuildId(azureProject, github))
   >>= (
     buildId => {
       AzurePipelines.getChecksumDownloadURL(azureProject, buildId)
@@ -225,7 +358,7 @@ let rec downloadCacheFromAzure =
         _ => {
           Process.Stdout.(write(v, "Verifying checksum... "));
 
-          verifyChecksum(~checksumFilePath, ~exportPath)
+          verifyChecksum(~checksumFilePath, ~cacheZipPath)
           |> Js.Promise.then_(cacheState =>
                switch (cacheState) {
                | ChecksumMatch =>
@@ -277,9 +410,9 @@ let run = (esy, project) => {
   let checksumZipPath = Path.join([|cacheDir, "checksum.zip"|]);
   let checksumFilePath = Path.join([|cacheDir, "checksum.txt"|]);
   let cacheZipPath = Path.join([|cacheDir, "cache.zip"|]);
-  let exportPath = Path.join([|cacheDir, "_export.zip"|]);
+  let exportPath = Path.join([|cacheDir, "_export"|]);
 
-  checkCacheState(~checksumFilePath, ~exportPath)
+  checkCacheState(~checksumFilePath, ~cacheZipPath)
   |> Js.Promise.then_(cacheState =>
        switch (cacheState) {
        | CacheFound(ChecksumMatch) => ResultPromise.ok()
@@ -289,8 +422,26 @@ let run = (esy, project) => {
          >>= (
            pesyConfig => {
              let github = PesyConfig.getGithub(pesyConfig);
-             switch (PesyConfig.getAzureProject(pesyConfig)) {
-             | Some(azureProject) =>
+             let templateVersion = PesyConfig.getTemplateTag(pesyConfig);
+             let azureProject = PesyConfig.getAzureProject(pesyConfig);
+             switch (templateVersion, azureProject) {
+             | (None, None) =>
+               downloadCacheFromGithub(
+                 ~github,
+                 ~templateTag="latest",
+                 ~cacheDir,
+                 ~cacheZipPath,
+                 ~checksumFilePath,
+               )
+             | (Some(templateTag), _) =>
+               downloadCacheFromGithub(
+                 ~github,
+                 ~templateTag,
+                 ~cacheDir,
+                 ~cacheZipPath,
+                 ~checksumFilePath,
+               )
+             | (None, Some(azureProject)) =>
                let azureProject =
                  azureProject
                  |> AzurePipelines.ProjectName.ofString
@@ -304,7 +455,6 @@ let run = (esy, project) => {
                  ~checksumFilePath,
                  ~exportPath,
                );
-             | None => ResultPromise.fail("TODO: lookup github")
              };
            }
          )
