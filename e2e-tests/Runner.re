@@ -48,8 +48,8 @@ let () = {
   run(makeCommand("yarn"), [|"run", "package"|]);
   run(makeCommand("npm"), [|"pack"|]);
   run(
-    makeCommand("yarn"),
-    [|"global", "add", Path.(cwd / "npm-cli" / "pesy-0.5.0-dev.23.tgz")|],
+    makeCommand("npm"),
+    [|"i", "-g", Path.(cwd / "npm-cli" / "pesy-0.5.0-dev.23.tgz")|],
   );
   chdir(cwd);
 };
