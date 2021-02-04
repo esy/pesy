@@ -4,7 +4,7 @@ const path = require("path");
 const cp = require("child_process");
 const util = require("util");
 
-let tag = "0.1.0-alpha.16";
+let tag = "0.1.0-alpha.17";
 let url = `https://github.com/esy/pesy-reason-template/archive/${tag}.zip`;
 let downloadAs = "template.zip";
 let extractedDirName = `pesy-reason-template-${tag}`;
