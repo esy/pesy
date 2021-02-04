@@ -25,7 +25,7 @@ function run(urlStr, callback) {
       });
     } else if (response.statusCode >= 200 && response.statusCode < 300) {
       return callback(null, urlStr);
-    } else callback("Server returned 4xx/5xx");
+    } else callback("Server returned 4xx/5xx for " + urlStr);
   });
 }
 

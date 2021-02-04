@@ -122,10 +122,17 @@ let rec downloadCacheFromGithub =
         (~github, ~templateTag, ~cacheDir, ~cacheZipPath, ~checksumFilePath) => {
   let os =
     switch (Process.platform) {
-    | "darwin" => Some("Darwin")
-    | "linux" => Some("Linux")
-    | "win32" => Some("Windows_NT")
-    | _ => None
+    | "darwin" =>
+      let os = "Darwin";
+      let os =
+        switch (Process.arch) {
+        | "arm64" => os ++ "-arm64"
+        | _ => os
+        };
+      os;
+    | "linux" => "Linux"
+    | "win32" => "Windows_NT"
+    | _ => failwith("No $os")
     };
   Js.log2(
     "Fetching prebuilts from Github" |> Chalk.dim,
@@ -160,7 +167,7 @@ let rec downloadCacheFromGithub =
           resolve(. Error("Checksum file download failed"));
         };
         let end_ = () => {
-          Js.log("\nChecksum file downloaded. " |> Chalk.green);
+          Js.log("Checksum file downloaded. " |> Chalk.green);
           resolve(. Ok());
         };
         download(downloadUrl, checksumFilePath, ~progress, ~error, ~end_);
@@ -183,7 +190,11 @@ let rec downloadCacheFromGithub =
               Process.Stdout.(
                 write(
                   v,
-                  "Downloading cache files " ++ (x |> Chalk.green) ++ "\r",
+                  "Downloading cache ("
+                  ++ {j|cache-$os-install-v1|j}
+                  ++ ") "
+                  ++ (x |> Chalk.green)
+                  ++ "\r",
                 )
               )
           );
@@ -200,14 +211,7 @@ let rec downloadCacheFromGithub =
       })
   )
   >>= (_ => getUnzipCmd())
-  >>= (
-    cmd =>
-      Cmd.output(
-        ~cwd=cacheDir,
-        ~cmd,
-        ~args=[|"-d _export", "-o", cacheZipPath|],
-      )
-  )
+  >>= (cmd => Cmd.output(~cwd=cacheDir, ~cmd, ~args=[|"-o", cacheZipPath|]))
   >>= (
     _ => {
       Process.Stdout.(write(v, "Verifying checksum... "));
@@ -301,11 +305,7 @@ let rec downloadCacheFromAzure =
       >>= (_ => getUnzipCmd())
       >>= (
         cmd => {
-          Cmd.output(
-            ~cwd=cacheDir,
-            ~cmd,
-            ~args=[|"-j", "-o", checksumZipPath|],
-          )
+          Cmd.output(~cwd=cacheDir, ~cmd, ~args=[|"-o", checksumZipPath|])
           >>= (
             _ => {
               Js.log("Extracting files...");
@@ -482,7 +482,11 @@ let run = (esy, project) => {
         ((stdout, stderr)) => {
           Js.log(
             ("Running " |> Chalk.dim)
-            ++ ("esy import-dependencies" |> Chalk.bold),
+            ++ (
+              "esy import-dependencies "
+              ++ Path.join([|cacheDir, "_export"|])
+              |> Chalk.bold
+            ),
           );
           Process.Stdout.(write(v, stdout |> Chalk.dim));
           Process.Stdout.(write(v, stderr |> Chalk.dim));

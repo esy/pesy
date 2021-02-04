@@ -6,6 +6,7 @@ module Process = {
   [@bs.val] [@bs.scope "process"] external cwd: unit => string = "cwd";
   [@bs.val] [@bs.scope "process"] external chdir: string => unit = "chdir";
   [@bs.val] [@bs.scope "process"] external platform: string = "platform";
+  [@bs.val] [@bs.scope "process"] external arch: string = "arch";
   [@bs.val] [@bs.scope "process"] external env: Js.Dict.t(string) = "env";
   module Stdout = {
     type t;

@@ -59,7 +59,13 @@ $str
     guard(responseText =>
       switch (Json.parse(responseText)) {
       | Some(json) => Ok(getBuildId'(json))
-      | None => Error("getBuildId(): responseText could not be parsed")
+      | None =>
+        Error(
+          {j|getBuildId(): responseText could not be parsed
+------------
+$responseText
+|j},
+        )
       }
     );
 
