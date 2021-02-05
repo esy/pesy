@@ -32,7 +32,7 @@ steps:
   - task: PublishBuildArtifacts@1
     displayName: 'Upload sources'
     inputs:
-        pathToPublish: './npm-cli/*.tgz'
+        pathToPublish: './npm-cli/pesy-0.5.0-dev.23.tgz.tgz'
         artifactName: 'pesy-npm-cli-source'
         parallel: true
         parallelCount: 8
