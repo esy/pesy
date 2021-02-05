@@ -29,6 +29,13 @@ steps:
     env:
       PESY_CLONE_PATH: $(Build.SourcesDirectory)
       OCAMLRUNPARAM: 'b'
+  - task: PublishBuildArtifacts@1
+    displayName: 'Upload sources'
+    inputs:
+        pathToPublish: './npm-cli/*.tgz'
+        artifactName: 'pesy-npm-cli-source'
+        parallel: true
+        parallelCount: 8
   # - script: "esy release"
   #   displayName: "esy release"
   - script: "esy test"
