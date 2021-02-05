@@ -1,6 +1,21 @@
 open Bindings;
 open ResultPromise;
 
+let os =
+  switch (Process.platform) {
+  | "darwin" =>
+    let os = "Darwin";
+    let os =
+      switch (Process.arch) {
+      | "arm64" => os ++ "-arm64"
+      | _ => os
+      };
+    os;
+  | "linux" => "Linux"
+  | "win32" => "Windows_NT"
+  | _ => failwith("No $os")
+  };
+
 let prepareAzureCacheURL = (projStr, github) => {
   let proj =
     projStr
@@ -120,20 +135,6 @@ let checkCacheState = (~checksumFilePath, ~cacheZipPath) =>
 
 let rec downloadCacheFromGithub =
         (~github, ~templateTag, ~cacheDir, ~cacheZipPath, ~checksumFilePath) => {
-  let os =
-    switch (Process.platform) {
-    | "darwin" =>
-      let os = "Darwin";
-      let os =
-        switch (Process.arch) {
-        | "arm64" => os ++ "-arm64"
-        | _ => os
-        };
-      os;
-    | "linux" => "Linux"
-    | "win32" => "Windows_NT"
-    | _ => failwith("No $os")
-    };
   Js.log2(
     "Fetching prebuilts from Github" |> Chalk.dim,
     github |> Chalk.whiteBright,
@@ -296,35 +297,11 @@ let rec downloadCacheFromAzure =
               resolve(. Error("Checksum file download failed"));
             };
             let end_ = () => {
-              Js.log("\nChecksum file downloaded. " |> Chalk.green);
+              Js.log("Checksum file downloaded. " |> Chalk.green);
               resolve(. Ok());
             };
             download(downloadUrl, checksumZipPath, ~progress, ~error, ~end_);
           })
-      )
-      >>= (_ => getUnzipCmd())
-      >>= (
-        cmd => {
-          Cmd.output(~cwd=cacheDir, ~cmd, ~args=[|"-o", checksumZipPath|])
-          >>= (
-            _ => {
-              Js.log("Extracting files...");
-              Cmd.output(
-                ~cwd=cacheDir,
-                ~cmd,
-                ~args=[|"-j", "-o", cacheZipPath|],
-              );
-            }
-          )
-          >>= (
-            _ =>
-              Cmd.output(
-                ~cwd=cacheDir,
-                ~cmd,
-                ~args=[|"-d _export", "-o", exportPath|],
-              )
-          );
-        }
       )
       >>= (_ => AzurePipelines.getDownloadURL(azureProject, buildId))
       >>= (
@@ -354,11 +331,30 @@ let rec downloadCacheFromAzure =
             download(downloadUrl, cacheZipPath, ~progress, ~error, ~end_);
           })
       )
+      >>= (_ => getUnzipCmd())
+      >>= (
+        cmd => {
+          Cmd.output(~cwd=cacheDir, ~cmd, ~args=[|"-o", checksumZipPath|])
+          >>= (
+            _ => {
+              Js.log("Extracting files...");
+              Cmd.output(~cwd=cacheDir, ~cmd, ~args=[|"-o", cacheZipPath|]);
+            }
+          )
+          >>= (
+            _ =>
+              Cmd.output(
+                ~cwd=cacheDir,
+                ~cmd,
+                ~args=[|"-d", "_export", "-o", exportPath|],
+              )
+          );
+        }
+      )
       >>= (
         _ => {
           Process.Stdout.(write(v, "Verifying checksum... "));
-
-          verifyChecksum(~checksumFilePath, ~cacheZipPath)
+          verifyChecksum(~checksumFilePath, ~cacheZipPath=exportPath)
           |> Js.Promise.then_(cacheState =>
                switch (cacheState) {
                | ChecksumMatch =>
@@ -408,9 +404,15 @@ let run = (esy, project) => {
   let projectPath = Project.path(project);
   let cacheDir = Path.join([|Os.tmpdir(), "pesy-" ++ projectHash|]);
   let checksumZipPath = Path.join([|cacheDir, "checksum.zip"|]);
-  let checksumFilePath = Path.join([|cacheDir, "checksum.txt"|]);
+  let checksumFilePath =
+    Path.join([|
+      cacheDir,
+      {j|cache-$os-install-v1-checksum|j},
+      "checksum.txt",
+    |]);
   let cacheZipPath = Path.join([|cacheDir, "cache.zip"|]);
-  let exportPath = Path.join([|cacheDir, "_export"|]);
+  let exportPath =
+    Path.join([|cacheDir, {j|cache-$os-install-v1|j}, "_export.zip"|]);
 
   checkCacheState(~checksumFilePath, ~cacheZipPath)
   |> Js.Promise.then_(cacheState =>
