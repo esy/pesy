@@ -31,7 +31,7 @@ steps:
       OCAMLRUNPARAM: 'b'
   - task: PublishBuildArtifacts@1
     displayName: 'Upload sources'
-    condition: eq(variables['Agent.OS'], 'Windows_NT')
+    condition: eq(variables['Agent.OS'], 'Linux')
     inputs:
         pathToPublish: './npm-cli/pesy-0.5.0-dev.23.tgz'
         artifactName: 'pesy-npm-cli-source'
