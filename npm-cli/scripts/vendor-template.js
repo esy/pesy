@@ -4,7 +4,7 @@ const path = require("path");
 const cp = require("child_process");
 const util = require("util");
 
-let tag = "0.1.0-alpha.13";
+let tag = "0.1.0-alpha.18";
 let url = `https://github.com/esy/pesy-reason-template/archive/${tag}.zip`;
 let downloadAs = "template.zip";
 let extractedDirName = `pesy-reason-template-${tag}`;
@@ -66,7 +66,7 @@ let main = () => {
         );
         return Promise.resolve(
           cp
-            .execSync("unzip template.zip", {
+            .execSync("unzip -o template.zip", {
               cwd: path.resolve(__dirname, "..", templateDir),
             })
             .toString()

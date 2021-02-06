@@ -4,13 +4,16 @@ type t;
 let decoder: Json.Decode.decoder(t);
 
 /* Extracts the Azure Project name from the config */
-let getAzureProject: t => string;
+let getAzureProject: t => option(string);
 
 /* Extracts the github slug (username/reponame) from the config */
 let getGithub: t => string;
 
 /* Extracts ignoreDirs from the config */
 let getIgnoreDirs: t => option(list(string));
+
+/* Extracts template version/tag from the config */
+let getTemplateTag: t => option(string);
 
 /* Creates pesy config from a give manifest file */
 let make: string => result(t, string);

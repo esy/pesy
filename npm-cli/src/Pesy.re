@@ -69,7 +69,7 @@ let testTemplate = () => {
   Rimraf.run(testProjectPath)
   >>= (
     () =>
-      Fs.mkdir(~p=true, testProjectPath)
+      Fs.mkdir(testProjectPath)
       |> Js.Promise.then_(() => Cmd.make(~cmd="esy", ~env=Process.env))
   )
   >>= (

@@ -114,7 +114,7 @@ let copyAndSubstitute = (templatePath, projectPath, ignoreDirs) => {
         Fs.isDirectory(src)
         |> Js.Promise.then_(isDir =>
              if (isDir) {
-               Fs.mkdir(~dryRun=false, ~p=true, dest);
+               Fs.mkdir(dest);
              } else {
                Js.Promise.(
                  Fs.(

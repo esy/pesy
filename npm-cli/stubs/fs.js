@@ -1,15 +1,14 @@
-let { promisify } = require('util');
-let fs = require('fs');
+let { promisify } = require("util");
+let fs = require("fs");
 let readFile = promisify(fs.readFile);
 let writeFile = promisify(fs.writeFile);
-let mkdir = promisify(fs.mkdir);
+let mkdirP = promisify(fs.mkdir);
 let exists = promisify(fs.exists);
 let stat = promisify(fs.stat);
 let readdir = promisify(fs.readdir);
 let unlink = promisify(fs.unlink);
-let rmdir = promisify(fs.rmdir);
 
-let rmdirRecursive = (path) => rmdir(path, { recursive: true });
+let mkdir = (path) => mkdirP(path, { recursive: true });
 
 module.exports = {
   readFile,
@@ -19,5 +18,4 @@ module.exports = {
   readdir,
   stat,
   unlink,
-  rmdirRecursive,
 };

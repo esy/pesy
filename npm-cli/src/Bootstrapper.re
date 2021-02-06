@@ -179,7 +179,7 @@ let run =
       bootstrapCIOnly,
       forceCacheFetch,
     ) => {
-  Fs.mkdir(~p=true, projectPath)
+  Fs.mkdir(projectPath)
   |> Js.Promise.then_(() => {
        Process.chdir(projectPath);
        run(

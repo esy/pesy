@@ -47,7 +47,10 @@ let () = {
   run(makeCommand("yarn"), [||]);
   run(makeCommand("yarn"), [|"run", "package"|]);
   run(makeCommand("npm"), [|"pack"|]);
-  run(makeCommand("npm"), [|"i", "-g", "./pesy-0.5.0-dev.23.tgz"|]);
+  run(
+    makeCommand("npm"),
+    [|"i", "-g", Path.(cwd / "npm-cli" / "pesy-0.5.0-dev.23.tgz")|],
+  );
   chdir(cwd);
 };
 
@@ -344,7 +347,12 @@ let checkBootstrapper = cwd => {
           Str.regexp("<RESOLUTION_LINK>"),
           "link:"
           ++ (
-            Sys.getenv("PESY_CLONE_PATH")
+            (
+              switch (Sys.getenv_opt("PESY_CLONE_PATH")) {
+              | Some(path) => path
+              | None => Sys.getcwd()
+              }
+            )
             |> Str.(global_replace(regexp("\\"), "/"))
           ),
           {|
