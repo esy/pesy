@@ -404,95 +404,116 @@ let run = (esy, project) => {
   let projectPath = Project.path(project);
   let cacheDir = Path.join([|Os.tmpdir(), "pesy-" ++ projectHash|]);
   let checksumZipPath = Path.join([|cacheDir, "checksum.zip"|]);
-  let checksumFilePath =
-    Path.join([|
-      cacheDir,
-      {j|cache-$os-install-v1-checksum|j},
-      "checksum.txt",
-    |]);
   let cacheZipPath = Path.join([|cacheDir, "cache.zip"|]);
   let exportPath =
     Path.join([|cacheDir, {j|cache-$os-install-v1|j}, "_export.zip"|]);
 
-  checkCacheState(~checksumFilePath, ~cacheZipPath)
-  |> Js.Promise.then_(cacheState =>
-       switch (cacheState) {
-       | CacheFound(ChecksumMatch) => ResultPromise.ok()
-       | CacheNotFound
-       | CacheFound(ChecksumNotMatch) =>
-         Js.Promise.resolve(Project.pesyConfig(project))
-         >>= (
-           pesyConfig => {
-             let github = PesyConfig.getGithub(pesyConfig);
-             let templateVersion = PesyConfig.getTemplateTag(pesyConfig);
-             let azureProject = PesyConfig.getAzureProject(pesyConfig);
-             switch (templateVersion, azureProject) {
-             | (None, None) =>
-               downloadCacheFromGithub(
-                 ~github,
-                 ~templateTag="latest",
-                 ~cacheDir,
-                 ~cacheZipPath,
-                 ~checksumFilePath,
-               )
-             | (Some(templateTag), _) =>
-               downloadCacheFromGithub(
-                 ~github,
-                 ~templateTag,
-                 ~cacheDir,
-                 ~cacheZipPath,
-                 ~checksumFilePath,
-               )
-             | (None, Some(azureProject)) =>
-               let azureProject =
-                 azureProject
-                 |> AzurePipelines.ProjectName.ofString
-                 |> AzurePipelines.ProjectName.validate;
-               downloadCacheFromAzure(
-                 ~azureProject,
-                 ~github,
-                 ~cacheDir,
-                 ~checksumZipPath,
-                 ~cacheZipPath,
-                 ~checksumFilePath,
-                 ~exportPath,
-               );
-             };
-           }
-         )
-       }
-     )
+  Js.Promise.resolve(Project.pesyConfig(project))
   >>= (
-    _stdout =>
-      Esy.importDependencies(
-        ~projectPath,
-        ~exportsPath=Path.join([|cacheDir, "_export"|]),
-        esy,
-      )
-      |> Js.Promise.then_(
-           fun
-           | Ok(r) => ResultPromise.ok(r)
-           | Error(_) =>
-             /* import-dependencies can sometimes fail on individual cache entries which is fail. We can simply retry */
-             Esy.importDependencies(
-               ~projectPath,
-               ~exportsPath=Path.join([|cacheDir, "_export"|]),
-               esy,
-             ),
-         )
-      >>| (
-        ((stdout, stderr)) => {
-          Js.log(
-            ("Running " |> Chalk.dim)
-            ++ (
-              "esy import-dependencies "
-              ++ Path.join([|cacheDir, "_export"|])
-              |> Chalk.bold
-            ),
-          );
-          Process.Stdout.(write(v, stdout |> Chalk.dim));
-          Process.Stdout.(write(v, stderr |> Chalk.dim));
-        }
-      )
+    pesyConfig => {
+      let p = {
+        let github = PesyConfig.getGithub(pesyConfig);
+        let templateVersion = PesyConfig.getTemplateTag(pesyConfig);
+        let azureProject = PesyConfig.getAzureProject(pesyConfig);
+        switch (templateVersion, azureProject) {
+        | (None, None) =>
+          let checksumFilePath = Path.join([|cacheDir, "checksum.txt"|]);
+          checkCacheState(~checksumFilePath, ~cacheZipPath)
+          |> Js.Promise.then_(cacheState =>
+               switch (cacheState) {
+               | CacheFound(ChecksumMatch) => ResultPromise.ok()
+               | CacheNotFound
+               | CacheFound(ChecksumNotMatch) =>
+                 downloadCacheFromGithub(
+                   ~github,
+                   ~templateTag="latest",
+                   ~cacheDir,
+                   ~cacheZipPath,
+                   ~checksumFilePath,
+                 )
+               }
+             );
+        | (Some(templateTag), _) =>
+          let checksumFilePath = Path.join([|cacheDir, "checksum.txt"|]);
+          checkCacheState(~checksumFilePath, ~cacheZipPath)
+          |> Js.Promise.then_(cacheState =>
+               switch (cacheState) {
+               | CacheFound(ChecksumMatch) => ResultPromise.ok()
+               | CacheNotFound
+               | CacheFound(ChecksumNotMatch) =>
+                 downloadCacheFromGithub(
+                   ~github,
+                   ~templateTag,
+                   ~cacheDir,
+                   ~cacheZipPath,
+                   ~checksumFilePath,
+                 )
+               }
+             );
+        | (None, Some(azureProject)) =>
+          let checksumFilePath =
+            Path.join([|
+              cacheDir,
+              {j|cache-$os-install-v1-checksum|j},
+              "checksum.txt",
+            |]);
+          checkCacheState(~checksumFilePath, ~cacheZipPath)
+          |> Js.Promise.then_(cacheState => {
+               switch (cacheState) {
+               | CacheFound(ChecksumMatch) => ResultPromise.ok()
+               | CacheNotFound
+               | CacheFound(ChecksumNotMatch) =>
+                 let azureProject =
+                   azureProject
+                   |> AzurePipelines.ProjectName.ofString
+                   |> AzurePipelines.ProjectName.validate;
+                 downloadCacheFromAzure(
+                   ~azureProject,
+                   ~github,
+                   ~cacheDir,
+                   ~checksumZipPath,
+                   ~cacheZipPath,
+                   ~checksumFilePath,
+                   ~exportPath,
+                 );
+               }
+             });
+        };
+      };
+      p
+      >>= (
+        _stdout =>
+          Esy.importDependencies(
+            ~projectPath,
+            ~exportsPath=Path.join([|cacheDir, "_export"|]),
+            esy,
+          )
+          |> Js.Promise.then_(
+               fun
+               | Ok(r) => ResultPromise.ok(r)
+               | Error(_) =>
+                 /* import-dependencies can sometimes fail on individual cache entries which is fail. We can simply retry */
+                 Esy.importDependencies(
+                   ~projectPath,
+                   ~exportsPath=Path.join([|cacheDir, "_export"|]),
+                   esy,
+                 ),
+             )
+          >>| (
+            ((stdout, stderr)) => {
+              Js.log(
+                ("Running " |> Chalk.dim)
+                ++ (
+                  "esy import-dependencies "
+                  ++ Path.join([|cacheDir, "_export"|])
+                  |> Chalk.bold
+                ),
+              );
+              Process.Stdout.(write(v, stdout |> Chalk.dim));
+              Process.Stdout.(write(v, stderr |> Chalk.dim));
+            }
+          )
+      );
+    }
   );
 };
