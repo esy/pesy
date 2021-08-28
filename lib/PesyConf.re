@@ -369,6 +369,21 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
     | _e => raise(ImportsParserFailure())
     };
 
+  let modesAsFieldTypes =
+    try(Some(JSON.member(conf, "modes") |> JSON.toValue)) {
+    | JSON.NullJSONValue () => None
+    | e => raise(e)
+    };
+
+  let modes =
+    switch (modesAsFieldTypes) {
+    | Some(modesAsFieldTypes) =>
+      try(Some(Executable.Mode.ofFieldTypes(modesAsFieldTypes))) {
+      | _ => None
+      }
+    | None => None
+    };
+
   let pesyModuleNamespace =
     [rootName]
     @ String.split_on_char('/', dir)
@@ -424,11 +439,17 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
              |> List.fold_left((++), "");
            } else {
              /** ie. external library. We use findlib and figure out namespace **/
+             let findlibQueryModes =
+               switch (modesAsFieldTypes) {
+               | Some(modes) =>
+                 modes |> FieldTypes.toList |> List.map(FieldTypes.toString)
+               | None => ["native"]
+               };
              Str.global_replace(
-               Str.regexp("\\.cmxa"),
+               Str.regexp("\\.cm.*"),
                "",
                Findlib.package_property(
-                 ["native"],
+                 findlibQueryModes,
                  pathToOCamlLibName(libraryAsPath),
                  "archive",
                ),
@@ -662,22 +683,11 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
   switch (bin) {
   | Some(binKVs) =>
     //bins |> List.map(((mainFileName, _installedBinaryName)) => moduleNameOf(mainFileName))
-    let modes =
-      try(
-        Some(
-          Executable.Mode.ofFieldTypes(
-            JSON.member(conf, "modes") |> JSON.toValue,
-          ),
-        )
-      ) {
-      | JSON.NullJSONValue () => None
-      | e => raise(e)
-      };
     {
       pkg_path,
       common,
       pkgType: ExecutablePackage(Executable.create(binKVs, modes)),
-    };
+    }
   | None =>
     let namespace =
       try(
