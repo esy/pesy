@@ -1,9 +1,9 @@
 # steps to install esy globally
 
 steps:
-  - script: "sudo npm install --prefix /usr/local --unsafe-perm -g @esy-nightly/esy"
-    displayName: "install nightly esy"
+  - script: "sudo npm install --prefix /usr/local --unsafe-perm -g esy"
+    displayName: "install esy"
     condition: ne(variables['Agent.OS'], 'Windows_NT')
-  - script: "npm install -g @esy-nightly/esy"
-    displayName: "install nightly esy"
+  - script: "npm install -g esy"
+    displayName: "install esy"
     condition: eq(variables['Agent.OS'], 'Windows_NT')
