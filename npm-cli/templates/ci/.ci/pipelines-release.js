@@ -42,9 +42,9 @@ const packageJson = JSON.stringify(
     description: mainPackageJson.description,
     repository: mainPackageJson.repository,
     scripts: {
-      postinstall: rewritePrefix
-        ? "ESY_RELEASE_REWRITE_PREFIX=true node ./postinstall.js"
-        : "node ./postinstall.js",
+      postinstall:
+	"node -e \"process.env['OCAML_VERSION'] = process.platform == 'linux' ? '4.10.2000-musl.static.flambda': '4.10.2000'; process.env['OCAML_PKG_NAME'] = 'ocaml'; process.env['ESY_RELEASE_REWRITE_PREFIX']=true; require('./postinstall.js')\"":
+	"node -e \"process.env['OCAML_VERSION'] = process.platform == 'linux' ? '4.10.2000-musl.static.flambda': '4.10.2000'; process.env['OCAML_PKG_NAME'] = 'ocaml'; require('./postinstall.js')\""
     },
     bin: bins,
     files: [
