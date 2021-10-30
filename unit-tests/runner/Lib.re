@@ -137,7 +137,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (modes best))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo) (modes best))\n",
     ])
   );
   test("Sample config - 3", ({expect, _}) =>
@@ -160,7 +160,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (c_names stubs))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo) (c_names stubs))\n",
     ])
   );
   test("Sample config - 4", ({expect, _}) =>
@@ -182,7 +182,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (implements foo))\n",
+      "(library (name Foo) (modules (:standard)) (implements foo))\n",
     ])
   );
   test("Sample config - 5", ({expect, _}) =>
@@ -204,7 +204,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (wrapped false))\n",
+      "(library (name Foo) (modules (:standard)) (wrapped false))\n",
     ])
   );
   test("Sample config - 6", ({expect, _}) =>
@@ -225,7 +225,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(executables (names Foo) (modules (:standard)) (public_names bar.exe)\n    (modes (best c)))\n",
+    "(executables (names Foo) (modules (:standard)) (public_names bar.exe)\n    (modes (best c)))\n",
     ])
   );
   test("Sample config - 7", ({expect, _}) =>
@@ -248,7 +248,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (flags -w -33+9))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo) (flags -w -33+9))\n",
     ])
   );
   test("Sample config - 8", ({expect, _}) =>
@@ -271,7 +271,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (ocamlc_flags -annot -c))\n",
+      "(library (name Foo) (modules (:standard)) (ocamlc_flags -annot -c))\n",
     ])
   );
   test("Sample config - 9", ({expect, _}) =>
@@ -294,7 +294,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (ocamlopt_flags -rectypes -nostdlib))\n",
+      "(library (name Foo) (modules (:standard))\n    (ocamlopt_flags -rectypes -nostdlib))\n",
     ])
   );
   test("Sample config - 10", ({expect, _}) =>
@@ -318,7 +318,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (js_of_ocaml -pretty -no-inline))\n",
+      "(library (name Foo) (modules (:standard)) (js_of_ocaml -pretty -no-inline))\n",
     ])
   );
   test("Sample config - 11", ({expect, _}) =>
@@ -341,7 +341,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (preprocess (pps lwt_ppx)))\n",
+      "(library (name Foo) (modules (:standard)) (preprocess (pps lwt_ppx)))\n",
     ])
   );
   test("Sample config - 12", ({expect, _}) =>
@@ -365,7 +365,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard)))\n(include_subdirs unqualified)\n",
+      "(library (name Foo) (modules (:standard)))\n(include_subdirs unqualified)\n",
     ])
   );
   test("Sample config - 12", ({expect, _}) =>
@@ -389,7 +389,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard)))\n(include_subdirs unqualified)\n",
+      "(library (name Foo) (modules (:standard)))\n(include_subdirs unqualified)\n",
     ])
   );
   test("Sample config - 14", ({expect, _}) =>
@@ -457,7 +457,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard)))\n(install (section share_root) (files (asset.txt as asset.txt)))\n",
+      "(library (name Foo) (modules (:standard)))\n(install (section share_root) (files (asset.txt as asset.txt)))\n",
     ])
   );
   test("Sample config - 16", ({expect, _}) =>
@@ -482,7 +482,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries lwt lwt.unix raw.lib) (preprocess (pps lwt_ppx)))\n",
+      "(library (name Foo) (modules (:standard)) (libraries lwt lwt.unix raw.lib)\n    (preprocess (pps lwt_ppx)))\n",
     ])
   );
 
@@ -506,7 +506,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (flags -verbose))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo) (flags -verbose))\n",
     ])
   );
   test("Sample config - 18", ({expect, _}) =>
@@ -529,7 +529,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (ocamlc_flags -annot -c))\n",
+      "(library (name Foo) (modules (:standard)) (ocamlc_flags -annot -c))\n",
     ])
   );
   test("Sample config - 19", ({expect, _}) =>
@@ -552,7 +552,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (ocamlopt_flags -rectypes -nostdlib))\n",
+      "(library (name Foo) (modules (:standard))\n    (ocamlopt_flags -rectypes -nostdlib))\n",
     ])
   );
   test("Sample config - 20", ({expect, _}) =>
@@ -576,7 +576,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (js_of_ocaml -pretty -no-inline))\n",
+      "(library (name Foo) (modules (:standard)) (js_of_ocaml -pretty -no-inline))\n",
     ])
   );
   test("Sample config - 21", ({expect, _}) =>
@@ -734,7 +734,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names :standard) (flags :standard)))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo)\n    (foreign_stubs (language c) (names :standard) (flags :standard)))\n",
     ])
   );
 
@@ -765,7 +765,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard)))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard)))\n",
     ])
   );
 
@@ -800,7 +800,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard))\n    (foreign_stubs (language cxx) (names src3) (flags -02)))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard))\n    (foreign_stubs (language cxx) (names src3) (flags -02)))\n",
     ])
   );
 
@@ -836,7 +836,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard))\n    (foreign_stubs (language cxx) (names src3) (flags -02)))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo)\n    (foreign_stubs (language c) (names src1 src2) (flags :standard))\n    (foreign_stubs (language cxx) (names src3) (flags -02)))\n",
     ])
   );
 
@@ -872,7 +872,7 @@ describe("PesyConf.testToPackages", ({test, _}) => {
       |> List.map(DuneFile.toString),
     ).
       toEqual([
-      "(library (name Foo) (public_name bar.lib) (modules (:standard))\n    (libraries foo) (c_names stub1 stub2))\n",
+      "(library (name Foo) (modules (:standard)) (libraries foo)\n    (c_names stub1 stub2))\n",
     ])
   );
 });

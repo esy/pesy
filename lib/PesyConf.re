@@ -325,6 +325,12 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
     | e => raise(e)
     };
 
+  let public =
+    try(JSON.member(conf, "public") |> JSON.toValue |> FieldTypes.toBool) {
+    | JSON.NullJSONValue(_) => false
+    | e => raise(e)
+    };
+
   let (<|>) = (f, g, x) => g(f(x));
   /* "my-package/lib/here" => "my-package.lib.here" */
   let require =
@@ -515,6 +521,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
                )
              };
            },
+           ~internal=isLocalLibrary(libraryAsPath),
            ~library=pathToOCamlLibName(libraryAsPath),
            ~originalNamespace,
            ~exportedNamespace,
@@ -822,6 +829,7 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
         LibraryPackage(
           Library.create(
             name,
+            public,
             namespace,
             libraryModes,
             ffi,

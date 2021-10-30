@@ -78,7 +78,7 @@ let toDuneStanzas = c => {
         Some(
           Stanza.createExpression([
             Stanza.createAtom("libraries"),
-            Stanza.createAtom(PesyModule.getDunePublicName(x)),
+            Stanza.createAtom(PesyModule.getNamespace(x)),
           ]),
         )
       | None => None
@@ -92,7 +92,7 @@ let toDuneStanzas = c => {
                libs
                @ (
                  switch (pesyModules) {
-                 | Some(x) => [PesyModule.getDunePublicName(x)]
+                 | Some(x) => [PesyModule.getNamespace(x)]
                  | None => []
                  }
                ),

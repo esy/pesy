@@ -21,6 +21,7 @@ module Mode = {
 };
 type t = {
   name: string,
+  public: bool,
   namespace: string,
   modes: option(list(Mode.t)),
   ffi: option(Stubs.t),
@@ -29,8 +30,9 @@ type t = {
   wrapped: option(bool),
 };
 let create =
-    (name, namespace, modes, ffi, virtualModules, implements, wrapped) => {
+    (name, public, namespace, modes, ffi, virtualModules, implements, wrapped) => {
   name,
+  public,
   namespace,
   modes,
   ffi,
@@ -42,6 +44,7 @@ let toDuneStanza = (common, lib) => {
   /* let {name: pkgName, require, path} = common */
   let {
     name,
+    public,
     namespace,
     modes: modesP,
     ffi: stubsP,
@@ -64,7 +67,7 @@ let toDuneStanza = (common, lib) => {
   ) =
     Common.toDuneStanzas(common);
   let path = Common.getPath(common);
-  let public_name = Stanza.create("public_name", Stanza.createAtom(name)); // pesy's name is Dune's public_name
+  let public_name = if (public) { Stanza.createAtom(name) |> Stanza.create("public_name") |> Option.some } else { None }; // pesy's name is Dune's public_name
   let name = Stanza.create("name", Stanza.createAtom(namespace));
   let modules =
     Stanza.createExpression([
@@ -133,8 +136,9 @@ let toDuneStanza = (common, lib) => {
       )
     };
 
-  let mandatoryExpressions = [name, public_name, modules];
+  let mandatoryExpressions = [name, modules];
   let optionalExpressions = [
+    public_name,
     libraries,
     modesD,
     virtualModulesD,

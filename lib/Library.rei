@@ -8,6 +8,7 @@ type t;
 let create:
   (
     string,
+    bool,
     string,
     option(list(Mode.t)),
     option(Stubs.t),
