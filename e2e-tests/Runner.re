@@ -462,6 +462,7 @@ caml_foo(value a) {
             {|
 {
     "library": {
+      "public": true,
       "require": [
         "console.lib",
         "pastel.lib"

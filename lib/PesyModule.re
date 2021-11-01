@@ -2,12 +2,15 @@ module Alias = {
   type t = {
     alias: string,
     library: string,
+    internal: bool, // if an alias is for a local sub-library
     originalNamespace: string,
     exportedNamespace: string,
   };
-  let create = (~alias, ~library, ~originalNamespace, ~exportedNamespace) => {
-    {alias, library, originalNamespace, exportedNamespace};
+  let create = (~alias, ~internal, ~library, ~originalNamespace, ~exportedNamespace) => {
+    {alias, library, internal, originalNamespace, exportedNamespace};
   };
+  let isInternal = x => x.internal;
+  let getOriginalNamespace = x => x.originalNamespace;
   let getLibrary = x => x.library;
   let transform = (~f, x) => f(x);
   let toReStatement = a => a.alias;
@@ -70,10 +73,6 @@ let generateLibraryStanza = (preprocess, pesyModules) => {
       Stanza.createExpression([
         Stanza.createAtom("library"),
         Stanza.createExpression([
-          Stanza.createAtom("public_name"),
-          Stanza.createAtom(x.dunePublicName),
-        ]),
-        Stanza.createExpression([
           Stanza.createAtom("name"),
           Stanza.createAtom(x.namespace),
         ]),
@@ -86,7 +85,7 @@ let generateLibraryStanza = (preprocess, pesyModules) => {
           ...{
                module SS = Set.Make(String);
                x.aliases
-               |> List.map(Alias.getLibrary)
+               |> List.map(alias => Alias.isInternal(alias) ? Alias.getOriginalNamespace(alias): Alias.getLibrary(alias))
                |> SS.of_list
                |> SS.elements
                |> List.map(Alias.transform(~f=Stanza.createAtom));
