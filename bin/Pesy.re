@@ -335,24 +335,15 @@ let pesyLsLibs = () => {
 };
 let version = "0.1.0-alpha.14";
 
-let cmd = () => {
-  open Cmdliner.Term;
-  let cmd = "esy-pesy";
-  let envs: list(env_info) = [];
-  let exits: list(exit_info) = [];
-  let doc = "Esy Pesy - Your Esy Assistant.";
-  let cmd_t = Term.(const(main) $ const());
-  (cmd_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
-};
 
 let build = () => {
-  open Cmdliner.Term;
   let cmd = "build";
-  let envs: list(env_info) = [];
-  let exits: list(exit_info) = [];
+  let envs: list(Cmd.Env.info) = [];
+  let exits: list(Cmd.Exit.info) = [];
   let doc = "build - builds your pesy managed project";
   let build_t = Term.(const(pesy_build) $ const());
-  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+  let info = Cmd.info(cmd, ~envs, ~exits, ~doc, ~version);
+  Cmd.v(info, build_t);
 };
 
 let subpkgTerm =
@@ -367,13 +358,13 @@ let subpkgTerm =
   );
 
 let pesy_dune_file = () => {
-  open Cmdliner.Term;
   let cmd = "dune-file";
-  let envs: list(env_info) = [];
-  let exits: list(exit_info) = [];
+  let envs: list(Cmd.Env.info) = [];
+  let exits: list(Cmd.Exit.info) = [];
   let doc = "dune-file - prints dune file for a given dir/subpackage";
   let build_t = Term.(const(pesy_dune_file) $ subpkgTerm);
-  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+  let info = Cmd.info(cmd, ~envs, ~exits, ~doc, ~version);
+  Cmd.v(info, build_t);
 };
 
 let pesy_eject = dir => {
@@ -394,7 +385,6 @@ let pesy_eject = dir => {
 };
 
 let eject = () => {
-  open Cmdliner.Term;
   let subpkgTerm =
     Arg.(
       required
@@ -407,22 +397,29 @@ let eject = () => {
     );
 
   let cmd = "eject";
-  let envs: list(env_info) = [];
-  let exits: list(exit_info) = [];
+  let envs: list(Cmd.Env.info) = [];
+  let exits: list(Cmd.Exit.info) = [];
   let doc = "eject - eject dune file for a given dir/subpackage";
   let build_t = Term.(const(pesy_eject) $ subpkgTerm);
-  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+  let info = Cmd.info(cmd, ~envs, ~exits, ~doc, ~version);
+  Cmd.v(info, build_t); 
 };
 
 let lsLibs = () => {
-  open Cmdliner.Term;
   let cmd = "ls-libs";
-  let envs: list(env_info) = [];
-  let exits: list(exit_info) = [];
+  let envs: list(Cmd.Env.info) = [];
+  let exits: list(Cmd.Exit.info) = [];
   let doc = "ls-libs - lists installed packages";
   let build_t = Term.(const(pesyLsLibs) $ const());
-  (build_t, Term.info(cmd, ~envs, ~exits, ~doc, ~version));
+  let info = Cmd.info(cmd, ~envs, ~exits, ~doc, ~version);
+  Cmd.v(info, build_t);
 };
 
-Term.exit @@
-Term.eval_choice(cmd(), [build(), pesy_dune_file(), lsLibs(), eject()]);
+  let cmd = "esy-pesy";
+  let envs: list(Cmd.Env.info) = [];
+  let exits: list(Cmd.Exit.info) = [];
+  let doc = "Esy Pesy - Your Esy Assistant.";
+  let cmd_t = Term.(const(main) $ const());
+let cmd_info = Cmd.info(cmd, ~envs, ~exits, ~doc, ~version);
+
+exit @@ Cmd.eval @@ Cmd.group(~default=cmd_t, cmd_info, [build(), pesy_dune_file(), lsLibs(), eject()]);
