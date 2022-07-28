@@ -39,21 +39,31 @@
     "@opam/reason": "*",
     "@opam/dune": "*",
     "@opam/cmdliner": "*",
-    "@reason-native/pastel": "*",
+    "@opam/pastel": "*",
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
-    "ocaml": "4.6.10 - 4.13"
+    "ocaml": "4.6.10 - 4.15"
   },
   "devDependencies": {
-    "ocaml": "4.10.2000",
-    "refmterr": "^3.3.0",
+    "ocaml": "4.14.0",
+    "refmterr": "ManasJayanth/reason-native:refmterr.opam",
     "@opam/dune": "*",
     "@opam/bos": "0.2.0",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
     "@opam/merlin": "*",
-    "@opam/ocamlformat": "0.18.0",
+    "@opam/ocamlformat": "*",
     "@opam/ocaml-lsp-server": "*"
+  },
+  "resolutions": {
+    "refmterr": "ManasJayanth/reason-native:refmterr.opam#3e273ac3786ba70bf773d304c2bf279b0eb9be36",
+    "@opam/cli": "reasonml/reason-native:cli.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
+    "@reason-native/cli": "reasonml/reason-native:cli.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
+    "@reason-native/rely": "reasonml/reason-native:rely.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
+    "@opam/pastel": "reasonml/reason-native:pastel.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
+    "@opam/console": "reasonml/reason-native:console.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
+    "@opam/file-context-printer": "reasonml/reason-native:file-context-printer.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
+    "@opam/pastel": "reasonml/reason-native:pastel.opam#3529b8f526eff146ff477f95f288acbc70ce466d"
   }
 }
