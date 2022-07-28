@@ -36,7 +36,7 @@
     "test": "esy run-script test:unit"
   },
   "dependencies": {
-    "@esy-ocaml/reason": "3.x.x",
+    "@opam/reason": "*",
     "@opam/dune": "*",
     "@opam/cmdliner": "*",
     "@reason-native/pastel": "*",
