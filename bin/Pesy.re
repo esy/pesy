@@ -271,6 +271,18 @@ let pesy_build = () =>
           );
         fprintf(stderr, "%s\n", message);
         exit(-1);
+      | InvalidDuneVersion(version) =>
+        let message =
+          Pastel.(
+            <Pastel>
+              <Pastel color=Red> "Error: " </Pastel>
+              <Pastel>
+                "Invalid Dune version" <Pastel bold=true> {version} </Pastel>
+              </Pastel>
+            </Pastel>
+          );
+        fprintf(stderr, "%s\n", message);
+        exit(-1);
       };
 
       let buildTarget = build(manifestFile);

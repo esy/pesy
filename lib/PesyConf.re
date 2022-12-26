@@ -20,17 +20,18 @@ type package = {
   pkgType,
 };
 
-exception InvalidDuneVersion;
 module Version = {
   type t =
     | V1(int)
-    | V2(int);
+    | V2(int)
+    | V3(int);
   let ofString = version => {
     let vs = String.split_on_char('.', version) |> List.map(int_of_string);
     switch (vs) {
     | [1, minorVersion] => V1(minorVersion)
     | [2, minorVersion] => V2(minorVersion)
-    | _ => raise(InvalidDuneVersion)
+    | [3, minorVersion] => V3(minorVersion)
+    | _ => raise(InvalidDuneVersion(version))
     };
   };
 };
@@ -761,10 +762,11 @@ let toPesyConf = (projectPath, rootName, pkg, ~duneVersion) => {
       | (V1(_), Some(cn), None)
       | (V1(_), Some(cn), Some(_)) => Some(Stubs.ofCNames(cStubs(cn)))
       | (V1(_), None, Some(_)) => raise(ForeignStubsIncorrectlyUsed)
-      | (V2(_), None, None) => None
-      | (V2(_), Some(_), None) => raise(CNamesIncorrectlyUsed)
-      | (V2(_), None, Some(fs))
-      | (V2(_), Some(_), Some(fs)) =>
+      /* foreign stubs is supported in version > 1.0 */
+      | (_, None, None) => None
+      | (_, Some(_), None) => raise(CNamesIncorrectlyUsed)
+      | (_, None, Some(fs))
+      | (_, Some(_), Some(fs)) =>
         Some(Stubs.ofForeignStubs(foreignStubs(fs)))
       };
 
