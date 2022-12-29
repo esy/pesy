@@ -218,19 +218,12 @@ let duneEject = (projectPath, manifestFile, subpackageNameOrPath) => {
 let validateManifestFile = (projectPath, manifestFile) => {
   let conf = PesyConf.get(manifestFile);
   let pkgs = PesyConf.pkgs(conf);
-
   let duneProjectPath = Path.(projectPath / "dune-project");
   let duneVersion =
     DuneFile.ofFile(duneProjectPath) |> DuneProject.findLangVersion;
-
   let rootName = PesyConf.rootName(conf);
-  let _ =
-    try(
-      pkgs
-      |> List.map(PesyConf.toPesyConf(projectPath, rootName, ~duneVersion))
-    ) {
-    | x => raise(x)
-    };
-
-  ();
+  ignore(
+    pkgs
+    |> List.map(PesyConf.toPesyConf(projectPath, rootName, ~duneVersion)),
+  );
 };

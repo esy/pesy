@@ -14,3 +14,4 @@ exception ImportsParserFailure(unit);
 exception LocalLibraryPathNotFound(string);
 exception ForeignStubsIncorrectlyUsed;
 exception CNamesIncorrectlyUsed;
+exception InvalidDuneVersion(string);
