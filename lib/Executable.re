@@ -29,7 +29,13 @@ module Mode = {
   };
 
   module BinaryKind: {
-    type t;
+    type t =
+      | C
+      | Exe
+      | Object
+      | Shared_object
+      | JS
+      | Plugin;
     let toString: t => string;
     let ofString: string => t;
   } = {
@@ -68,12 +74,15 @@ module Mode = {
   exception InvalidExecutableMode(string);
   let rec ofFieldTypes = parts =>
     switch (parts) {
-    | FieldTypes.String(bs) =>
-      Array(
-        bs
+    | FieldTypes.String(bs) => {
+        let parts = bs
         |> Str.split(Str.regexp("[ \n\r\x0c\t]+"))
-        |> List.map(b => Atom(BinaryKind.ofString(b))),
-      )
+        if (List.length(parts) > 1) {
+          Array(parts |> List.map(b => Atom(BinaryKind.ofString(b))))
+        } else {
+          Atom(BinaryKind.ofString(List.hd(parts)))
+        }
+      }
     | FieldTypes.List([FieldTypes.String(c), FieldTypes.String(b)]) =>
       try(Tuple(Compilation.ofString(c), BinaryKind.ofString(b))) {
       | InvalidCompilationMode () =>
@@ -182,7 +191,11 @@ let toDuneStanza = (common: Common.t, e) => {
       )
     };
 
-  let mandatoryExpressions = [name, modules, public_name];
+  let mandatoryExpressions = switch(modesP) {
+    | Some(Mode.Atom(Mode.BinaryKind.JS)) => [name, modules]
+    | _ => [name, modules, public_name]
+  }
+
   let optionalExpressions = [
     libraries,
     modesD,
