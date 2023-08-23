@@ -16,7 +16,9 @@ module EnvVars = {
 let getManifestFile = projectRoot => {
   switch (EnvVars.rootPackageConfigPath) {
   | Some(x) => x
-  | None => Path.(projectRoot / "package.json")
+  | None => {
+     Path.(projectRoot / "package.json")
+        }
   };
 };
 

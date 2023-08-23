@@ -16,15 +16,15 @@ trigger:
     - LICENSE
 
 jobs:
-  - template: .ci/build-platform.yml
-    parameters:
-      platform: Linux
-      vmImage: ubuntu-latest
+  # - template: .ci/build-platform.yml
+  #   parameters:
+  #     platform: Linux
+  #     vmImage: ubuntu-latest
 
-  - template: .ci/build-platform.yml
-    parameters:
-      platform: macOS
-      vmImage: macOS-latest
+  # - template: .ci/build-platform.yml
+  #   parameters:
+  #     platform: macOS
+  #     vmImage: macOS-latest
 
   # Need windows-2019 to do esy import/export-dependencies
   # which assumes you have bsdtar (tar.exe) in your system
@@ -33,17 +33,17 @@ jobs:
   - template: .ci/build-platform.yml
     parameters:
       platform: Windows
-      vmImage: windows-2019
+      vmImage: windows-latest
 
   # This job is kept here as we want to have the platform names in the same file
-  - job: Release
-    displayName: Release
-    dependsOn:
-      - Linux
-      - macOS
-      - Windows
-    pool:
-      vmImage: macOS-latest
-      demands: node.js
-    steps:
-      - template: .ci/cross-release.yml
+  # - job: Release
+  #   displayName: Release
+  #   dependsOn:
+  #     - Linux
+  #     - macOS
+  #     - Windows
+  #   pool:
+  #     vmImage: macOS-latest
+  #     demands: node.js
+  #   steps:
+  #     - template: .ci/cross-release.yml
