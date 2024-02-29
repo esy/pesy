@@ -43,26 +43,24 @@
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
-    "ocaml": "4.6.10 - 4.15"
+    "ocaml": "4.14.x - 5.3.x"
   },
   "devDependencies": {
-    "ocaml": "4.14.0",
+    "ocaml": "5.x",
     "refmterr": "ManasJayanth/reason-native:refmterr.opam",
     "@opam/dune": "*",
-    "@opam/bos": "0.2.0",
-    "@reason-native/rely": "*",
+    "@opam/bos": "*",
     "@opam/odoc": "*",
     "@opam/ocamlformat": "*",
     "@opam/ocaml-lsp-server": "*"
   },
   "resolutions": {
+    "@opam/ocp-indent": "OCamlPro/ocp-indent:ocp-indent.opam#f38578c25d62701847b1bcb45099a9020e2032fe",
+    "@opam/ocaml-compiler-libs": "opam:v0.12.4",
+    "ocaml": "5.1.1000",
+    "@opam/num": "opam:1.4",
     "refmterr": "ManasJayanth/reason-native:refmterr.opam#3e273ac3786ba70bf773d304c2bf279b0eb9be36",
-    "@opam/cli": "reasonml/reason-native:cli.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@reason-native/cli": "reasonml/reason-native:cli.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@reason-native/rely": "reasonml/reason-native:rely.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@opam/pastel": "reasonml/reason-native:pastel.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@opam/console": "reasonml/reason-native:console.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@opam/file-context-printer": "reasonml/reason-native:file-context-printer.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@opam/pastel": "reasonml/reason-native:pastel.opam#3529b8f526eff146ff477f95f288acbc70ce466d"
+    "@opam/console": "reasonml/reason-native:console.opam#aec0ac68",
+    "@opam/pastel": "reasonml/reason-native:pastel.opam#aec0ac68"
   }
 }

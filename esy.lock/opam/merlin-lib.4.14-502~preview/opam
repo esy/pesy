@@ -10,13 +10,15 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.14" & < "4.15"}
+  "ocaml" {>= "5.2" & < "5.3"}
   "dune" {>= "2.9.0"}
   "csexp" {>= "1.5.1"}
   "menhir"    {dev & >= "20201216"}
   "menhirLib" {dev & >= "20201216"}
   "menhirSdk" {dev & >= "20201216"}
 ]
+flags: avoid-version
+available: opam-version >= "2.1.0"
 synopsis:
   "Merlin's libraries"
 description:
@@ -25,10 +27,9 @@ description:
   thoroughly documented, and its public API might break with any new release."
 url {
   src:
-    "https://github.com/ocaml/merlin/releases/download/v4.14-414/merlin-4.14-414.tbz"
+    "https://github.com/ocaml/merlin/archive/96a95bdaf3304a7b6aad7115fe8055d83eaef1cc.tar.gz"
   checksum: [
-    "sha256=79018ccaa37c1501dd5c4d5cf78bc3420d641b1e82443662981c5472d973993d"
-    "sha512=ebefec44c7f54b10aa85895baacecf778930ee0c4cd5a257836755ccadd9018c20379511e254efa98ed7d48fff9ba9eeb93b45a722cc1d2d61f51570cc57985d"
+    "sha256=733844a3b28c70a63ebb1f12b489ef84c0c868c1cbeda0dd566fcf12ab17937e"
+    "sha512=3c43cf81478b30a98ce209f9f05f0f1c8c5e614b5682d617ae55df361efc7c12eee867f2b027d0e14200a530178450bcfac509d34caecb27385ad211807d223f"
   ]
 }
-x-commit-hash: "7017cc271403487756e412349f3718a8ba2e6a36"
