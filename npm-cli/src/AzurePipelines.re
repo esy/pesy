@@ -131,7 +131,7 @@ let getDefinitionID = (projName, github) => {
   let proj = projName |> ProjectName.toString;
   let definition = Js.String.replace("/", ".", github);
   Https.getCompleteResponse(
-    {j|$restBase/$proj/_apis/build/definitions?name=$definition&api-version=4.1|j},
+    {j|$restBase/$proj/_apis/build/definitions?project=$definition&api-version=7.0|j},
   )
   |> P.then_(r =>
        P.resolve(
@@ -149,7 +149,7 @@ let getDefinitionID = (projName, github) => {
 let getBuildID = (projName, definitionID) => {
   let proj = projName |> ProjectName.toString;
   Https.getCompleteResponse(
-    {j|$restBase/$proj/_apis/build/builds?$filter&$master&$latest&definitions=$definitionID&api-version=4.1|j},
+    {j|$restBase/$proj/_apis/build/builds?$filter&$master&$latest&definitions=$definitionID&api-version=7.0|j},
   )
   |> P.then_(r =>
        P.resolve(
@@ -170,7 +170,7 @@ let getDownloadURL = (projName, latestBuildID) => {
   switch (artifact) {
   | Some({filename}) =>
     Https.getCompleteResponse(
-      {j|$restBase/$proj/_apis/build/builds/$latestBuildID/artifacts?artifactname=$filename&api-version=4.1|j},
+      {j|$restBase/$proj/_apis/build/builds/$latestBuildID/artifacts?artifactname=$filename&api-version=7.0|j},
     )
     |> P.then_(
          fun
@@ -191,7 +191,7 @@ let getChecksumDownloadURL = (projName, latestBuildID) => {
   switch (artifact) {
   | Some({checksumFilename}) =>
     Https.getCompleteResponse(
-      {j|$restBase/$proj/_apis/build/builds/$latestBuildID/artifacts?artifactname=$checksumFilename&api-version=4.1|j},
+      {j|$restBase/$proj/_apis/build/builds/$latestBuildID/artifacts?artifactname=$checksumFilename&api-version=7.0|j},
     )
     |> P.then_(
          fun
