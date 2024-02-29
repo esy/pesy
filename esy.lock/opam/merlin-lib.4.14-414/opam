@@ -25,10 +25,10 @@ description:
   thoroughly documented, and its public API might break with any new release."
 url {
   src:
-    "https://github.com/ocaml/merlin/releases/download/v4.13-414/merlin-4.13-414.tbz"
+    "https://github.com/ocaml/merlin/releases/download/v4.14-414/merlin-4.14-414.tbz"
   checksum: [
-    "sha256=025cf1a93ba1e40916f5d9cf22fe7569bbfbaf403f54e4b724e4f92078b1db03"
-    "sha512=cf7e292a515122756bd614eedbf11cc09108e6afab77cd5805428207b3ca5a98494ee43ad59fcfb667b48fe0874f0a8359882b3c14ee270769f99c41e176d455"
+    "sha256=79018ccaa37c1501dd5c4d5cf78bc3420d641b1e82443662981c5472d973993d"
+    "sha512=ebefec44c7f54b10aa85895baacecf778930ee0c4cd5a257836755ccadd9018c20379511e254efa98ed7d48fff9ba9eeb93b45a722cc1d2d61f51570cc57985d"
   ]
 }
-x-commit-hash: "b06a4e4f976100c23173d715f1b35cd91f8131f0"
+x-commit-hash: "7017cc271403487756e412349f3718a8ba2e6a36"
