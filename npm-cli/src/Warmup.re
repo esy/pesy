@@ -144,7 +144,7 @@ let rec downloadCacheFromGithub =
   |> (
     _ =>
       Resolve.resolve(
-        {j|https://github.com/$github/releases/download/$templateTag/cache-$os-install-v1-checksum|j},
+        {j|https://github.com/$github/releases/download/$templateTag/cache-$os-install-v1-checksum.txt|j},
       )
   )
   >>= (
@@ -177,7 +177,7 @@ let rec downloadCacheFromGithub =
   >>= (
     _ =>
       Resolve.resolve(
-        {j|https://github.com/$github/releases/download/$templateTag/cache-$os-install-v1|j},
+        {j|https://github.com/$github/releases/download/$templateTag/cache-$os-install-v1.zip|j},
       )
   )
   >>= (
