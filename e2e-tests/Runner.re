@@ -358,6 +358,8 @@ let checkBootstrapper = cwd => {
           {|
 {
   "resolutions": {
+    "@opam/console": "reasonml/reason-native:console.opam#aec0ac68",
+    "@opam/pastel": "reasonml/reason-native:pastel.opam#aec0ac68",
     "@pesy/esy-pesy": "<RESOLUTION_LINK>"
   }
 }
