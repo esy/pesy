@@ -50,7 +50,6 @@
     "@opam/bos": "*",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
-    "@opam/ocamlformat": "*",
     "@opam/ocaml-lsp-server": "*"
   },
   "resolutions": {

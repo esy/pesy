@@ -38,10 +38,10 @@ build: [
 dev-repo: "git+https://github.com/ocaml-community/yojson.git"
 url {
   src:
-    "https://github.com/ocaml-community/yojson/releases/download/2.2.0/yojson-2.2.0.tbz"
+    "https://github.com/ocaml-community/yojson/releases/download/2.2.1/yojson-2.2.1.tbz"
   checksum: [
-    "sha256=bfdc33bef3141bba9a8fa66a885b54b29f6bfab450040884dd8cf7cdec784519"
-    "sha512=0854d8ab094c8f70fdb6af7f36cac621cecfcbae4592f6e079945761460625fdb7d1bff458998dc95970990daefce57b7f4f9458fd1347a393a1d76709bc9561"
+    "sha256=cd3c1d94f695899a026dff72696989bdb10dc1632934bb9cbe6f4598d4afa6d4"
+    "sha512=d9ba97feca5fef67325ada009760784be9c7bea70469540df7adf3f7e65c1de6cbda2fe12410c4a315716a4f0b533d21fbe9092bfc922bfaf2ff646931f7f5fc"
   ]
 }
-x-commit-hash: "c0276cebe274f90241141338e7d6f13df3bd1c0e"
+x-commit-hash: "a9c234f0a0fa143ec35917e814ad20040f8610e1"
