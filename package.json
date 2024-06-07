@@ -11,7 +11,7 @@
       "esy-installer pesy--esy-pesy.install"
     ],
     "buildDev": [
-      "refmterr dune build --root . --only-packages pesy--esy-pesy,PesyE2E"
+      "dune build --root . --only-packages pesy--esy-pesy,PesyE2E"
     ],
     "buildEnv": {
       "ODOC_SYNTAX": "re"
@@ -43,26 +43,22 @@
     "@opam/ocamlfind": "*",
     "@opam/sexplib": "*",
     "@opam/yojson": "*",
-    "ocaml": "4.6.10 - 4.15"
+    "ocaml": "4.6.10 - 5.3.0"
   },
   "devDependencies": {
-    "ocaml": "4.14.0",
-    "refmterr": "ManasJayanth/reason-native:refmterr.opam",
     "@opam/dune": "*",
-    "@opam/bos": "0.2.0",
+    "@opam/bos": "*",
     "@reason-native/rely": "*",
     "@opam/odoc": "*",
-    "@opam/ocamlformat": "*",
     "@opam/ocaml-lsp-server": "*"
   },
   "resolutions": {
-    "refmterr": "ManasJayanth/reason-native:refmterr.opam#3e273ac3786ba70bf773d304c2bf279b0eb9be36",
-    "@opam/cli": "reasonml/reason-native:cli.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@reason-native/cli": "reasonml/reason-native:cli.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@reason-native/rely": "reasonml/reason-native:rely.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@opam/pastel": "reasonml/reason-native:pastel.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@opam/console": "reasonml/reason-native:console.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@opam/file-context-printer": "reasonml/reason-native:file-context-printer.opam#3529b8f526eff146ff477f95f288acbc70ce466d",
-    "@opam/pastel": "reasonml/reason-native:pastel.opam#3529b8f526eff146ff477f95f288acbc70ce466d"
+    "@opam/cli": "reasonml/reason-native:cli.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
+    "@reason-native/cli": "reasonml/reason-native:cli.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
+    "@reason-native/rely": "reasonml/reason-native:rely.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
+    "@opam/pastel": "reasonml/reason-native:pastel.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
+    "@opam/console": "reasonml/reason-native:console.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
+    "@opam/file-context-printer": "reasonml/reason-native:file-context-printer.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8",
+    "@opam/pastel": "reasonml/reason-native:pastel.opam#20b1997b6451d9715dfdbeec86a9d274c7430ed8"
   }
 }
